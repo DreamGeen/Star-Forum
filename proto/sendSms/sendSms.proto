@@ -1,0 +1,15 @@
+syntax="proto3";
+
+option go_package=".;sendSmsPb";
+
+
+service sendMsg{
+     rpc HandleSendSms(SendRequest) returns (EmptySendResponse){};
+}
+
+message SendRequest{
+     string Phone=1;
+     string TemplateCode=2;
+}
+
+message EmptySendResponse{ }

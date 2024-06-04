@@ -1,0 +1,25 @@
+# 程序和插件的二进制文件
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# 测试二进制文件，使用 'go test -c' 构建
+*.test
+
+# go coverage 工具的输出
+*.out
+
+
+# Go 工作区文件
+go.work
+
+#日志
+*.log
+
+#目录
+.idea/
+
+#配置文件
+*.yaml
