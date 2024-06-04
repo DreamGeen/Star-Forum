@@ -13,11 +13,11 @@ var db *sqlx.DB
 
 func Init() (err error) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8&parseTime=True&loc=Local",
-		settings.Conf.MysqlConfig.User,
-		settings.Conf.MysqlConfig.Password,
-		settings.Conf.MysqlConfig.Host,
-		settings.Conf.MysqlConfig.Port,
-		settings.Conf.MysqlConfig.Dbname,
+		settings.Conf.MysqlUser,
+		settings.Conf.MysqlPassword,
+		settings.Conf.MysqlHost,
+		settings.Conf.MysqlPort,
+		settings.Conf.MysqlDbname,
 	)
 	db, err = sqlx.Connect("mysql", dsn)
 	if err != nil {

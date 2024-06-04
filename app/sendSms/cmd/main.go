@@ -24,7 +24,7 @@ func main() {
 	}
 	defer redis.Close()
 	etcdReg := etcd.NewRegistry(
-		registry.Addrs(fmt.Sprintf("%s:%d", settings.Conf.EtcdConfig.Host, settings.Conf.EtcdConfig.Port)),
+		registry.Addrs(fmt.Sprintf("%s:%d", settings.Conf.EtcdHost, settings.Conf.EtcdPort)),
 	)
 	//得到一个微服务实例
 	microSevice := micro.NewService(

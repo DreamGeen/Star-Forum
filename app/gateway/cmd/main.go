@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"star/app/gateway/rpc"
+	"star/app/gateway/client"
 
 	"github.com/go-micro/plugins/v4/registry/etcd"
 	"go-micro.dev/v4/registry"
@@ -18,9 +18,9 @@ func main() {
 		return
 	}
 	//初始化微服务客户端
-	rpc.Init()
+	client.Init()
 	etcdReg := etcd.NewRegistry(
-		registry.Addrs(fmt.Sprintf("%s:%d", settings.Conf.EtcdConfig.Host, settings.Conf.EtcdConfig.Port)))
+		registry.Addrs(fmt.Sprintf("%s:%d", settings.Conf.EtcdHost, settings.Conf.EtcdPort)))
 	//得到一个web服务实例
 	webService := web.NewService(
 		web.Name("HttpService"), //服务名称

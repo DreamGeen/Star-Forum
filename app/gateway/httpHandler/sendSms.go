@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"star/app/gateway/rpc"
+	"star/app/gateway/client"
 	"star/proto/sendSms/sendSmsPb"
 	"star/settings"
 	"star/utils"
@@ -28,7 +28,7 @@ func sendHandler(c *gin.Context, templateCode string) {
 		utils.ResponseErr(c, utils.ErrPhoneEmpty)
 		return
 	}
-	if _, err := rpc.SendSmsService.HandleSendSms(c, req); err != nil {
+	if _, err := client.HandleSendSms(c, req); err != nil {
 		utils.ResponseErr(c, err)
 		return
 	}

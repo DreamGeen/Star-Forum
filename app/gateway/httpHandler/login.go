@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"star/app/gateway/rpc"
+	"star/app/gateway/client"
 	"star/models"
 	"star/proto/user/userPb"
 	"star/utils"
@@ -25,7 +25,7 @@ func LoginHandler(c *gin.Context) {
 		User:     u.User,
 		Password: u.Password,
 	}
-	resp, err := rpc.UserService.LoginPassword(c, req)
+	resp, err := client.LoginPassword(c, req)
 	if err != nil {
 		log.Println("登录失败", err)
 		utils.ResponseErr(c, err)
@@ -49,7 +49,7 @@ func LoginWithCaptcha(c *gin.Context) {
 		Phone:   u.Phone,
 		Captcha: u.Captcha,
 	}
-	resp, err := rpc.UserService.LoginCaptcha(c, req)
+	resp, err := client.LoginCaptcha(c, req)
 	if err != nil {
 		log.Println("登录失败", err)
 		utils.ResponseErr(c, err)

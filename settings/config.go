@@ -27,20 +27,20 @@ type GinConfig struct {
 
 // MysqlConfig  mysql配置
 type MysqlConfig struct {
-	Port     int    `mapstructure:"port"`
-	Host     string `mapstructure:"host"`
-	User     string `mapstructure:"user"`
-	Password string `mapstructure:"password"`
-	Dbname   string `mapstructure:"dbname"`
+	MysqlPort     int    `mapstructure:"port"`
+	MysqlHost     string `mapstructure:"host"`
+	MysqlUser     string `mapstructure:"user"`
+	MysqlPassword string `mapstructure:"password"`
+	MysqlDbname   string `mapstructure:"dbname"`
 }
 
 // RedisConfig redis配置
 type RedisConfig struct {
-	Host     string `mapstructure:"host"`
-	Password string `mapstructure:"password"`
-	Port     int    `mapstructure:"port"`
-	Db       int    `mapstructure:"db"`
-	PoolSize int    `mapstructure:"pool_size"`
+	RedisHost     string `mapstructure:"host"`
+	RedisPassword string `mapstructure:"password"`
+	RedisPort     int    `mapstructure:"port"`
+	RedisDb       int    `mapstructure:"db"`
+	RedisPoolSize int    `mapstructure:"pool_size"`
 }
 
 // AliyunConfig  阿里云短信配置
@@ -59,8 +59,8 @@ type ServiceConfig struct {
 }
 
 type EtcdConfig struct {
-	Host string `mapstructure:"host"`
-	Port int    `mapstructure:"port"`
+	EtcdHost string `mapstructure:"host"`
+	EtcdPort int    `mapstructure:"port"`
 }
 
 func Init() (err error) {

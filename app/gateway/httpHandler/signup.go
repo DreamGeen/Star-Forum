@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"star/app/gateway/rpc"
+	"star/app/gateway/client"
 	"star/models"
 	"star/proto/user/userPb"
 	"star/utils"
@@ -32,7 +32,7 @@ func SignupHandler(c *gin.Context) {
 		Phone:    u.Phone,
 		Captcha:  u.Captcha,
 	}
-	if _, err := rpc.UserService.Signup(c, req); err != nil {
+	if _, err := client.Signup(c, req); err != nil {
 		log.Println("注册失败", err)
 		utils.ResponseMessage(c, utils.CodeUserExists)
 		return
