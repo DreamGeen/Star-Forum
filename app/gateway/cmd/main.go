@@ -29,6 +29,7 @@ func main() {
 		web.Handler(router.Setup()), // 路由
 		web.Metadata(map[string]string{"protocol": "http"}),
 	)
+	//初始化并运行web服务
 	_ = webService.Init()
 	_ = webService.Run()
 }

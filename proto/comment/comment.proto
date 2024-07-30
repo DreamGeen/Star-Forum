@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package comment;
+
+option go_package = ".;commentPb";
+
+// 定义评论消息
+message Comment {
+  int64 comment_id = 1;   // 评论id
+  int64 post_id = 2;      // 帖子id
+  int64 user_id = 3;      // 用户id
+  string content = 4;     // 评论内容
+  int64 star = 5;         // 点赞数
+  int64 be_comment_id = 6;// 关联评论id
+  int64 created_at = 7;   // 创建时间
+}
+
+// 定义发布评论的请求
+message PostCommentRequest {
+  int64 post_id = 1;        // 帖子id
+  int64 user_id = 2;        // 用户id
+  string content = 3;       // 评论内容
+  int64 be_comment_id = 4;  // 关联评论id
+}
+
+// 定义发布评论的响应
+message PostCommentResponse {
+  bool success = 1;         // 是否成功
+  string message = 2;       // 信息
+}
+
+// 定义删除评论的请求
+message DeleteCommentRequest {
+  int64 comment_id = 1;    // 评论id
+}
+
+// 定义删除评论的响应
+message DeleteCommentResponse {
+  bool success = 1;         // 是否成功
+  string message = 2;       // 信息
+}
+
+// 定义获取评论列表的请求
+message GetCommentsRequest {
+  int64 post_id = 1;      // 帖子id
+  int64 page = 2;         // 页码
+  int64 page_size = 3;    // 页码
+}
+
+// 定义获取评论列表的响应
+message GetCommentsResponse {
+  repeated Comment comments = 1;  // 评论切片
+}
+
+// 定义点赞评论列表的请求
+message StarCommentRequest {
+  int64 comment_id = 1;      // 评论id
+}
+
+// 定义点赞评论列表的响应
+message StarCommentResponse {
+  bool success = 1;          // 是否成功
+  string message = 2;        // 信息
+}
+
+// 定义评论服务
+service CommentService {
+  // 发布评论服务
+  rpc PostComment (PostCommentRequest) returns (PostCommentResponse);
+  // 删除评论服务
+  rpc DeleteComment (DeleteCommentRequest) returns (DeleteCommentResponse);
+  // 获取评论服务
+  rpc GetComments (GetCommentsRequest) returns (GetCommentsResponse);
+  // 点赞评论服务
+  rpc StarComment(StarCommentRequest) returns (StarCommentResponse);
+}

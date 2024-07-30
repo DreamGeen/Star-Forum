@@ -33,7 +33,8 @@ func main() {
 		micro.Registry(etcdReg),      //etcd注册件
 	)
 	//初始化
-	microSevice.Init()
+	// 级别会比 NewService 更高，二选一即可
+	//microSevice.Init()
 	//服务注册
 	if err := sendSmsPb.RegisterSendMsgHandler(microSevice.Server(), service.GetSendSmsSrv()); err != nil {
 		panic(err)
