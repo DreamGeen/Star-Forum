@@ -31,5 +31,9 @@ func main() {
 	)
 	//初始化并运行web服务
 	_ = webService.Init()
-	_ = webService.Run()
+
+	// 如果出错，检查端口是否被占用
+	if err := webService.Run(); err != nil {
+		fmt.Println(err)
+	}
 }

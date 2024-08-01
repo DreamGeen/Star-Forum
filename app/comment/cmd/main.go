@@ -6,6 +6,7 @@ import (
 	"go-micro.dev/v4"
 	"go-micro.dev/v4/logger"
 	"go-micro.dev/v4/registry"
+	"star/utils"
 
 	"star/app/comment/dao/mysql"
 	"star/app/comment/dao/redis"
@@ -31,6 +32,11 @@ func main() {
 		logger.Fatal(err)
 	}
 	defer redis.Close()
+
+	//雪花算法初始化
+	if err := utils.Init(1); err != nil {
+		panic(err)
+	}
 
 	// etcd注册
 	etcdReg := etcd.NewRegistry(
