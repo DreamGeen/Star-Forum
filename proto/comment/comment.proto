@@ -12,7 +12,7 @@ message Comment {
   string content = 4;     // 评论内容
   int64 star = 5;         // 点赞数
   int64 be_comment_id = 6;// 关联评论id
-  int64 created_at = 7;   // 创建时间
+  string created_at = 7;   // 创建时间
 }
 
 // 定义发布评论的请求
@@ -44,7 +44,7 @@ message DeleteCommentResponse {
 message GetCommentsRequest {
   int64 post_id = 1;      // 帖子id
   int64 page = 2;         // 页码
-  int64 page_size = 3;    // 页码
+  int64 page_size = 3;    // 页码容量
 }
 
 // 定义获取评论列表的响应
