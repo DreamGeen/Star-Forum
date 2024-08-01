@@ -7,6 +7,7 @@ import (
 	"star/proto/comment/commentPb"
 )
 
+// StarComment 点赞评论
 func (s *CommentService) StarComment(ctx context.Context, req *commentPb.StarCommentRequest, rsp *commentPb.StarCommentResponse) error {
 	if err := redis.IncrementCommentStar(req.CommentId); err != nil {
 		rsp.Success = false

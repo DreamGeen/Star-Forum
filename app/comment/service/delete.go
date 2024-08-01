@@ -6,6 +6,7 @@ import (
 	"star/proto/comment/commentPb"
 )
 
+// DeleteComment 删除评论
 func (s *CommentService) DeleteComment(ctx context.Context, req *commentPb.DeleteCommentRequest, rsp *commentPb.DeleteCommentResponse) error {
 	if err := mysql.DeleteComment(req.CommentId); err != nil {
 		rsp.Success = false

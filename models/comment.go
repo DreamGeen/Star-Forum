@@ -9,5 +9,5 @@ type Comment struct {
 	Content     string `db:"content"`
 	Star        int64  `db:"star"`
 	Comment     int64  `db:"comment"`
-	BeCommentId *int64 `db:"beCommentId"`
+	BeCommentId int64  `db:"beCommentId"`
 }

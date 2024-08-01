@@ -6,6 +6,8 @@ import (
 	"star/proto/comment/commentPb"
 )
 
+// GetComments 获取一个帖子的评论
+// 根据页面获取，每一页多少个评论
 func (s *CommentService) GetComments(ctx context.Context, req *commentPb.GetCommentsRequest, rsp *commentPb.GetCommentsResponse) error {
 	comments, err := mysql.GetComments(req.PostId, req.Page, req.PageSize)
 	if err != nil {
@@ -18,7 +20,7 @@ func (s *CommentService) GetComments(ctx context.Context, req *commentPb.GetComm
 			UserId:      comment.UserId,
 			Content:     comment.Content,
 			Star:        comment.Star,
-			BeCommentId: *comment.BeCommentId,
+			BeCommentId: comment.BeCommentId,
 			CreatedAt:   comment.CreatedAt,
 		})
 	}
