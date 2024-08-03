@@ -62,6 +62,7 @@ message StarCommentRequest {
 message StarCommentResponse {
   bool success = 1;          // 是否成功
   string message = 2;        // 信息
+  int64 star = 3;            // 点赞数
 }
 
 // 定义评论服务

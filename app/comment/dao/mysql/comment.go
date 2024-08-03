@@ -186,7 +186,7 @@ func GetComments(postId int64, page int64, pageSize int64) ([]*models.Comment, e
 }
 
 // UpdateStar 点赞评论
-func UpdateStar(commentId int64, increment int) error {
+func UpdateStar(commentId int64, increment int8) error {
 	// 检查评论是否存在（即未被软删除）
 	var exists bool
 	checkStr := "SELECT EXISTS(SELECT 1 FROM postComment WHERE commentId = ? AND deletedAt IS NULL)"
@@ -207,4 +207,22 @@ func UpdateStar(commentId int64, increment int) error {
 	}
 
 	return nil
+}
+
+// GetStar 获取点赞数
+func GetStar(commentId int64) (int64, error) {
+	// 创建查询语句
+	sqlStr := "SELECT star FROM postComment WHERE commentId = ?"
+	// 执行查询
+	var starCount int64
+	err := db.QueryRow(sqlStr, commentId).Scan(&starCount)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, fmt.Errorf("评论ID: %d 不存在或已被删除", commentId)
+		}
+		return 0, fmt.Errorf("点赞数更新失败，err:%v", err)
+	}
+
+	// 返回点赞数
+	return starCount, nil
 }
