@@ -11,8 +11,9 @@ message Comment {
   int64 user_id = 3;      // 用户id
   string content = 4;     // 评论内容
   int64 star = 5;         // 点赞数
-  int64 be_comment_id = 6;// 关联评论id
-  string created_at = 7;   // 创建时间
+  int64 comment = 6;      //评论数
+  int64 be_comment_id = 7;// 关联评论id
+  string created_at = 8;  // 创建时间
 }
 
 // 定义发布评论的请求

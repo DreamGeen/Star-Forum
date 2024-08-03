@@ -10,6 +10,13 @@ import (
 )
 
 func PostComment(c *gin.Context) {
+	// 测试样例：127.0.0.1:9090/comment
+	//{
+	//	"post_id":1,
+	//	"user_id":123,
+	//	"content":"家人们",
+	//	"be_comment_id":1819704700270809088
+	//}
 	var req commentPb.PostCommentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -24,6 +31,7 @@ func PostComment(c *gin.Context) {
 }
 
 func DeleteComment(c *gin.Context) {
+	// 测试样例：127.0.0.1:9090/comment/1
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid comment ID"})
@@ -39,6 +47,7 @@ func DeleteComment(c *gin.Context) {
 }
 
 func GetComments(c *gin.Context) {
+	// 测试样例：127.0.0.1:9090/comments?postId=1
 	postId, err := strconv.ParseInt(c.Query("postId"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
@@ -62,6 +71,7 @@ func GetComments(c *gin.Context) {
 }
 
 func StarComment(c *gin.Context) {
+	// 测试样例：127.0.0.1:9090/comment/star/1
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid comment ID"})
