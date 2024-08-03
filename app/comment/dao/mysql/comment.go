@@ -7,6 +7,7 @@ import (
 	"star/utils"
 )
 
+// CreateComment 发布评论
 func CreateComment(comment *models.Comment) error {
 	// 开始事务
 	tx, err := db.Begin()
@@ -53,6 +54,7 @@ func CreateComment(comment *models.Comment) error {
 	return err
 }
 
+// DeleteComment 删除评论入口
 func DeleteComment(commentId int64) error {
 	// 开始事务
 	tx, err := db.Begin()
@@ -75,6 +77,7 @@ func DeleteComment(commentId int64) error {
 	return nil
 }
 
+// 使用递归删除评论，删除评论逻辑
 func deleteComments(tx *sql.Tx, commentId int64) error {
 	// 检查评论是否存在（即未被软删除）
 	var exists bool
@@ -122,6 +125,7 @@ func deleteComments(tx *sql.Tx, commentId int64) error {
 	return nil
 }
 
+// GetComments 获取评论
 func GetComments(postId int64, page int64, pageSize int64) ([]*models.Comment, error) {
 	// 检查帖子是否存在（即未被软删除）
 	var exists bool
@@ -181,6 +185,7 @@ func GetComments(postId int64, page int64, pageSize int64) ([]*models.Comment, e
 	return comments, nil
 }
 
+// UpdateStar 点赞评论
 func UpdateStar(commentId int64, increment int) error {
 	// 检查评论是否存在（即未被软删除）
 	var exists bool
