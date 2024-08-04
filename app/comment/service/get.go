@@ -10,7 +10,8 @@ import (
 // GetComments 获取一个帖子的评论
 // 根据页面获取，第几页，每一页多少个评论
 func (s *CommentService) GetComments(ctx context.Context, req *commentPb.GetCommentsRequest, rsp *commentPb.GetCommentsResponse) error {
-	comments, err := mysql.GetComments(req.PostId, req.Page, req.PageSize)
+	// 按照点赞数排序
+	comments, err := mysql.GetCommentsStar(req.PostId, req.Page, req.PageSize)
 	if err != nil {
 		return fmt.Errorf("GetComments err: %v", err)
 	}

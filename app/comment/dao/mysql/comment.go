@@ -182,8 +182,8 @@ func deleteComments(tx *sql.Tx, commentId int64, postId int64) error {
 	return nil
 }
 
-// GetComments 获取评论
-func GetComments(postId int64, page int64, pageSize int64) ([]*models.Comment, error) {
+// GetCommentsStar 获取评论（按照点赞数排序）
+func GetCommentsStar(postId int64, page int64, pageSize int64) ([]*models.Comment, error) {
 	// 检查帖子是否存在（即未被软删除）
 	var exists bool
 	checkStr := "SELECT EXISTS(SELECT 1 FROM post WHERE postId = ? AND deletedAt IS NULL)"
@@ -197,7 +197,7 @@ func GetComments(postId int64, page int64, pageSize int64) ([]*models.Comment, e
 	}
 
 	// 构造 SQL 查询语句，包含分页和软删除检查
-	sqlStr := "SELECT commentId, postId, userId, content, star, reply, beCommentId,createdAt FROM postComment WHERE postId = ? AND deletedAt IS NULL LIMIT ?, ?"
+	sqlStr := "SELECT commentId, postId, userId, content, star, reply, beCommentId,createdAt FROM postComment WHERE postId = ? AND deletedAt IS NULL ORDER BY star DESC LIMIT ?, ?"
 
 	// 执行 SQL 查询。
 	rows, err := db.Query(sqlStr, postId, (page-1)*pageSize, pageSize)
@@ -233,12 +233,12 @@ func GetComments(postId int64, page int64, pageSize int64) ([]*models.Comment, e
 		return nil, fmt.Errorf("迭代出错，err:%v", err)
 	}
 
-	if len(comments) == 0 {
-		// 如果没有找到任何有效评论，返回错误
-		return nil, fmt.Errorf("暂无评论")
-	}
+	//if len(comments) == 0 {
+	//	// 如果没有找到任何有效评论，返回错误
+	//	return nil, fmt.Errorf("暂无评论")
+	//}
 
-	// 返回查询到的评论列表和 nil 错误（表示没有错误发生）。
+	// 返回查询到的评论列表，如果为空，返回空评论
 	return comments, nil
 }
 
