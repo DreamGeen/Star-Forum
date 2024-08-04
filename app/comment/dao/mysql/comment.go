@@ -70,7 +70,7 @@ func CreateComment(comment *models.Comment) error {
 
 	// 如果存在父评论，则更新其回复数(+1)
 	if comment.BeCommentId != 0 {
-		err := updateReplyComment(tx, comment.CommentId, 1)
+		err := updateReplyComment(tx, comment.BeCommentId, 1)
 		if err != nil {
 			return err
 		}
