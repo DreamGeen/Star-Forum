@@ -42,9 +42,16 @@ func CreateComment(comment *models.Comment) error {
 	sqlStr := "INSERT INTO postComment (commentId, postId, userId, content, beCommentId) VALUES (?, ?, ?, ?, ?)"
 	_, err = db.Exec(sqlStr, commentId, comment.PostId, comment.UserId, comment.Content, comment.BeCommentId)
 
+	// 更新帖子评论数
+	updatePostComment := "UPDATE post SET comment = comment + 1 WHERE postId = ? AND deletedAt IS NULL"
+	_, err = db.Exec(updatePostComment, comment.PostId)
+	if err != nil {
+		return err
+	}
+
 	// 如果存在父评论，则更新其回复数
 	if comment.BeCommentId != 0 {
-		updateStr := "UPDATE postComment SET comment = comment + 1 WHERE commentId = ? AND deletedAt IS NULL"
+		updateStr := "UPDATE postComment SET reply = reply + 1 WHERE commentId = ? AND deletedAt IS NULL"
 		_, err = tx.Exec(updateStr, comment.BeCommentId)
 		if err != nil {
 			return err
@@ -140,7 +147,7 @@ func GetComments(postId int64, page int64, pageSize int64) ([]*models.Comment, e
 	}
 
 	// 构造 SQL 查询语句，包含分页和软删除检查
-	sqlStr := "SELECT commentId, postId, userId, content, star,comment, beCommentId,createdAt FROM postComment WHERE postId = ? AND deletedAt IS NULL LIMIT ?, ?"
+	sqlStr := "SELECT commentId, postId, userId, content, star, reply, beCommentId,createdAt FROM postComment WHERE postId = ? AND deletedAt IS NULL LIMIT ?, ?"
 
 	// 执行 SQL 查询。
 	rows, err := db.Query(sqlStr, postId, (page-1)*pageSize, pageSize)
@@ -161,7 +168,7 @@ func GetComments(postId int64, page int64, pageSize int64) ([]*models.Comment, e
 		var comment models.Comment
 
 		// 将当前行的数据扫描到 comment 实例中。
-		if err := rows.Scan(&comment.CommentId, &comment.PostId, &comment.UserId, &comment.Content, &comment.Star, &comment.Comment, &comment.BeCommentId, &comment.CreatedAt); err != nil {
+		if err := rows.Scan(&comment.CommentId, &comment.PostId, &comment.UserId, &comment.Content, &comment.Star, &comment.Reply, &comment.BeCommentId, &comment.CreatedAt); err != nil {
 			// 如果扫描失败，返回错误。
 			return nil, fmt.Errorf("调用Scan错误，err:%v", err)
 		}

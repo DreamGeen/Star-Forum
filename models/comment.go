@@ -8,6 +8,6 @@ type Comment struct {
 	UserId      int64  `db:"userId"`      // 用户id
 	Content     string `db:"content"`     // 评论内容
 	Star        int64  `db:"star"`        // 评论点赞数
-	Comment     int64  `db:"comment"`     // 评论回复数
+	Reply       int64  `db:"reply"`       // 评论回复数
 	BeCommentId int64  `db:"beCommentId"` // 关联评论id
 }

@@ -22,7 +22,7 @@ func (s *CommentService) GetComments(ctx context.Context, req *commentPb.GetComm
 			Content:     comment.Content,
 			Star:        comment.Star,
 			BeCommentId: comment.BeCommentId,
-			Comment:     comment.Comment,
+			Reply:       comment.Reply,
 			CreatedAt:   comment.CreatedAt,
 		})
 	}

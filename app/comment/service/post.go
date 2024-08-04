@@ -24,5 +24,8 @@ func (s *CommentService) PostComment(ctx context.Context, req *commentPb.PostCom
 	}
 	rsp.Success = true
 	rsp.Message = "评论发布成功"
+
+	// 返回帖子评论数（未完成）
+
 	return nil
 }

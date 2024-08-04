@@ -70,7 +70,7 @@ CREATE TABLE postComment
     userId      BIGINT(20)        NOT NULL COMMENT '用户id',
     content     VARCHAR(511)      NOT NULL COMMENT '评论内容',
     star        BIGINT   DEFAULT 0 COMMENT '点赞数',
-    comment     BIGINT   DEFAULT 0 COMMENT '评论数',
+    reply       BIGINT   DEFAULT 0 COMMENT '回复数',
     beCommentId BIGINT(20) DEFAULT NULL COMMENT '关联评论id'
 ) COMMENT '评论表';
 
