@@ -3,6 +3,7 @@ package mysql
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"star/models"
 	"star/utils"
 )
@@ -36,9 +37,15 @@ func CreateComment(comment *models.Comment) error {
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback() // 如果发生错误，则回滚事务
+			// 如果发生错误，则回滚事务
+			if err = tx.Rollback(); err != nil {
+				log.Println("发布评论回滚事务失败，err:", err)
+			}
 		} else {
-			tx.Commit() // 如果没有错误，则提交事务
+			// 如果没有错误，则提交事务
+			if err = tx.Commit(); err != nil {
+				log.Println("发布评论提交事务失败，err:", err)
+			}
 		}
 	}()
 
@@ -88,9 +95,15 @@ func DeleteComment(commentId int64) error {
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback() // 如果发生错误，则回滚事务
+			// 如果发生错误，则回滚事务
+			if err = tx.Rollback(); err != nil {
+				log.Println("删除评论事务回滚失败，err:", err)
+			}
 		} else {
-			tx.Commit() // 如果没有错误，则提交事务
+			// 如果没有错误，则提交事务
+			if err = tx.Commit(); err != nil {
+				log.Println("删除评论事务提交失败，err:", err)
+			}
 		}
 	}()
 
@@ -158,7 +171,11 @@ func deleteComments(tx *sql.Tx, commentId int64, postId int64) error {
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Println("删除评论rows.Close() err:", err)
+		}
+	}()
 
 	var childIds []int64
 	for rows.Next() {
@@ -206,24 +223,28 @@ func GetCommentsStar(postId int64, page int64, pageSize int64) ([]*models.Commen
 		return nil, fmt.Errorf("查询数据库错误，err:%v", err)
 	}
 
-	// 延迟关闭 rows，确保在函数退出前释放数据库连接。
-	defer rows.Close()
+	// 延迟关闭 rows，确保在函数退出前释放数据库连接
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Println("rows.Close() err:", err)
+		}
+	}()
 
-	// 初始化一个空的切片来存储查询到的评论。
+	// 初始化一个空的切片来存储查询到的评论
 	var comments []*models.Comment
 
 	// 遍历查询结果。
 	for rows.Next() {
-		// 创建一个 Comment 结构体实例来存储当前行的数据。
+		// 创建一个Comment结构体实例来存储当前行的数据
 		var comment models.Comment
 
-		// 将当前行的数据扫描到 comment 实例中。
+		// 将当前行的数据扫描到comment实例中
 		if err := rows.Scan(&comment.CommentId, &comment.PostId, &comment.UserId, &comment.Content, &comment.Star, &comment.Reply, &comment.BeCommentId, &comment.CreatedAt); err != nil {
 			// 如果扫描失败，返回错误。
 			return nil, fmt.Errorf("调用Scan错误，err:%v", err)
 		}
 
-		// 将 comment 实例的指针添加到 comments 切片中。
+		// 将comment实例的指针添加到comments切片中
 		comments = append(comments, &comment)
 	}
 
