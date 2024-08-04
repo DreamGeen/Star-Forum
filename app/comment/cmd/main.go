@@ -53,7 +53,7 @@ func main() {
 	// 初始化服务
 	// 级别会比 NewService 更高，作用一致，二选一即可
 	// 后续代码运行期，初始化才有使用的必要
-	//service.Init()
+	service.Init()
 
 	// 注册服务
 	if err := commentPb.RegisterCommentServiceHandler(service.Server(), new(commentService.CommentService)); err != nil {
