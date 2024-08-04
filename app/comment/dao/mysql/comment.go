@@ -7,6 +7,26 @@ import (
 	"star/utils"
 )
 
+// 更新帖子评论数
+func updatePostComment(tx *sql.Tx, postId, count int64) error {
+	sqlStr := "UPDATE post SET comment = comment + ? WHERE postId = ? "
+	_, err := tx.Exec(sqlStr, count, postId)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// 更新评论回复数
+func updateReplyComment(tx *sql.Tx, commentId, count int64) error {
+	updateStr := "UPDATE postComment SET reply = reply + ? WHERE commentId = ? "
+	_, err := tx.Exec(updateStr, count, commentId)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // CreateComment 发布评论
 func CreateComment(comment *models.Comment) error {
 	// 开始事务
@@ -42,17 +62,15 @@ func CreateComment(comment *models.Comment) error {
 	sqlStr := "INSERT INTO postComment (commentId, postId, userId, content, beCommentId) VALUES (?, ?, ?, ?, ?)"
 	_, err = db.Exec(sqlStr, commentId, comment.PostId, comment.UserId, comment.Content, comment.BeCommentId)
 
-	// 更新帖子评论数
-	updatePostComment := "UPDATE post SET comment = comment + 1 WHERE postId = ? AND deletedAt IS NULL"
-	_, err = db.Exec(updatePostComment, comment.PostId)
+	// 更新帖子评论数(+1)
+	err = updatePostComment(tx, comment.PostId, 1)
 	if err != nil {
 		return err
 	}
 
-	// 如果存在父评论，则更新其回复数
+	// 如果存在父评论，则更新其回复数(+1)
 	if comment.BeCommentId != 0 {
-		updateStr := "UPDATE postComment SET reply = reply + 1 WHERE commentId = ? AND deletedAt IS NULL"
-		_, err = tx.Exec(updateStr, comment.BeCommentId)
+		err := updateReplyComment(tx, comment.CommentId, 1)
 		if err != nil {
 			return err
 		}
@@ -76,8 +94,19 @@ func DeleteComment(commentId int64) error {
 		}
 	}()
 
+	// 查询对应的postId
+	var postId int64
+	err = tx.QueryRow("SELECT postId FROM postComment WHERE commentId = ? AND deletedAt IS NULL", commentId).Scan(&postId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// 评论不存在或已被删除
+			return fmt.Errorf("评论ID: %d 不存在或已被删除", commentId)
+		}
+		return err
+	}
+
 	// 递归删除评论
-	if err := deleteComments(tx, commentId); err != nil {
+	if err := deleteComments(tx, commentId, postId); err != nil {
 		return err
 	}
 
@@ -85,7 +114,7 @@ func DeleteComment(commentId int64) error {
 }
 
 // 使用递归删除评论，删除评论逻辑
-func deleteComments(tx *sql.Tx, commentId int64) error {
+func deleteComments(tx *sql.Tx, commentId int64, postId int64) error {
 	// 检查评论是否存在（即未被软删除）
 	var exists bool
 	checkStr := "SELECT EXISTS(SELECT 1 FROM postComment WHERE commentId = ? AND deletedAt IS NULL)"
@@ -103,8 +132,29 @@ func deleteComments(tx *sql.Tx, commentId int64) error {
 		return err
 	}
 
+	// 更新帖子评论数(-1)
+	err = updatePostComment(tx, postId, -1)
+	if err != nil {
+		return err
+	}
+
+	// 检查当前评论是否有父评论（即是否是子评论）
+	var beCommentId int64
+	err = tx.QueryRow("SELECT beCommentId FROM postComment WHERE commentId = ? ", commentId).Scan(&beCommentId)
+	if err != nil {
+		return err
+	}
+
+	// 如果有父评论，则更新父评论的回复数
+	if beCommentId != 0 {
+		err := updateReplyComment(tx, beCommentId, -1)
+		if err != nil {
+			return err
+		}
+	}
+
 	// 查找所有以当前commentId为beCommentId的评论（即直接回复）
-	rows, err := tx.Query("SELECT commentId FROM postComment WHERE beCommentId = ?", commentId)
+	rows, err := tx.Query("SELECT commentId FROM postComment WHERE beCommentId = ? AND deletedAt IS NULL", commentId)
 	if err != nil {
 		return err
 	}
@@ -124,7 +174,7 @@ func deleteComments(tx *sql.Tx, commentId int64) error {
 
 	// 递归删除所有子评论
 	for _, childId := range childIds {
-		if err := deleteComments(tx, childId); err != nil {
+		if err := deleteComments(tx, childId, postId); err != nil {
 			return err
 		}
 	}
