@@ -239,7 +239,7 @@ func GetCommentsStar(postId int64, page int64, pageSize int64) ([]*models.Commen
 	}
 
 	// 构造 SQL 查询语句，包含分页和软删除检查
-	sqlStr := "SELECT commentId, postId, userId, content, star, reply, beCommentId,createdAt FROM postComment WHERE postId = ? AND deletedAt IS NULL ORDER BY star DESC LIMIT ?, ?"
+	sqlStr := "SELECT commentId, postId, userId, content, star, reply, beCommentId,createdAt FROM postComment WHERE postId = ? AND deletedAt IS NULL ORDER BY star DESC, createdAt DESC LIMIT ?, ?"
 
 	// 执行 SQL 查询。
 	rows, err := db.Query(sqlStr, postId, (page-1)*pageSize, pageSize)
