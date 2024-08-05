@@ -3,9 +3,9 @@ package redis
 import (
 	"context"
 	"fmt"
+	"github.com/redis/go-redis/v9"
 	"star/settings"
 
-	"github.com/go-redis/redis/v8"
 	"go-micro.dev/v4/logger"
 )
 

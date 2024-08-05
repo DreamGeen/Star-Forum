@@ -9,19 +9,7 @@ import (
 
 // StarComment 点赞评论
 func (s *CommentService) StarComment(ctx context.Context, req *commentPb.StarCommentRequest, rsp *commentPb.StarCommentResponse) error {
-	// redis中点赞
-	if err := redis.IncrementCommentStar(req.CommentId); err != nil {
-		rsp.Success = false
-		rsp.Message = err.Error()
-		return err
-	}
-	// mysql中点赞
-	if err := mysql.UpdateStar(req.CommentId, 1); err != nil {
-		rsp.Success = false
-		rsp.Message = err.Error()
-		return err
-	}
-	// 从redis中获取更新后的点赞数
+	// 尝试从redis中获取点赞数
 	star, err := redis.GetCommentStar(req.CommentId)
 	// 缓存未命中或已过期
 	if err != nil || star == 0 {
@@ -38,8 +26,21 @@ func (s *CommentService) StarComment(ctx context.Context, req *commentPb.StarCom
 	} else {
 		rsp.Star = star
 	}
+	// redis中点赞
+	if err := redis.IncrementCommentStar(req.CommentId); err != nil {
+		rsp.Success = false
+		rsp.Message = err.Error()
+		return err
+	}
+	// mysql中点赞
+	if err := mysql.UpdateStar(req.CommentId, 1); err != nil {
+		rsp.Success = false
+		rsp.Message = err.Error()
+		return err
+	}
 
 	rsp.Success = true
 	rsp.Message = "点赞成功"
+	rsp.Star = rsp.Star + 1
 	return nil
 }
