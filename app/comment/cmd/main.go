@@ -65,8 +65,9 @@ func main() {
 	}
 	defer RabbitMQ.Close()
 
-	// 启动消费者，监听并处理点赞事件
+	// 启动RabbitMQ消费者
 	RabbitMQ.ConsumeStarEvents()
+	RabbitMQ.ConsumeCommentEvents()
 
 	// 创建服务
 	service := micro.NewService(

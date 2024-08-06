@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"go.uber.org/zap"
 	"star/app/comment/dao/mysql"
 	"star/app/comment/dao/redis"
@@ -33,12 +34,6 @@ func (s *CommentService) StarComment(ctx context.Context, req *commentPb.StarCom
 		rsp.Star = star
 	}
 
-	// 使用RabbitMQ异步存储至MySQL数据库中
-	// 生产者发布点赞消息
-	go func() {
-		RabbitMQ.PublishStarEvent(req.CommentId)
-	}()
-
 	// Redis中点赞
 	if err := redis.IncrementCommentStar(req.CommentId); err != nil {
 		utils.Logger.Error("Redis中点赞失败", zap.Error(err))
@@ -46,6 +41,18 @@ func (s *CommentService) StarComment(ctx context.Context, req *commentPb.StarCom
 		rsp.Message = err.Error()
 		return err
 	}
+
+	// 使用RabbitMQ异步存储至MySQL数据库中
+	// 生产者发布点赞消息
+	go func() {
+		if err := RabbitMQ.PublishStarEvent(req.CommentId); err != nil {
+			if err := redis.Client.Del(ctx, fmt.Sprintf("comment:star:%d", req.CommentId)).Err(); err != nil {
+				utils.Logger.Error("删除Redis中点赞数缓存失败", zap.Error(err))
+			}
+			rsp.Success = false
+			rsp.Message = err.Error()
+		}
+	}()
 
 	rsp.Success = true
 	rsp.Message = "点赞成功"
