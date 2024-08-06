@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"errors"
-	"log"
+	"go.uber.org/zap"
 
 	"star/app/user/dao/mysql"
 	"star/proto/user/userPb"
@@ -24,16 +24,16 @@ func (u *UserSrv) Signup(ctx context.Context, req *userPb.LSRequest, resp *userP
 	//检查用户名和手机号是否已经注册过
 	user := createUser(0, req.User, req.Password, req.Phone, "")
 	if err = mysql.QueryUserByUsername(user); !errors.Is(err, utils.ErrUserNotExists) {
-		log.Println("用户名已注册", user.Username, err)
+		utils.Logger.Error("用户名已注册", zap.String("userName", user.Username), zap.Error(err))
 		return
 	}
 	if err = mysql.QueryUserByPhone(user); !errors.Is(err, utils.ErrUserNotExists) {
-		log.Println("手机号已注册", user.Phone, err)
+		utils.Logger.Error("手机号已注册", zap.String("userPhone", user.Phone), zap.Error(err))
 		return
 	}
 	//对密码进行加密
 	if user.Password, err = utils.EncryptPassword(user.Password); err != nil {
-		log.Println("密码加密失败", err)
+		utils.Logger.Error("密码加密失败", zap.Error(err))
 		return err
 	}
 	//生成用户id
@@ -50,9 +50,9 @@ func (u *UserSrv) Signup(ctx context.Context, req *userPb.LSRequest, resp *userP
 	//暂定
 	//将用户信息储存到mysql
 	if err = mysql.InsertUser(user); err != nil {
-		log.Println("插入用户失败", err)
+		utils.Logger.Error("插入用户失败", zap.Error(err))
 		return
 	}
-	log.Println("用户注册成功", user.UserId, user.Username)
+	utils.Logger.Info("用户注册成功", zap.Int64("userId", user.UserId), zap.String("userName", user.Username))
 	return
 }

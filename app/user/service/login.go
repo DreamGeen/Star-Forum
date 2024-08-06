@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"log"
 	"regexp"
 	"strings"
 	"time"
@@ -93,7 +92,7 @@ func validatePassword(ctx context.Context, user *models.User, queryFunc func(*mo
 		redis.Set(ctx, cacheKey, user, 24*time.Hour)
 	}
 	if !utils.EqualsPassword(password, user.Password) {
-		log.Println("密码错误", user.Username, user.UserId)
+		utils.Logger.Error("密码错误", zap.String("userName", user.Username), zap.String("userPassword", user.Password))
 		return utils.ErrUserNotExists
 	}
 	return nil
@@ -122,7 +121,7 @@ func (u *UserSrv) LoginCaptcha(ctx context.Context, req *userPb.LSRequest, resp 
 	} else {
 		// 缓存中没有，从数据库中获取
 		if err := mysql.QueryUserByPhone(user); err != nil {
-			log.Println("该手机号未注册", user.Phone)
+			utils.Logger.Error("密码错误", zap.String("userPhone", user.Phone), zap.Error(err))
 			return err
 		}
 		// 将用户信息缓存到Redis中并设置超时时间
@@ -130,7 +129,7 @@ func (u *UserSrv) LoginCaptcha(ctx context.Context, req *userPb.LSRequest, resp 
 	}
 	accessToken, refreshToken, err := utils.GetToken(user)
 	if err != nil {
-		zap.L().Error("获取JWT令牌失败", zap.Error(err))
+		utils.Logger.Error("获取JWT令牌失败", zap.Error(err))
 		return err
 	}
 
