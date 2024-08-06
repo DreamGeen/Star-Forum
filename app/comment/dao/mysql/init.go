@@ -20,7 +20,6 @@ func Init() error {
 	var err error
 	db, err = sqlx.Connect("mysql", dsn)
 	if err != nil {
-		fmt.Println("连接mysql失败")
 		return err
 	}
 	db.SetMaxOpenConns(20)

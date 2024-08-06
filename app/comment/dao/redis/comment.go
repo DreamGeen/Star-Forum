@@ -12,7 +12,7 @@ import (
 // IncrementCommentStar 点赞评论
 func IncrementCommentStar(commentId int64) error {
 	key := fmt.Sprintf("comment:star:%d", commentId)
-	utils.Logger.Info("Redis点赞评论")
+	utils.Logger.Info("Redis点赞评论成功")
 	return Client.Incr(Ctx, key).Err()
 }
 

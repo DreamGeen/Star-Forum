@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"go.uber.org/zap"
 	"math/rand/v2"
 	"strconv"
 	"sync"
@@ -36,7 +36,7 @@ func GetSendSmsSrv() *SendSmsSrv {
 
 func (s *SendSmsSrv) HandleSendSms(ctx context.Context, req *sendSmsPb.SendRequest, resp *sendSmsPb.EmptySendResponse) error {
 	if err := sendMsg(req.Phone, req.TemplateCode); err != nil {
-		log.Println("发送短信失败", err)
+		utils.Logger.Error("发送短信失败", zap.Error(err))
 		return utils.ErrSendSmsFailed
 	}
 	return nil

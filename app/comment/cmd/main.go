@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 	"log"
 	"os"
+	"star/app/gateway/middleware/RabbitMQ"
 	"star/utils"
 
 	"star/app/comment/dao/mysql"
@@ -22,6 +23,7 @@ func main() {
 	if err := utils.InitLogger(); err != nil {
 		log.Fatalf("初始化日志失败: %v", err)
 	}
+
 	// 确保所有日志都被刷新
 	defer func() {
 		if err := utils.Logger.Sync(); err != nil {
@@ -57,6 +59,15 @@ func main() {
 		registry.Addrs(fmt.Sprintf("%s:%d", settings.Conf.EtcdConfig.EtcdHost, settings.Conf.EtcdConfig.EtcdPort)),
 	)
 
+	// 初始化RabbitMQ连接
+	if err := RabbitMQ.ConnectToRabbitMQ(); err != nil {
+		utils.Logger.Fatal("初始化RabbitMQ连接失败", zap.Error(err))
+	}
+	defer RabbitMQ.Close()
+
+	// 启动消费者，监听并处理点赞事件
+	RabbitMQ.ConsumeStarEvents()
+
 	// 创建服务
 	service := micro.NewService(
 		micro.Name("CommentService"),
@@ -67,7 +78,7 @@ func main() {
 	// 初始化服务
 	// 级别会比 NewService 更高，作用一致，二选一即可
 	// 后续代码运行期，初始化才有使用的必要
-	// service.Init()
+	//service.Init()
 
 	// 注册服务
 	if err := commentPb.RegisterCommentServiceHandler(service.Server(), new(commentService.CommentService)); err != nil {

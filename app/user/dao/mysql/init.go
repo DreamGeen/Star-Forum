@@ -21,8 +21,7 @@ func Init() (err error) {
 	)
 	db, err = sqlx.Connect("mysql", dsn)
 	if err != nil {
-		panic(err)
-		return
+		return err
 	}
 	return nil
 }

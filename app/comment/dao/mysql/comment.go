@@ -3,13 +3,14 @@ package mysql
 import (
 	"database/sql"
 	"fmt"
+	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 	"star/models"
 	"star/utils"
 )
 
 // 更新帖子评论数
-func updatePostComment(tx *sql.Tx, postId, count int64) error {
+func updatePostComment(tx *sqlx.Tx, postId, count int64) error {
 	sqlStr := "UPDATE post SET comment = comment + ? WHERE postId = ? "
 	_, err := tx.Exec(sqlStr, count, postId)
 	if err != nil {
@@ -20,7 +21,7 @@ func updatePostComment(tx *sql.Tx, postId, count int64) error {
 }
 
 // 更新评论回复数
-func updateReplyComment(tx *sql.Tx, commentId, count int64) error {
+func updateReplyComment(tx *sqlx.Tx, commentId, count int64) error {
 	updateStr := "UPDATE postComment SET reply = reply + ? WHERE commentId = ? "
 	_, err := tx.Exec(updateStr, count, commentId)
 	if err != nil {
@@ -34,7 +35,7 @@ func updateReplyComment(tx *sql.Tx, commentId, count int64) error {
 func CreateComment(comment *models.Comment) error {
 	utils.Logger.Info("开始发布评论")
 	// 开始事务
-	tx, err := db.Begin()
+	tx, err := db.Beginx()
 	if err != nil {
 		utils.Logger.Error("发布评论事务开启失败", zap.Error(err))
 		return err
@@ -104,7 +105,7 @@ func CreateComment(comment *models.Comment) error {
 func DeleteComment(commentId int64) error {
 	utils.Logger.Info("开始删除评论")
 	// 开始事务
-	tx, err := db.Begin()
+	tx, err := db.Beginx()
 	if err != nil {
 		utils.Logger.Error("开启事务失败", zap.Error(err))
 		return err
@@ -149,7 +150,7 @@ func DeleteComment(commentId int64) error {
 }
 
 // 使用递归删除评论，删除评论逻辑
-func deleteComments(tx *sql.Tx, commentId int64, postId int64) error {
+func deleteComments(tx *sqlx.Tx, commentId int64, postId int64) error {
 	// 检查评论是否存在（即未被软删除）
 	var exists bool
 	checkStr := "SELECT EXISTS(SELECT 1 FROM postComment WHERE commentId = ? AND deletedAt IS NULL)"
@@ -324,7 +325,7 @@ func UpdateStar(commentId int64, increment int8) error {
 // GetStar 获取点赞数
 func GetStar(commentId int64) (int64, error) {
 	// 创建查询语句
-	sqlStr := "SELECT star FROM postComment WHERE commentId = ?"
+	sqlStr := "SELECT star FROM postComment WHERE commentId = ? AND deletedAt IS NULL"
 	// 执行查询
 	var starCount int64
 	err := db.QueryRow(sqlStr, commentId).Scan(&starCount)

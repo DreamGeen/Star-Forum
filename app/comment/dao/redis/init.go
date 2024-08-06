@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	"star/settings"
-
-	"go-micro.dev/v4/logger"
 )
 
 var Client *redis.Client
@@ -21,10 +19,9 @@ func Init() error {
 
 	_, err := Client.Ping(Ctx).Result()
 	if err != nil {
-		fmt.Println("连接redis失败")
-		logger.Fatal(err)
+		return err
 	}
-	return err
+	return nil
 }
 
 func Close() {
