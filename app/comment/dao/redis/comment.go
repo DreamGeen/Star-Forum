@@ -1,12 +1,9 @@
 package redis
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
-	"star/models"
 	"star/utils"
 	"strconv"
 	"time"
@@ -57,28 +54,28 @@ func GetCommentStar(commentId int64) (int64, error) {
 	return starCount, nil
 }
 
-// CreateComment 存储新发布的评论到Redis
-func CreateComment(comment *models.Comment) error {
-	// 将评论对象序列化为JSON字符串
-	commentJSON, err := json.Marshal(comment)
-	if err != nil {
-		// 如果序列化失败，记录错误并返回
-		utils.Logger.Error("序列化评论失败", zap.Error(err))
-		return err
-	}
-
-	// 定义键名
-	key := fmt.Sprintf("comment:%d", comment.CommentId)
-
-	// 将评论存储到Redis
-	err = Client.Set(context.Background(), key, commentJSON, 0).Err()
-	if err != nil {
-		// 如果存储到Redis失败，记录错误并返回
-		utils.Logger.Error("存储评论到Redis失败", zap.Error(err))
-		return err
-	}
-
-	// 记录成功存储的事件
-	utils.Logger.Info("评论存储到Redis成功", zap.String("key", key))
-	return nil
-}
+//// CreateComment 存储新发布的评论到Redis
+//func CreateComment(comment *models.Comment) error {
+//	// 将评论对象序列化为JSON字符串
+//	commentJSON, err := json.Marshal(comment)
+//	if err != nil {
+//		// 如果序列化失败，记录错误并返回
+//		utils.Logger.Error("序列化评论失败", zap.Error(err))
+//		return err
+//	}
+//
+//	// 定义键名
+//	key := fmt.Sprintf("comment:%d", comment.CommentId)
+//
+//	// 将评论存储到Redis
+//	err = Client.Set(context.Background(), key, commentJSON, 0).Err()
+//	if err != nil {
+//		// 如果存储到Redis失败，记录错误并返回
+//		utils.Logger.Error("存储评论到Redis失败", zap.Error(err))
+//		return err
+//	}
+//
+//	// 记录成功存储的事件
+//	utils.Logger.Info("评论存储到Redis成功", zap.String("key", key))
+//	return nil
+//}

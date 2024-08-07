@@ -8,14 +8,14 @@ import (
 	"go.uber.org/zap"
 	"log"
 	"os"
-	"star/app/gateway/middleware/RabbitMQ"
-	"star/utils"
-
 	"star/app/comment/dao/mysql"
 	"star/app/comment/dao/redis"
 	commentService "star/app/comment/service"
+	"star/app/gateway/middleware/RabbitMQ"
 	"star/proto/comment/commentPb"
 	"star/settings"
+	"star/utils"
+	"time"
 )
 
 func main() {
@@ -65,9 +65,18 @@ func main() {
 	}
 	defer RabbitMQ.Close()
 
+	// 初始化heartbeatStop channel
+	heartbeatStop := make(chan struct{})
+	// 停止发布心跳消息
+	defer close(heartbeatStop)
+
+	// 发布心跳消息
+	go RabbitMQ.StartHeartbeatTicker("comment_star", 5*time.Minute, heartbeatStop)
+	//go RabbitMQ.StartHeartbeatTicker("comment_post", 5*time.Minute, heartbeatStop)
+
 	// 启动RabbitMQ消费者
 	RabbitMQ.ConsumeStarEvents()
-	RabbitMQ.ConsumeCommentEvents()
+	//RabbitMQ.ConsumeCommentEvents()
 
 	// 创建服务
 	service := micro.NewService(

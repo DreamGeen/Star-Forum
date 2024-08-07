@@ -23,6 +23,10 @@ func ConnectToRabbitMQ() error {
 		return err
 	}
 
+	if err := DeclareQueues(); err != nil {
+		return err
+	}
+
 	utils.Logger.Info("成功连接到 RabbitMQ")
 	return nil
 }
@@ -36,4 +40,48 @@ func Close() {
 			utils.Logger.Info("成功关闭 RabbitMQ 连接")
 		}
 	}
+}
+
+// DeclareQueues 在服务启动时声明所有需要的队列
+func DeclareQueues() error {
+	if rabbitMQConn == nil {
+		err := fmt.Errorf("RabbitMQ 连接未初始化")
+		utils.Logger.Error("队列声明失败", zap.Error(err))
+		return err
+	}
+
+	ch, err := rabbitMQConn.Channel()
+	if err != nil {
+		utils.Logger.Error("创建通道失败", zap.Error(err))
+		return err
+	}
+	defer func() {
+		_ = ch.Close()
+	}()
+
+	_, err = ch.QueueDeclare(
+		"comment_star", // 队列名称
+		true,           // 是否持久化
+		false,          // 是否在消费者断开连接时自动删除队列
+		false,          // 是否独占队列
+		false,          // 是否非阻塞模式
+		nil,            // 其他参数
+	)
+	if err != nil {
+		return err
+	}
+
+	//_, err = ch.QueueDeclare(
+	//	"comment_post", // 队列名称
+	//	true,           // 是否持久化
+	//	false,          // 是否在消费者断开连接时自动删除队列
+	//	false,          // 是否独占队列
+	//	false,          // 是否非阻塞模式
+	//	nil,            // 其他参数
+	//)
+	//if err != nil {
+	//	return err
+	//}
+
+	return nil
 }

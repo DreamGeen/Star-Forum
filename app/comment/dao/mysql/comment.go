@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
@@ -22,8 +23,8 @@ func updatePostComment(tx *sqlx.Tx, postId, count int64) error {
 
 // 更新评论回复数
 func updateReplyComment(tx *sqlx.Tx, commentId, count int64) error {
-	updateStr := "UPDATE postComment SET reply = reply + ? WHERE commentId = ? "
-	_, err := tx.Exec(updateStr, count, commentId)
+	sqlStr := "UPDATE postComment SET reply = reply + ? WHERE commentId = ? "
+	_, err := tx.Exec(sqlStr, count, commentId)
 	if err != nil {
 		utils.Logger.Error("更新评论回复数失败", zap.Error(err), zap.Int64("commentId", commentId))
 		return err
@@ -54,26 +55,52 @@ func CreateComment(comment *models.Comment) error {
 		}
 	}()
 
+	// 检查一下帖子是否存在
+	var exists bool
+	sqlStr := "SELECT EXISTS(SELECT 1 FROM post WHERE postId = ? AND deletedAt IS NULL)"
+	if err = tx.Get(&exists, sqlStr, comment.PostId); err != nil {
+		utils.Logger.Error("评论发布:检查帖子是否存在失败", zap.Error(err))
+		return err
+	}
+	if !exists {
+		// 如果帖子不存在
+		utils.Logger.Error("评论发布:帖子不存在", zap.Int64("postId", comment.PostId))
+		return fmt.Errorf("帖子ID: %d 不存在或已被删除", comment.PostId)
+	}
+
 	// 判断是否有父评论
 	if comment.BeCommentId != 0 {
-		// 检查评论是否存在（即未被软删除）
+		// 检查评论是否存在
 		var exists bool
-		checkStr := "SELECT EXISTS(SELECT 1 FROM postComment WHERE commentId = ? AND deletedAt IS NULL)"
-		err := db.QueryRow(checkStr, comment.BeCommentId).Scan(&exists)
+		sqlStr := "SELECT EXISTS(SELECT 1 FROM postComment WHERE commentId = ? AND deletedAt IS NULL)"
+		err := tx.Get(&exists, sqlStr, comment.BeCommentId)
 		if err != nil {
 			utils.Logger.Error("评论发布:检查是否有父评论失败", zap.Error(err))
 			return err
 		}
 		if !exists {
-			// 如果评论不存在（可能已经被软删除）
+			// 如果评论不存在
 			utils.Logger.Error("评论发布:尝试关联的父评论ID不存在或已被删除", zap.Int64("beCommentId", comment.BeCommentId))
 			return fmt.Errorf("关联评论ID: %d 不存在或已被删除", comment.BeCommentId)
+		} else {
+			// 检查父评论的帖子ID是否与当前评论的帖子ID相同
+			var parentPostId int64
+			sqlStr := "SELECT postId FROM postComment WHERE commentId = ? AND deletedAt IS NULL"
+			err := tx.Get(&parentPostId, sqlStr, comment.BeCommentId)
+			if err != nil {
+				utils.Logger.Error("评论发布:检查父评论的帖子ID失败", zap.Error(err))
+				return err
+			}
+			if parentPostId != comment.PostId {
+				utils.Logger.Error("评论发布:父评论的帖子ID与当前评论的帖子ID不一致", zap.Int64("parentPostId", parentPostId), zap.Int64("commentPostId", comment.PostId))
+				return fmt.Errorf("父评论的帖子ID: %d 与当前评论的帖子ID: %d 不一致", parentPostId, comment.PostId)
+			}
 		}
 	}
 
 	// 雪花算法生成评论id
 	commentId := utils.GetID()
-	sqlStr := "INSERT INTO postComment (commentId, postId, userId, content, beCommentId) VALUES (?, ?, ?, ?, ?)"
+	sqlStr = "INSERT INTO postComment (commentId, postId, userId, content, beCommentId) VALUES (?, ?, ?, ?, ?)"
 	_, err = db.Exec(sqlStr, commentId, comment.PostId, comment.UserId, comment.Content, comment.BeCommentId)
 	if err != nil {
 		utils.Logger.Error("评论发布:评论插入数据库失败", zap.Error(err))
@@ -126,9 +153,10 @@ func DeleteComment(commentId int64) error {
 
 	// 查询对应的postId
 	var postId int64
-	err = tx.QueryRow("SELECT postId FROM postComment WHERE commentId = ? AND deletedAt IS NULL", commentId).Scan(&postId)
+	sqlStr := "SELECT postId FROM postComment WHERE commentId = ? AND deletedAt IS NULL"
+	err = db.Get(&postId, sqlStr, commentId)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			// 评论不存在或已被删除
 			utils.Logger.Error("尝试删除的评论ID不存在或已被删除", zap.Int64("commentId", commentId))
 			return fmt.Errorf("评论ID: %d 不存在或已被删除", commentId)
@@ -153,8 +181,8 @@ func DeleteComment(commentId int64) error {
 func deleteComments(tx *sqlx.Tx, commentId int64, postId int64) error {
 	// 检查评论是否存在（即未被软删除）
 	var exists bool
-	checkStr := "SELECT EXISTS(SELECT 1 FROM postComment WHERE commentId = ? AND deletedAt IS NULL)"
-	err := tx.QueryRow(checkStr, commentId).Scan(&exists)
+	sqlStr := "SELECT EXISTS(SELECT 1 FROM postComment WHERE commentId = ? AND deletedAt IS NULL)"
+	err := tx.Get(&exists, sqlStr, commentId)
 	if err != nil {
 		return err
 	}
@@ -176,7 +204,8 @@ func deleteComments(tx *sqlx.Tx, commentId int64, postId int64) error {
 
 	// 检查当前评论是否有父评论（即是否是子评论）
 	var beCommentId int64
-	err = tx.QueryRow("SELECT beCommentId FROM postComment WHERE commentId = ? ", commentId).Scan(&beCommentId)
+	sqlStr = "SELECT beCommentId FROM postComment WHERE commentId = ?"
+	err = tx.Get(&beCommentId, sqlStr, commentId)
 	if err != nil {
 		return err
 	}
@@ -190,7 +219,8 @@ func deleteComments(tx *sqlx.Tx, commentId int64, postId int64) error {
 	}
 
 	// 查找所有以当前commentId为beCommentId的评论（即直接回复）
-	rows, err := tx.Query("SELECT commentId FROM postComment WHERE beCommentId = ? AND deletedAt IS NULL", commentId)
+	sqlStr = "SELECT commentId FROM postComment WHERE beCommentId = ? AND deletedAt IS NULL"
+	rows, err := tx.Query(sqlStr, commentId)
 	if err != nil {
 		return err
 	}
@@ -227,8 +257,8 @@ func GetCommentsStar(postId int64, page int64, pageSize int64) ([]*models.Commen
 	utils.Logger.Info("开始获取评论")
 	// 检查帖子是否存在（即未被软删除）
 	var exists bool
-	checkStr := "SELECT EXISTS(SELECT 1 FROM post WHERE postId = ? AND deletedAt IS NULL)"
-	err := db.QueryRow(checkStr, postId).Scan(&exists)
+	sqlStr := "SELECT EXISTS(SELECT 1 FROM post WHERE postId = ? AND deletedAt IS NULL)"
+	err := db.Get(&exists, sqlStr, postId)
 	if err != nil {
 		utils.Logger.Error("评论获取:帖子查询失败", zap.Error(err))
 		return nil, fmt.Errorf("帖子查询失败")
@@ -239,10 +269,10 @@ func GetCommentsStar(postId int64, page int64, pageSize int64) ([]*models.Commen
 		return nil, fmt.Errorf("帖子ID: %d 不存在或已被删除", postId)
 	}
 
-	// 构造 SQL 查询语句，包含分页和软删除检查
-	sqlStr := "SELECT commentId, postId, userId, content, star, reply, beCommentId, createdAt FROM postComment WHERE postId = ? AND deletedAt IS NULL ORDER BY star DESC, createdAt DESC LIMIT ?, ?"
+	// 构造SQL查询语句，包含分页和软删除检查
+	sqlStr = "SELECT commentId, postId, userId, content, star, reply, beCommentId, createdAt FROM postComment WHERE postId = ? AND deletedAt IS NULL ORDER BY star DESC, createdAt DESC LIMIT ?, ?"
 
-	// 执行 SQL 查询。
+	// 执行SQL查询
 	rows, err := db.Query(sqlStr, postId, (page-1)*pageSize, pageSize)
 	if err != nil {
 		// 如果查询失败，返回错误。
@@ -250,7 +280,7 @@ func GetCommentsStar(postId int64, page int64, pageSize int64) ([]*models.Commen
 		return nil, fmt.Errorf("查询数据库错误，err:%v", err)
 	}
 
-	// 延迟关闭 rows，确保在函数退出前释放数据库连接
+	// 延迟关闭rows，确保在函数退出前释放数据库连接
 	defer func() {
 		if err := rows.Close(); err != nil {
 			utils.Logger.Error("评论获取:关闭rows时出错", zap.Error(err))
@@ -298,8 +328,8 @@ func UpdateStar(commentId int64, increment int8) error {
 	utils.Logger.Info("开始点赞评论")
 	// 检查评论是否存在（即未被软删除）
 	var exists bool
-	checkStr := "SELECT EXISTS(SELECT 1 FROM postComment WHERE commentId = ? AND deletedAt IS NULL)"
-	err := db.QueryRow(checkStr, commentId).Scan(&exists)
+	sqlStr := "SELECT EXISTS(SELECT 1 FROM postComment WHERE commentId = ? AND deletedAt IS NULL)"
+	err := db.Get(&exists, sqlStr, commentId)
 	if err != nil {
 		utils.Logger.Error("评论点赞:检查评论存在时出错", zap.Error(err))
 		return err
@@ -328,9 +358,9 @@ func GetStar(commentId int64) (int64, error) {
 	sqlStr := "SELECT star FROM postComment WHERE commentId = ? AND deletedAt IS NULL"
 	// 执行查询
 	var starCount int64
-	err := db.QueryRow(sqlStr, commentId).Scan(&starCount)
+	err := db.Get(&starCount, sqlStr, commentId)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			utils.Logger.Error("获取点赞数:评论不存在或已被删除", zap.Int64("commentId", commentId))
 			return 0, fmt.Errorf("评论ID: %d 不存在或已被删除", commentId)
 		}

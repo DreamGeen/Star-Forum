@@ -14,6 +14,7 @@ message Comment {
   int64 reply = 6;        // 回复数
   int64 be_comment_id = 7;// 关联评论id
   string created_at = 8;  // 创建时间
+  repeated Comment child_comments = 9; // 子评论列表
 }
 
 // 定义发布评论的请求
@@ -45,7 +46,7 @@ message DeleteCommentResponse {
 message GetCommentsRequest {
   int64 post_id = 1;      // 帖子id
   int64 page = 2;         // 页码
-  int64 page_size = 3;    // 页码容量
+  int64 page_size = 3;    // 页容量
 }
 
 // 定义获取评论列表的响应
