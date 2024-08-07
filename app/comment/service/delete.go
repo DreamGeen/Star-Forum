@@ -17,12 +17,12 @@ func (s *CommentService) DeleteComment(ctx context.Context, req *commentPb.Delet
 		rsp.Message = err.Error()
 		return err
 	}
-	// 清除Redis缓存中与该评论相关的点赞数和回复数
+	// 清除对应评论的Redis缓存
 	if err := redis.Client.Del(ctx, fmt.Sprintf("comment:star:%d", req.CommentId)).Err(); err != nil {
 		utils.Logger.Error("删除Redis中点赞数缓存失败", zap.Error(err))
 	}
-	if err := redis.Client.Del(ctx, fmt.Sprintf("comment:reply:%d", req.CommentId)).Err(); err != nil {
-		utils.Logger.Error("删除Redis中回复数缓存失败", zap.Error(err))
+	if err := redis.Client.Del(ctx, fmt.Sprintf("comment:%d", req.CommentId)).Err(); err != nil {
+		utils.Logger.Error("删除Redis中评论缓存失败", zap.Error(err))
 	}
 	rsp.Success = true
 	rsp.Message = "评论删除成功"

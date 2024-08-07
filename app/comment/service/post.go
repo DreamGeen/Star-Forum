@@ -34,7 +34,7 @@ func (s *CommentService) PostComment(ctx context.Context, req *commentPb.PostCom
 	go func() {
 		if err := RabbitMQ.PublishCommentEvent(comment); err != nil {
 			if err := redis.Client.Del(ctx, fmt.Sprintf("comment:%d", comment.CommentId)).Err(); err != nil {
-				utils.Logger.Error("删除Redis中回复数缓存失败", zap.Error(err))
+				utils.Logger.Error("删除Redis中评论缓存失败", zap.Error(err))
 			}
 			rsp.Success = false
 			rsp.Message = err.Error()
