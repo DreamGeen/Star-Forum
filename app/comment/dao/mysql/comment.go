@@ -272,10 +272,6 @@ func deleteComments(tx *sqlx.Tx, commentId int64, postId int64) error {
 // GetCommentsStar 获取评论（按照点赞数排序）
 func GetCommentsStar(postId int64, page int64, pageSize int64) ([]*models.Comment, error) {
 	logger.CommentLogger.Info("开始获取评论")
-	// 检查帖子是否存在
-	if err := CheckPost(postId); err != nil {
-		return nil, err
-	}
 
 	// 执行SQL查询，包含分页和软删除检查
 	rows, err := db.Query(queryComments, postId, (page-1)*pageSize, pageSize)
