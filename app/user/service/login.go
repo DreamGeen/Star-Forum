@@ -27,7 +27,7 @@ func (u *UserSrv) LoginPassword(ctx context.Context, req *userPb.LSRequest, resp
 	}
 	accessToken, refreshToken, err := utils.GetToken(user)
 	if err != nil {
-		zap.L().Error("获取JWT令牌失败", zap.Error(err))
+		utils.Logger.Error("获取JWT令牌失败", zap.Error(err))
 		return err
 	}
 	resp.Token = &userPb.LoginResponse_Token{
