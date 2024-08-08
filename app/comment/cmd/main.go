@@ -72,10 +72,12 @@ func main() {
 
 	// 发布心跳消息
 	go RabbitMQ.StartHeartbeatTicker("comment_star", 5*time.Minute, heartbeatStop)
+	go RabbitMQ.StartHeartbeatTicker("comment_delete", 5*time.Minute, heartbeatStop)
 	//go RabbitMQ.StartHeartbeatTicker("comment_post", 5*time.Minute, heartbeatStop)
 
 	// 启动RabbitMQ消费者
 	RabbitMQ.ConsumeStarEvents()
+	RabbitMQ.ConsumeDeleteCommentEvents()
 	//RabbitMQ.ConsumeCommentEvents()
 
 	// 创建服务

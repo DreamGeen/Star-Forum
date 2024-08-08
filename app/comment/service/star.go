@@ -13,6 +13,11 @@ import (
 
 // StarComment 点赞评论
 func (s *CommentService) StarComment(ctx context.Context, req *commentPb.StarCommentRequest, rsp *commentPb.StarCommentResponse) error {
+	// 检查评论是否存在
+	if err := mysql.CheckComment(req.CommentId); err != nil {
+		utils.Logger.Error("点赞评论: 检查评论是否存在返回错误", zap.Error(err))
+		return err
+	}
 	// 尝试从Redis中获取点赞数
 	star, err := redis.GetCommentStar(req.CommentId)
 	// 缓存未命中或已过期
@@ -44,15 +49,14 @@ func (s *CommentService) StarComment(ctx context.Context, req *commentPb.StarCom
 
 	// 使用RabbitMQ异步存储至MySQL数据库中
 	// 生产者发布点赞消息
-	go func() {
-		if err := RabbitMQ.PublishStarEvent(req.CommentId); err != nil {
-			if err := redis.Client.Del(ctx, fmt.Sprintf("comment:star:%d", req.CommentId)).Err(); err != nil {
-				utils.Logger.Error("删除Redis中点赞数缓存失败", zap.Error(err))
-			}
-			rsp.Success = false
-			rsp.Message = err.Error()
+	if err := RabbitMQ.PublishStarEvent(req.CommentId); err != nil {
+		if err := redis.Client.Del(ctx, fmt.Sprintf("comment:star:%d", req.CommentId)).Err(); err != nil {
+			utils.Logger.Error("删除Redis中点赞数缓存失败", zap.Error(err))
 		}
-	}()
+		rsp.Success = false
+		rsp.Message = err.Error()
+		return err
+	}
 
 	rsp.Success = true
 	rsp.Message = "点赞成功"

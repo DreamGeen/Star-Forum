@@ -44,6 +44,44 @@ func PublishStarEvent(commentId int64) error {
 	return nil
 }
 
+// PublishDeleteEvent 发布评论删除事件到RabbitMQ
+func PublishDeleteEvent(commentId int64) error {
+	if rabbitMQConn == nil {
+		err := fmt.Errorf("RabbitMQ 连接未初始化")
+		utils.Logger.Error("MQ评论删除生产通道获取失败", zap.Error(err))
+		return err
+	}
+
+	ch, err := rabbitMQConn.Channel()
+	if err != nil {
+		utils.Logger.Error("MQ评论删除生产通道获取失败", zap.Error(err))
+		return err
+	}
+	defer func() {
+		_ = ch.Close()
+	}()
+
+	// 构造消息体
+	body := fmt.Sprintf("delete-comment:%d", commentId)
+	err = ch.Publish(
+		"",               // 交换机
+		"comment_delete", // 路由键，使用队列名称
+		false,            // 是否强制模式
+		false,            // 是否立即模式
+		amqp091.Publishing{
+			ContentType:  "text/plain",
+			DeliveryMode: amqp091.Persistent, // 持久化消息
+			Body:         []byte(body),
+		})
+	if err != nil {
+		utils.Logger.Error("MQ发布删除评论消息失败", zap.Error(err))
+		return err
+	}
+
+	utils.Logger.Info("成功发布删除评论消息", zap.String("message", body))
+	return nil
+}
+
 // SendHeartbeat 发送心跳消息到RabbitMQ的特定队列
 func SendHeartbeat(queueName string) error {
 	if rabbitMQConn == nil {

@@ -19,9 +19,9 @@ func IncrementCommentStar(commentId int64) error {
 // SetCommentStar 设置评论的点赞数到Redis，并设置过期时间为24小时
 func SetCommentStar(commentId int64, starCount int64) error {
 	key := fmt.Sprintf("comment:star:%d", commentId)
-	// 24小时转换为秒
+	// 过期时间24小时
 	overtime := 24 * time.Hour
-	// 使用SetEX设置键值对和过期时间
+	// 设置键值对和过期时间
 	utils.Logger.Info("设置评论的点赞数到Redis，并设置过期时间为24小时")
 	return Client.Set(Ctx, key, starCount, overtime).Err()
 }

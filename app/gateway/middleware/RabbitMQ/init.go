@@ -71,6 +71,18 @@ func DeclareQueues() error {
 		return err
 	}
 
+	_, err = ch.QueueDeclare(
+		"comment_delete", // 队列名称
+		true,             // 是否持久化
+		false,            // 是否在消费者断开连接时自动删除队列
+		false,            // 是否独占队列
+		false,            // 是否非阻塞模式
+		nil,              // 其他参数
+	)
+	if err != nil {
+		return err
+	}
+
 	//_, err = ch.QueueDeclare(
 	//	"comment_post", // 队列名称
 	//	true,           // 是否持久化
