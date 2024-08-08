@@ -6,9 +6,9 @@ import (
 	"go.uber.org/zap"
 	"star/app/comment/dao/mysql"
 	"star/app/comment/dao/redis"
-	"star/app/gateway/middleware/RabbitMQ"
+	logger "star/app/comment/logger"
+	"star/app/comment/rabbitMQ"
 	"star/proto/comment/commentPb"
-	"star/utils"
 )
 
 // DeleteComment 删除评论
@@ -20,12 +20,12 @@ func (s *CommentService) DeleteComment(ctx context.Context, req *commentPb.Delet
 
 	// 清除对应评论的Redis缓存
 	if err := redis.Client.Del(ctx, fmt.Sprintf("comment:star:%d", req.CommentId)).Err(); err != nil {
-		utils.Logger.Error("删除Redis中点赞数缓存失败", zap.Error(err))
+		logger.CommentLogger.Error("删除Redis中点赞数缓存失败", zap.Error(err))
 	}
 
 	// 使用RabbitMQ异步在MySQL数据库中删除
 	// 生产者发布删除消息
-	if err := RabbitMQ.PublishDeleteEvent(req.CommentId); err != nil {
+	if err := rabbitMQ.PublishDeleteEvent(req.CommentId); err != nil {
 		return err
 	}
 	rsp.Success = true

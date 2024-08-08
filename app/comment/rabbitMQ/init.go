@@ -1,11 +1,11 @@
-package RabbitMQ
+package rabbitMQ
 
 import (
 	"fmt"
 	"github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
+	logger "star/app/comment/logger"
 	"star/settings"
-	"star/utils"
 )
 
 var rabbitMQConn *amqp091.Connection
@@ -13,13 +13,13 @@ var rabbitMQConn *amqp091.Connection
 func ConnectToRabbitMQ() error {
 	// 格式化连接字符串
 	connStr := fmt.Sprintf("amqp://%s:%s@%s:%d/", settings.Conf.RabbitMQConfig.Username, settings.Conf.RabbitMQConfig.Password, settings.Conf.RabbitMQConfig.Host, settings.Conf.RabbitMQConfig.Port)
-	utils.Logger.Info("尝试连接到 RabbitMQ", zap.String("connStr", connStr))
+	logger.CommentLogger.Info("尝试连接到 rabbitMQ", zap.String("connStr", connStr))
 
 	// 尝试连接
 	var err error
 	rabbitMQConn, err = amqp091.Dial(connStr)
 	if err != nil {
-		utils.Logger.Error("连接到 RabbitMQ 失败", zap.Error(err))
+		logger.CommentLogger.Error("连接到 rabbitMQ 失败", zap.Error(err))
 		return err
 	}
 
@@ -27,7 +27,7 @@ func ConnectToRabbitMQ() error {
 		return err
 	}
 
-	utils.Logger.Info("成功连接到 RabbitMQ")
+	logger.CommentLogger.Info("成功连接到 rabbitMQ")
 	return nil
 }
 
@@ -35,9 +35,9 @@ func Close() {
 	if rabbitMQConn != nil {
 		err := rabbitMQConn.Close()
 		if err != nil {
-			utils.Logger.Error("关闭 RabbitMQ 连接失败", zap.Error(err))
+			logger.CommentLogger.Error("关闭 rabbitMQ 连接失败", zap.Error(err))
 		} else {
-			utils.Logger.Info("成功关闭 RabbitMQ 连接")
+			logger.CommentLogger.Info("成功关闭 rabbitMQ 连接")
 		}
 	}
 }
@@ -45,14 +45,14 @@ func Close() {
 // DeclareQueues 在服务启动时声明所有需要的队列
 func DeclareQueues() error {
 	if rabbitMQConn == nil {
-		err := fmt.Errorf("RabbitMQ 连接未初始化")
-		utils.Logger.Error("队列声明失败", zap.Error(err))
+		err := fmt.Errorf("rabbitMQ 连接未初始化")
+		logger.CommentLogger.Error("队列声明失败", zap.Error(err))
 		return err
 	}
 
 	ch, err := rabbitMQConn.Channel()
 	if err != nil {
-		utils.Logger.Error("创建通道失败", zap.Error(err))
+		logger.CommentLogger.Error("创建通道失败", zap.Error(err))
 		return err
 	}
 	defer func() {

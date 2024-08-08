@@ -1,11 +1,9 @@
 package httpHandler
 
 import (
-	"log"
-
 	"github.com/gin-gonic/gin"
-
 	"star/app/gateway/client"
+	logger "star/app/gateway/logger"
 	"star/proto/sendSms/sendSmsPb"
 	"star/settings"
 	"star/utils"
@@ -39,7 +37,7 @@ func sendHandler(c *gin.Context, templateCode string) {
 func validatePhone(c *gin.Context, templateCode string) (*sendSmsPb.SendRequest, error) {
 	phone := c.Query("phone")
 	if phone == "" {
-		log.Println("手机号为空")
+		logger.GatewayLogger.Error("手机号为空")
 		return nil, utils.ErrPhoneEmpty
 	}
 	return &sendSmsPb.SendRequest{

@@ -1,9 +1,9 @@
 package httpHandler
 
 import (
-	"log"
-
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+	logger "star/app/gateway/logger"
 
 	"star/app/gateway/client"
 	"star/models"
@@ -16,7 +16,7 @@ func LoginHandler(c *gin.Context) {
 	//参数校验
 	u := new(models.LoginPassword)
 	if err := c.ShouldBindJSON(u); err != nil {
-		log.Println("参数错误", err)
+		logger.GatewayLogger.Error("参数错误", zap.Error(err))
 		utils.ResponseMessage(c, utils.CodeInvalidParam)
 		return
 	}
@@ -27,7 +27,7 @@ func LoginHandler(c *gin.Context) {
 	}
 	resp, err := client.LoginPassword(c, req)
 	if err != nil {
-		log.Println("登录失败", err)
+		logger.GatewayLogger.Error("登录失败", zap.Error(err))
 		utils.ResponseErr(c, err)
 		return
 	}
@@ -40,7 +40,7 @@ func LoginWithCaptcha(c *gin.Context) {
 	//参数校验
 	u := new(models.LoginCaptcha)
 	if err := c.ShouldBindJSON(u); err != nil {
-		log.Println("参数错误", err)
+		logger.GatewayLogger.Error("参数错误", zap.Error(err))
 		utils.ResponseMessage(c, utils.CodeInvalidParam)
 		return
 	}
@@ -51,7 +51,7 @@ func LoginWithCaptcha(c *gin.Context) {
 	}
 	resp, err := client.LoginCaptcha(c, req)
 	if err != nil {
-		log.Println("登录失败", err)
+		logger.GatewayLogger.Error("登录失败", zap.Error(err))
 		utils.ResponseErr(c, err)
 		return
 	}

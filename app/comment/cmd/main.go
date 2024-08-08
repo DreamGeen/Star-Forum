@@ -10,8 +10,9 @@ import (
 	"os"
 	"star/app/comment/dao/mysql"
 	"star/app/comment/dao/redis"
+	logger "star/app/comment/logger"
+	"star/app/comment/rabbitMQ"
 	commentService "star/app/comment/service"
-	"star/app/gateway/middleware/RabbitMQ"
 	"star/proto/comment/commentPb"
 	"star/settings"
 	"star/utils"
@@ -20,13 +21,13 @@ import (
 
 func main() {
 	// 初始化zap
-	if err := utils.InitLogger(); err != nil {
+	if err := logger.InitCommentLogger(); err != nil {
 		log.Fatalf("初始化日志失败: %v", err)
 	}
 
 	// 确保所有日志都被刷新
 	defer func() {
-		if err := utils.Logger.Sync(); err != nil {
+		if err := logger.CommentLogger.Sync(); err != nil {
 			// 如果日志刷新失败，打印到标准错误输出
 			_, _ = fmt.Fprintf(os.Stderr, "日志刷新失败: %v\n", err)
 		}
@@ -34,24 +35,24 @@ func main() {
 
 	// 初始化配置
 	if err := settings.Init(); err != nil {
-		utils.Logger.Fatal("初始化配置失败", zap.Error(err))
+		logger.CommentLogger.Fatal("初始化配置失败", zap.Error(err))
 	}
 
 	// 初始化MySQL
 	if err := mysql.Init(); err != nil {
-		utils.Logger.Fatal("初始化MySQL失败", zap.Error(err))
+		logger.CommentLogger.Fatal("初始化MySQL失败", zap.Error(err))
 	}
 	defer mysql.Close()
 
 	// 初始化Redis
 	if err := redis.Init(); err != nil {
-		utils.Logger.Fatal("初始化Redis失败", zap.Error(err))
+		logger.CommentLogger.Fatal("初始化Redis失败", zap.Error(err))
 	}
 	defer redis.Close()
 
 	//雪花算法初始化
 	if err := utils.Init(1); err != nil {
-		utils.Logger.Fatal("初始化雪花算法失败", zap.Error(err))
+		logger.CommentLogger.Fatal("初始化雪花算法失败", zap.Error(err))
 	}
 
 	// etcd注册
@@ -60,10 +61,10 @@ func main() {
 	)
 
 	// 初始化RabbitMQ连接
-	if err := RabbitMQ.ConnectToRabbitMQ(); err != nil {
-		utils.Logger.Fatal("初始化RabbitMQ连接失败", zap.Error(err))
+	if err := rabbitMQ.ConnectToRabbitMQ(); err != nil {
+		logger.CommentLogger.Fatal("初始化RabbitMQ连接失败", zap.Error(err))
 	}
-	defer RabbitMQ.Close()
+	defer rabbitMQ.Close()
 
 	// 初始化heartbeatStop channel
 	heartbeatStop := make(chan struct{})
@@ -71,13 +72,13 @@ func main() {
 	defer close(heartbeatStop)
 
 	// 发布心跳消息
-	go RabbitMQ.StartHeartbeatTicker("comment_star", 5*time.Minute, heartbeatStop)
-	go RabbitMQ.StartHeartbeatTicker("comment_delete", 5*time.Minute, heartbeatStop)
-	//go RabbitMQ.StartHeartbeatTicker("comment_post", 5*time.Minute, heartbeatStop)
+	go rabbitMQ.StartHeartbeatTicker("comment_star", 5*time.Minute, heartbeatStop)
+	go rabbitMQ.StartHeartbeatTicker("comment_delete", 5*time.Minute, heartbeatStop)
+	//go rabbitMQ.StartHeartbeatTicker("comment_post", 5*time.Minute, heartbeatStop)
 
 	// 启动RabbitMQ消费者
-	RabbitMQ.ConsumeStarEvents()
-	RabbitMQ.ConsumeDeleteCommentEvents()
+	rabbitMQ.ConsumeStarEvents()
+	rabbitMQ.ConsumeDeleteCommentEvents()
 	//RabbitMQ.ConsumeCommentEvents()
 
 	// 创建服务
@@ -94,11 +95,11 @@ func main() {
 
 	// 注册服务
 	if err := commentPb.RegisterCommentServiceHandler(service.Server(), new(commentService.CommentService)); err != nil {
-		utils.Logger.Fatal("注册服务失败", zap.Error(err))
+		logger.CommentLogger.Fatal("注册服务失败", zap.Error(err))
 	}
 
 	// 运行服务
 	if err := service.Run(); err != nil {
-		utils.Logger.Fatal("运行服务失败", zap.Error(err))
+		logger.CommentLogger.Fatal("运行服务失败", zap.Error(err))
 	}
 }

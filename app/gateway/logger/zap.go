@@ -7,35 +7,37 @@ import (
 	"sync"
 )
 
-// Logger 在其它包中使用utils.Logger即可调用
-var Logger *zap.Logger
+// GatewayLogger 网关服务日志
+var GatewayLogger *zap.Logger
+
 var once sync.Once // 确保Logger只被初始化一次
 
-func InitLogger() error {
-	var err error
+// InitGatewayLogger 网关服务日志初始化
+func InitGatewayLogger() error {
 	once.Do(func() {
 		encoder := getEncoder()
 
-		// star.log记录全量日志
-		logF, err := os.Create("D:\\Star-Forum\\Star-Forum\\log\\star.log")
+		// gateway.log记录全量日志
+		logF, err := os.Create("D:\\Star-Forum\\Star-Forum\\app\\gateway\\logger\\log\\gateway.log")
 		if err != nil {
 			return
 		}
 		c1 := zapcore.NewCore(encoder, zapcore.AddSync(logF), zapcore.DebugLevel)
 
-		// star.err.log记录ERROR级别的日志
-		errF, err := os.Create("D:\\Star-Forum\\Star-Forum\\log\\star.err.log")
+		// gateway.err.log记录ERROR级别的日志
+		errF, err := os.Create("D:\\Star-Forum\\Star-Forum\\app\\gateway\\logger\\log\\gateway.err.log")
 		if err != nil {
 			return
 		}
 		c2 := zapcore.NewCore(encoder, zapcore.AddSync(errF), zap.ErrorLevel)
 
 		core := zapcore.NewTee(c1, c2)
-		Logger = zap.New(core, zap.AddCaller())
+		GatewayLogger = zap.New(core, zap.AddCaller())
 	})
-	return err
+	return nil
 }
 
+// 设置日志的格式
 func getEncoder() zapcore.Encoder {
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder

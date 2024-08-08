@@ -1,7 +1,8 @@
 package httpHandler
 
 import (
-	"log"
+	"go.uber.org/zap"
+	logger "star/app/gateway/logger"
 	"unicode"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +17,7 @@ func SignupHandler(c *gin.Context) {
 	//参数校验
 	u := new(models.SignupUser)
 	if err := c.ShouldBindJSON(u); err != nil {
-		log.Println("invalid param", err)
+		logger.GatewayLogger.Error("invalid param", zap.Error(err))
 		utils.ResponseMessage(c, utils.CodeInvalidParam)
 		return
 	}
@@ -33,7 +34,7 @@ func SignupHandler(c *gin.Context) {
 		Captcha:  u.Captcha,
 	}
 	if _, err := client.Signup(c, req); err != nil {
-		log.Println("注册失败", err)
+		logger.GatewayLogger.Error("注册失败", zap.Error(err))
 		utils.ResponseMessage(c, utils.CodeUserExists)
 		return
 	}

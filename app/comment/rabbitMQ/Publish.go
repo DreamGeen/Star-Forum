@@ -1,24 +1,24 @@
-package RabbitMQ
+package rabbitMQ
 
 import (
 	"fmt"
 	"github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
-	"star/utils"
+	logger "star/app/comment/logger"
 	"time"
 )
 
 // PublishStarEvent 发布点赞消息
 func PublishStarEvent(commentId int64) error {
 	if rabbitMQConn == nil {
-		err := fmt.Errorf("RabbitMQ 连接未初始化")
-		utils.Logger.Error("MQ点赞生产通道获取失败", zap.Error(err))
+		err := fmt.Errorf("rabbitMQ 连接未初始化")
+		logger.CommentLogger.Error("MQ点赞生产通道获取失败", zap.Error(err))
 		return err
 	}
 
 	ch, err := rabbitMQConn.Channel()
 	if err != nil {
-		utils.Logger.Error("MQ点赞生产通道获取失败", zap.Error(err))
+		logger.CommentLogger.Error("MQ点赞生产通道获取失败", zap.Error(err))
 		return err
 	}
 	defer func() {
@@ -36,25 +36,25 @@ func PublishStarEvent(commentId int64) error {
 			Body:        []byte(body),
 		})
 	if err != nil {
-		utils.Logger.Error("MQ发布点赞消息失败", zap.Error(err))
+		logger.CommentLogger.Error("MQ发布点赞消息失败", zap.Error(err))
 		return err
 	}
 
-	utils.Logger.Info("成功发布点赞消息", zap.String("message", body))
+	logger.CommentLogger.Info("成功发布点赞消息", zap.String("message", body))
 	return nil
 }
 
 // PublishDeleteEvent 发布评论删除事件到RabbitMQ
 func PublishDeleteEvent(commentId int64) error {
 	if rabbitMQConn == nil {
-		err := fmt.Errorf("RabbitMQ 连接未初始化")
-		utils.Logger.Error("MQ评论删除生产通道获取失败", zap.Error(err))
+		err := fmt.Errorf("rabbitMQ 连接未初始化")
+		logger.CommentLogger.Error("MQ评论删除生产通道获取失败", zap.Error(err))
 		return err
 	}
 
 	ch, err := rabbitMQConn.Channel()
 	if err != nil {
-		utils.Logger.Error("MQ评论删除生产通道获取失败", zap.Error(err))
+		logger.CommentLogger.Error("MQ评论删除生产通道获取失败", zap.Error(err))
 		return err
 	}
 	defer func() {
@@ -74,25 +74,25 @@ func PublishDeleteEvent(commentId int64) error {
 			Body:         []byte(body),
 		})
 	if err != nil {
-		utils.Logger.Error("MQ发布删除评论消息失败", zap.Error(err))
+		logger.CommentLogger.Error("MQ发布删除评论消息失败", zap.Error(err))
 		return err
 	}
 
-	utils.Logger.Info("成功发布删除评论消息", zap.String("message", body))
+	logger.CommentLogger.Info("成功发布删除评论消息", zap.String("message", body))
 	return nil
 }
 
 // SendHeartbeat 发送心跳消息到RabbitMQ的特定队列
 func SendHeartbeat(queueName string) error {
 	if rabbitMQConn == nil {
-		err := fmt.Errorf("RabbitMQ 连接未初始化")
-		utils.Logger.Error("发送心跳消息失败", zap.Error(err))
+		err := fmt.Errorf("rabbitMQ 连接未初始化")
+		logger.CommentLogger.Error("发送心跳消息失败", zap.Error(err))
 		return err
 	}
 
 	ch, err := rabbitMQConn.Channel()
 	if err != nil {
-		utils.Logger.Error("创建通道失败", zap.Error(err))
+		logger.CommentLogger.Error("创建通道失败", zap.Error(err))
 		return err
 	}
 	defer func() {
@@ -109,7 +109,7 @@ func SendHeartbeat(queueName string) error {
 		nil,       // 其他参数
 	)
 	if err != nil {
-		utils.Logger.Error("声明队列失败", zap.Error(err))
+		logger.CommentLogger.Error("声明队列失败", zap.Error(err))
 		return err
 	}
 
@@ -126,11 +126,11 @@ func SendHeartbeat(queueName string) error {
 			Body:        body,
 		})
 	if err != nil {
-		utils.Logger.Error("发送心跳消息失败", zap.Error(err))
+		logger.CommentLogger.Error("发送心跳消息失败", zap.Error(err))
 		return err
 	}
 
-	utils.Logger.Info("成功发送心跳消息")
+	logger.CommentLogger.Info("成功发送心跳消息")
 	return nil
 }
 
@@ -154,14 +154,14 @@ func StartHeartbeatTicker(queueName string, interval time.Duration, stopCh <-cha
 //// PublishCommentEvent 发布评论事件到RabbitMQ
 //func PublishCommentEvent(comment *models.Comment) error {
 //	if rabbitMQConn == nil {
-//		err := fmt.Errorf("RabbitMQ 连接未初始化")
-//		utils.Logger.Error("MQ评论生产通道获取失败", zap.Error(err))
+//		err := fmt.Errorf("rabbitMQ 连接未初始化")
+//		logger.CommentLogger.Error("MQ评论生产通道获取失败", zap.Error(err))
 //		return err
 //	}
 //
 //	ch, err := rabbitMQConn.Channel()
 //	if err != nil {
-//		utils.Logger.Error("MQ评论生产通道获取失败", zap.Error(err))
+//		logger.CommentLogger.Error("MQ评论生产通道获取失败", zap.Error(err))
 //		return err
 //	}
 //	defer func() {
@@ -170,7 +170,7 @@ func StartHeartbeatTicker(queueName string, interval time.Duration, stopCh <-cha
 //
 //	body, err := json.Marshal(comment)
 //	if err != nil {
-//		utils.Logger.Error("序列化评论事件失败", zap.Error(err))
+//		logger.CommentLogger.Error("序列化评论事件失败", zap.Error(err))
 //		return err
 //	}
 //
@@ -184,10 +184,10 @@ func StartHeartbeatTicker(queueName string, interval time.Duration, stopCh <-cha
 //			Body:        body,
 //		})
 //	if err != nil {
-//		utils.Logger.Error("MQ发布评论事件失败", zap.Error(err))
+//		logger.CommentLogger.Error("MQ发布评论事件失败", zap.Error(err))
 //		return err
 //	}
 //
-//	utils.Logger.Info("成功发布评论事件", zap.String("message", string(body)))
+//	logger.CommentLogger.Info("成功发布评论事件", zap.String("message", string(body)))
 //	return nil
 //}
