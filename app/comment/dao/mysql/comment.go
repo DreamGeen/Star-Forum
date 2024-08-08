@@ -14,6 +14,7 @@ import (
 const (
 	checkComment       = "SELECT EXISTS(SELECT 1 FROM postComment WHERE commentId = ? AND deletedAt IS NULL)"
 	checkPost          = "SELECT EXISTS(SELECT 1 FROM post WHERE postId = ? AND deletedAt IS NULL)"
+	checkUser          = "SELECT EXISTS(SELECT 1 FROM user WHERE userId = ? AND deletedAt IS NULL)"
 	updatePostComment  = "UPDATE post SET comment = comment + ? WHERE postId = ? "
 	updateReplyComment = "UPDATE postComment SET reply = reply + ? WHERE commentId = ? "
 	queryPostId        = "SELECT postId FROM postComment WHERE commentId = ? AND deletedAt IS NULL"
@@ -21,7 +22,8 @@ const (
 	deleteComment      = "UPDATE postComment SET deletedAt = CURRENT_TIMESTAMP WHERE commentId = ?"
 	queryBeCommentId   = "SELECT beCommentId FROM postComment WHERE commentId = ?"
 	queryReply         = "SELECT commentId FROM postComment WHERE beCommentId = ? AND deletedAt IS NULL"
-	queryComments      = "SELECT commentId, postId, userId, content, star, reply, beCommentId, createdAt FROM postComment WHERE postId = ? AND deletedAt IS NULL ORDER BY star DESC, createdAt DESC LIMIT ?, ?"
+	queryCommentsStar  = "SELECT commentId, postId, userId, content, star, reply, beCommentId, createdAt FROM postComment WHERE postId = ? AND deletedAt IS NULL ORDER BY star DESC, createdAt DESC"
+	queryCommentsTime  = "SELECT commentId, postId, userId, content, star, reply, beCommentId, createdAt FROM postComment WHERE postId = ? AND deletedAt IS NULL ORDER BY createdAt DESC, star DESC"
 	starComment        = "UPDATE postComment SET star = star + ? WHERE commentId = ?"
 	queryStar          = "SELECT star FROM postComment WHERE commentId = ? AND deletedAt IS NULL"
 )
@@ -54,6 +56,22 @@ func CheckPost(postId int64) error {
 		// 如果帖子不存在
 		logger.CommentLogger.Error("帖子不存在或已被删除", zap.Int64("postId", postId))
 		return fmt.Errorf("帖子ID: %d 不存在或已被删除", postId)
+	}
+	return nil
+}
+
+// CheckUser 检查用户是否存在
+func CheckUser(userId int64) error {
+	// 检查一下用户是否存在
+	var exists bool
+	if err := db.Get(&exists, checkUser, userId); err != nil {
+		logger.CommentLogger.Error("检查用户是否存在失败", zap.Error(err))
+		return err
+	}
+	if !exists {
+		// 如果用户不存在
+		logger.CommentLogger.Error("用户不存在或已被删除", zap.Int64("userId", userId))
+		return fmt.Errorf("用户ID: %d 不存在或已被删除", userId)
 	}
 	return nil
 }
@@ -103,6 +121,11 @@ func CreateComment(comment *models.Comment) error {
 
 	// 检查帖子是否存在
 	if err := CheckPost(comment.PostId); err != nil {
+		return err
+	}
+
+	// 检查用户是否存在
+	if err := CheckUser(comment.UserId); err != nil {
 		return err
 	}
 
@@ -270,11 +293,11 @@ func deleteComments(tx *sqlx.Tx, commentId int64, postId int64) error {
 }
 
 // GetCommentsStar 获取评论（按照点赞数排序）
-func GetCommentsStar(postId int64, page int64, pageSize int64) ([]*models.Comment, error) {
+func GetCommentsStar(postId int64) ([]*models.Comment, error) {
 	logger.CommentLogger.Info("开始获取评论")
 
 	// 执行SQL查询，包含分页和软删除检查
-	rows, err := db.Query(queryComments, postId, (page-1)*pageSize, pageSize)
+	rows, err := db.Query(queryCommentsStar, postId)
 	if err != nil {
 		// 如果查询失败，返回错误。
 		logger.CommentLogger.Error("评论获取:查询数据库错误", zap.Error(err))
@@ -291,7 +314,7 @@ func GetCommentsStar(postId int64, page int64, pageSize int64) ([]*models.Commen
 	// 初始化一个空的切片来存储查询到的评论
 	var comments []*models.Comment
 
-	// 遍历查询结果。
+	// 遍历查询结果
 	for rows.Next() {
 		// 创建一个Comment结构体实例来存储当前行的数据
 		var comment models.Comment

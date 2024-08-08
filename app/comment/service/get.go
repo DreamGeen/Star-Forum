@@ -17,7 +17,7 @@ func (s *CommentService) GetComments(ctx context.Context, req *commentPb.GetComm
 	}
 
 	// 按照点赞数排序，获取所有评论
-	comments, err := mysql.GetCommentsStar(req.PostId, req.Page, req.PageSize)
+	comments, err := mysql.GetCommentsStar(req.PostId)
 	if err != nil {
 		return fmt.Errorf("获取评论失败, err: %v", err)
 	}

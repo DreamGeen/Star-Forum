@@ -23,6 +23,11 @@ const (
 	CodeNotLogin
 	CodeSendSmsFailed
 	CodePhoneEmpty
+
+	CodePostCommentSuccess
+	CodeDeleteCommentSuccess
+	CodeGetCommentsSuccess
+	CodeStarCommentSuccess
 )
 
 // 定义错误
@@ -57,6 +62,11 @@ var codeMsg = map[ResponseCode]string{
 	CodeNotLogin:                "请登录",
 	CodeSendSmsFailed:           "发送短信失败",
 	CodePhoneEmpty:              "手机号为空",
+
+	CodePostCommentSuccess:   "评论发布成功",
+	CodeDeleteCommentSuccess: "评论删除成功",
+	CodeGetCommentsSuccess:   "评论获取成功",
+	CodeStarCommentSuccess:   "点赞评论成功",
 }
 
 var errMsg = map[error]ResponseCode{

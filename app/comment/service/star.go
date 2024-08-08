@@ -24,8 +24,6 @@ func (s *CommentService) StarComment(ctx context.Context, req *commentPb.StarCom
 	if err != nil || star == 0 {
 		// 如果Redis获取失败或返回0，则从MySQL中获取点赞数
 		if dbStar, err := mysql.GetStar(req.CommentId); err != nil {
-			rsp.Success = false
-			rsp.Message = err.Error()
 			return err
 		} else {
 			// 将从MySQL获取的点赞数更新回Redis缓存
@@ -42,8 +40,6 @@ func (s *CommentService) StarComment(ctx context.Context, req *commentPb.StarCom
 	// Redis中点赞
 	if err := redis.IncrementCommentStar(req.CommentId); err != nil {
 		logger.CommentLogger.Error("Redis中点赞失败", zap.Error(err))
-		rsp.Success = false
-		rsp.Message = err.Error()
 		return err
 	}
 
@@ -53,13 +49,9 @@ func (s *CommentService) StarComment(ctx context.Context, req *commentPb.StarCom
 		if err := redis.Client.Del(ctx, fmt.Sprintf("comment:star:%d", req.CommentId)).Err(); err != nil {
 			logger.CommentLogger.Error("删除Redis中点赞数缓存失败", zap.Error(err))
 		}
-		rsp.Success = false
-		rsp.Message = err.Error()
 		return err
 	}
 
-	rsp.Success = true
-	rsp.Message = "点赞成功"
 	rsp.Star = rsp.Star + 1
 	return nil
 }

@@ -28,7 +28,6 @@ func (s *CommentService) DeleteComment(ctx context.Context, req *commentPb.Delet
 	if err := rabbitMQ.PublishDeleteEvent(req.CommentId); err != nil {
 		return err
 	}
-	rsp.Success = true
-	rsp.Message = "评论删除成功"
+
 	return nil
 }

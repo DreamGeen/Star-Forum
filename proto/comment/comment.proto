@@ -6,47 +6,42 @@ option go_package = ".;commentPb";
 
 // 定义评论消息
 message Comment {
-  int64 comment_id = 1;   // 评论id
-  int64 post_id = 2;      // 帖子id
-  int64 user_id = 3;      // 用户id
+  int64 commentId = 1;   // 评论id
+  int64 postId = 2;      // 帖子id
+  int64 userId = 3;      // 用户id
   string content = 4;     // 评论内容
   int64 star = 5;         // 点赞数
   int64 reply = 6;        // 回复数
-  int64 be_comment_id = 7;// 关联评论id
-  string created_at = 8;  // 创建时间
-  repeated Comment child_comments = 9; // 子评论列表
+  int64 beCommentId = 7;// 关联评论id
+  string createdAt = 8;  // 创建时间
+  repeated Comment childComments = 9; // 子评论列表
 }
 
 // 定义发布评论的请求
 message PostCommentRequest {
-  int64 post_id = 1;        // 帖子id
-  int64 user_id = 2;        // 用户id
+  int64 postId = 1;        // 帖子id
+  int64 userId = 2;        // 用户id
   string content = 3;       // 评论内容
-  int64 be_comment_id = 4;  // 关联评论id
+  int64 beCommentId = 4;  // 关联评论id
 }
 
 // 定义发布评论的响应
 message PostCommentResponse {
-  bool success = 1;         // 是否成功
-  string message = 2;       // 信息
+  string content = 1;     //评论内容
 }
 
 // 定义删除评论的请求
 message DeleteCommentRequest {
-  int64 comment_id = 1;    // 评论id
+  int64 commentId = 1;    // 评论id
 }
 
 // 定义删除评论的响应
 message DeleteCommentResponse {
-  bool success = 1;         // 是否成功
-  string message = 2;       // 信息
 }
 
 // 定义获取评论列表的请求
 message GetCommentsRequest {
-  int64 post_id = 1;      // 帖子id
-  int64 page = 2;         // 页码
-  int64 page_size = 3;    // 页容量
+  int64 postId = 1;      // 帖子id
 }
 
 // 定义获取评论列表的响应
@@ -56,14 +51,12 @@ message GetCommentsResponse {
 
 // 定义点赞评论列表的请求
 message StarCommentRequest {
-  int64 comment_id = 1;      // 评论id
+  int64 commentId = 1;      // 评论id
 }
 
 // 定义点赞评论列表的响应
 message StarCommentResponse {
-  bool success = 1;          // 是否成功
-  string message = 2;        // 信息
-  int64 star = 3;            // 点赞数
+  int64 star = 1;            // 点赞数
 }
 
 // 定义评论服务

@@ -19,12 +19,9 @@ func (s *CommentService) PostComment(ctx context.Context, req *commentPb.PostCom
 	}
 	// 存储评论
 	if err := mysql.CreateComment(comment); err != nil {
-		rsp.Success = false
-		rsp.Message = err.Error()
 		return err
 	}
-	rsp.Success = true
-	rsp.Message = "评论发布成功"
+	rsp.Content = comment.Content
 
 	return nil
 }

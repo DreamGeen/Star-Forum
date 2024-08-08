@@ -43,10 +43,10 @@ func ResponseErr(c *gin.Context, err error) {
 }
 
 // ResponseErrWithData 可以设置补充响应信息(传错误)
-func ResponseErrWithData(c *gin.Context, err error) {
+func ResponseErrWithData(c *gin.Context, err error, data interface{}) {
 	c.JSON(http.StatusOK, &Response{
 		Code: getCode(err),
 		Msg:  err.Error(),
-		Data: nil,
+		Data: data,
 	})
 }
