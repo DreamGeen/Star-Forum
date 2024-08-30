@@ -4,9 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"log"
-
-	"star/models"
-	"star/utils"
+	"star/app/models"
+	"star/constant/str"
 )
 
 const (
@@ -35,14 +34,14 @@ func QueryUserByEmail(u *models.User) error {
 func queryUser(u *models.User, sqlStr string, args ...interface{}) error {
 	err := db.Get(u, sqlStr, args...)
 	if err != nil {
+		log.Println("查询用户信息失败", err)
 		if errors.Is(err, sql.ErrNoRows) {
-			return utils.ErrUserNotExists
+			return str.ErrUserNotExists
 		}
-		log.Println(err)
-		return utils.ErrServiceBusy
+		return err
 	}
 	if u.DeleteTime != nil {
-		return utils.ErrUserNotExists
+		return str.ErrUserNotExists
 	}
 	return nil
 }
@@ -53,7 +52,7 @@ func InsertUser(u *models.User) error {
 	transaction, err := db.Beginx()
 	if err != nil {
 		log.Println("开启事务失败", err)
-		return utils.ErrServiceBusy
+		return err
 	}
 	_, err = db.Exec(insertUserLoginSQL, u.UserId, u.Username, u.Password, u.Phone)
 	if err != nil {
@@ -61,7 +60,7 @@ func InsertUser(u *models.User) error {
 			log.Println("回滚事务失败", err)
 		}
 		log.Println("插入数据失败", err)
-		return utils.ErrServiceBusy
+		return err
 	}
 	_, err = db.Exec(insertUserSQL, u.UserId, u.Username, u.Img, u.Signature)
 	if err != nil {
@@ -69,15 +68,15 @@ func InsertUser(u *models.User) error {
 			log.Println("回滚事务失败", err)
 		}
 		log.Println("插入数据失败", err)
-		return utils.ErrServiceBusy
+		return err
 	}
 	if err := transaction.Commit(); err != nil {
 		if err := transaction.Rollback(); err != nil {
 			log.Println("回滚事务失败", err)
-			return utils.ErrServiceBusy
+			return err
 		}
 		log.Println("插入数据失败", err)
-		return utils.ErrServiceBusy
+		return err
 	}
 	return nil
 }

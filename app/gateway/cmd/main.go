@@ -2,14 +2,13 @@ package main
 
 import (
 	"fmt"
-	"star/app/gateway/client"
-
 	"github.com/go-micro/plugins/v4/registry/etcd"
 	"go-micro.dev/v4/registry"
 	"go-micro.dev/v4/web"
+	"star/app/gateway/client"
+	"star/constant/settings"
 
 	"star/app/gateway/router"
-	"star/settings"
 )
 
 func main() {

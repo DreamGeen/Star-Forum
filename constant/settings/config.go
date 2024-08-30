@@ -12,12 +12,13 @@ var Conf = new(AppConfig)
 
 // AppConfig  网站配置
 type AppConfig struct {
-	*GinConfig     `mapstructure:"gin"`
-	*MysqlConfig   `mapstructure:"mysql"`
-	*RedisConfig   `mapstructure:"redis"`
-	*AliyunConfig  `mapstructure:"aliyun"`
-	*ServiceConfig `mapstructure:"service"`
-	*EtcdConfig    `mapstructure:"etcd"`
+	*GinConfig      `mapstructure:"gin"`
+	*MysqlConfig    `mapstructure:"mysql"`
+	*RedisConfig    `mapstructure:"redis"`
+	*AliyunConfig   `mapstructure:"aliyun"`
+	*ServiceConfig  `mapstructure:"service"`
+	*EtcdConfig     `mapstructure:"etcd"`
+	*RabbitmqConfig `mapstructure:"rabbitmq"`
 }
 
 type GinConfig struct {
@@ -63,9 +64,18 @@ type EtcdConfig struct {
 	EtcdPort int    `mapstructure:"port"`
 }
 
+type RabbitmqConfig struct {
+	RabbitmqAgreement string `mapstructure:"agreement"`
+	RabbitmqUser      string `mapstructure:"user"`
+	RabbitmqPassword  string `mapstructure:"password"`
+	RabbitmqHost      string `mapstructure:"host"`
+	RabbitmqPort      int    `mapstructure:"port"`
+}
+
 func Init() (err error) {
 	//设置读取配置文件路径
-	viper.SetConfigFile("../../../settings/config.yaml")
+	viper.SetConfigFile("C:\\Users\\浅梦\\Desktop\\star\\constant\\settings\\config.yaml")
+	//viper.SetConfigFile("../../../settings/config.yaml")
 	//读取配置文件
 	if err = viper.ReadInConfig(); err != nil {
 		fmt.Printf("viper ReadInConfig failed, err:%v\n", err)

@@ -2,15 +2,14 @@ package main
 
 import (
 	"fmt"
-
 	"github.com/go-micro/plugins/v4/registry/etcd"
 	"go-micro.dev/v4"
 	"go-micro.dev/v4/registry"
-
-	redis "star/app/sendSms/dao"
+	"star/app/sendSms/dao"
 	"star/app/sendSms/service"
+	"star/constant/settings"
+	"star/constant/str"
 	"star/proto/sendSms/sendSmsPb"
-	"star/settings"
 )
 
 func main() {
@@ -28,9 +27,9 @@ func main() {
 	)
 	//得到一个微服务实例
 	microSevice := micro.NewService(
-		micro.Name("SendSmsService"), //服务名称
-		micro.Version("v1"),          //服务版本
-		micro.Registry(etcdReg),      //etcd注册件
+		micro.Name(str.SendSmsService), //服务名称
+		micro.Version("v1"),            //服务版本
+		micro.Registry(etcdReg),        //etcd注册件
 	)
 	//初始化
 	microSevice.Init()

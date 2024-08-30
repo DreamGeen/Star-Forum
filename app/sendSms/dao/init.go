@@ -3,10 +3,8 @@ package redis
 import (
 	"context"
 	"fmt"
-
 	"github.com/redis/go-redis/v9"
-
-	"star/settings"
+	"star/constant/settings"
 )
 
 var rdb *redis.Client

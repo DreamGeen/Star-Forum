@@ -2,12 +2,11 @@ package utils
 
 import (
 	"errors"
-	"star/models"
+	"star/app/models"
+	"star/constant/settings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-
-	"star/settings"
 )
 
 // token过期时间

@@ -2,16 +2,16 @@ package main
 
 import (
 	"fmt"
-
 	"github.com/go-micro/plugins/v4/registry/etcd"
 	"go-micro.dev/v4"
 	"go-micro.dev/v4/registry"
-
 	"star/app/user/dao/mysql"
 	"star/app/user/dao/redis"
 	"star/app/user/service"
+	"star/constant/settings"
+	"star/constant/str"
+	"star/mq"
 	"star/proto/user/userPb"
-	"star/settings"
 	"star/utils"
 )
 
@@ -34,15 +34,19 @@ func main() {
 	if err := utils.Init(1); err != nil {
 		panic(err)
 	}
+	//消息队列初始化
+	if err := mq.Init(); err != nil {
+		panic(err)
+	}
 	//etcd注册件
 	etcdReg := etcd.NewRegistry(
 		registry.Addrs(fmt.Sprintf("%s:%d", settings.Conf.EtcdHost, settings.Conf.EtcdPort)),
 	)
 	//得到一个微服务实例
 	microSevice := micro.NewService(
-		micro.Name("UserService"), //服务名称
-		micro.Version("v1"),       //服务版本
-		micro.Registry(etcdReg),   //etcd注册件
+		micro.Name(str.UserService), //服务名称
+		micro.Version("v1"),         //服务版本
+		micro.Registry(etcdReg),     //etcd注册件
 	)
 	//初始化
 	microSevice.Init()

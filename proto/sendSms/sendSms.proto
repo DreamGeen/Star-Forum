@@ -12,4 +12,5 @@ message SendRequest{
      string TemplateCode=2;
 }
 
-message EmptySendResponse{ }
+message EmptySendResponse{
+}

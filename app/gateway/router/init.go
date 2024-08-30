@@ -2,13 +2,11 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-
 	"star/app/gateway/httpHandler"
 )
 
 func Setup() *gin.Engine {
 	v := gin.New()
-	//v.Use(logger.GinLogger(), logger.GinRecovery(true))
 	//注册
 	{
 		v.GET("/signup/send", httpHandler.SendSetupHandler)

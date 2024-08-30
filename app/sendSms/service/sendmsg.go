@@ -6,17 +6,16 @@ import (
 	"fmt"
 	"log"
 	"math/rand/v2"
+	redis "star/app/sendSms/dao"
+	"star/constant/settings"
+	"star/constant/str"
+	"star/proto/sendSms/sendSmsPb"
 	"strconv"
 	"sync"
 
 	openapi "github.com/alibabacloud-go/darabonba-openapi/client"
 	dysmsapi "github.com/alibabacloud-go/dysmsapi-20170525/v2/client"
 	"github.com/alibabacloud-go/tea/tea"
-
-	"star/app/sendSms/dao"
-	"star/proto/sendSms/sendSmsPb"
-	"star/settings"
-	"star/utils"
 )
 
 type SendSmsSrv struct {
@@ -37,7 +36,7 @@ func GetSendSmsSrv() *SendSmsSrv {
 func (s *SendSmsSrv) HandleSendSms(ctx context.Context, req *sendSmsPb.SendRequest, resp *sendSmsPb.EmptySendResponse) error {
 	if err := sendMsg(req.Phone, req.TemplateCode); err != nil {
 		log.Println("发送短信失败", err)
-		return utils.ErrSendSmsFailed
+		return str.ErrSendSmsError
 	}
 	return nil
 }

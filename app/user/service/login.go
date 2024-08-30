@@ -4,38 +4,37 @@ import (
 	"context"
 	"log"
 	"regexp"
-	"strings"
-	"time"
-
-	"go.uber.org/zap"
-
+	"star/app/models"
 	"star/app/user/dao/mysql"
 	"star/app/user/dao/redis"
-	"star/models"
+	"star/constant/str"
 	"star/proto/user/userPb"
 	"star/utils"
+	"strings"
+	"time"
 )
 
 // 正则表达式用于匹配手机号
 var phoneRegex = regexp.MustCompile(`^1[3-9]\d{9}$`)
 
 // LoginPassword 用密码的方式登录
-func (u *UserSrv) LoginPassword(ctx context.Context, req *userPb.LSRequest, resp *userPb.LoginResponse) error {
-	user := createUser(0, "", req.Password, "", "")
-	err := determineLoginMethod(ctx, req.User, user)
+func (u *UserSrv) LoginPassword(ctx context.Context, req *userPb.LSRequest, resp *userPb.LoginResponse) (err error) {
+	user := createUser(0, str.Empty, req.Password, str.Empty, str.Empty)
+	err = determineLoginMethod(ctx, req.User, user)
 	if err != nil {
-		return err
+		return
 	}
 	accessToken, refreshToken, err := utils.GetToken(user)
 	if err != nil {
-		zap.L().Error("获取JWT令牌失败", zap.Error(err))
-		return err
+		log.Println("获取JWT令牌失败", err)
+		return str.ErrLoginError
 	}
+
 	resp.Token = &userPb.LoginResponse_Token{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}
-	return nil
+	return
 }
 
 // determineLoginMethod 确定用户登录方法是通过手机、邮箱还是用户名
@@ -82,19 +81,20 @@ func validatePassword(ctx context.Context, user *models.User, queryFunc func(*mo
 	password := user.Password
 	// 先尝试从缓存中获取用户信息
 	cacheKey := "user:" + getUserIdentifier(user)
-	if err := redis.Get(ctx, cacheKey, user); err == nil {
+	if err := redis.GetUser(ctx, cacheKey, user); err == nil {
 		// 从缓存中获取到了用户信息
 	} else {
 		// 缓存中没有，从数据库中获取
 		if err := queryFunc(user); err != nil {
-			return err
+			log.Println("query user err:", err)
+			return str.ErrUserNotExists
 		}
 		// 将用户信息缓存到Redis中并设置超时时间
-		redis.Set(ctx, cacheKey, user, 24*time.Hour)
+		_ = redis.SetUser(ctx, cacheKey, user, 2*24*time.Hour)
 	}
-	if !utils.EqualsPassword(password, user.Password) {
-		log.Println("密码错误", user.Username, user.UserId)
-		return utils.ErrUserNotExists
+	if err := utils.EqualsPassword(password, user.Password); err != nil {
+		log.Println("密码错误,err:", err, user.Username, user.UserId)
+		return str.ErrInvalidPassword
 	}
 	return nil
 }
@@ -110,35 +110,37 @@ func getUserIdentifier(u *models.User) string {
 }
 
 // LoginCaptcha 用验证码的方式登录
-func (u *UserSrv) LoginCaptcha(ctx context.Context, req *userPb.LSRequest, resp *userPb.LoginResponse) error {
-	if err := utils.ValidateCaptcha(req.Phone, req.Captcha); err != nil {
-		return err
+func (u *UserSrv) LoginCaptcha(ctx context.Context, req *userPb.LSRequest, resp *userPb.LoginResponse) (err error) {
+
+	if ok := utils.ValidateCaptcha(req.Phone, req.Captcha); !ok {
+		return str.ErrInvalidCaptcha
 	}
 	// 先尝试从缓存中获取用户信息
 	user := createUser(0, "", "", req.Phone, "")
 	cacheKey := "user:" + user.Phone
-	if err := redis.Get(ctx, cacheKey, user); err == nil {
+	if err = redis.GetUser(ctx, cacheKey, user); err == nil {
 		// 从缓存中获取到了用户信息
 	} else {
 		// 缓存中没有，从数据库中获取
-		if err := mysql.QueryUserByPhone(user); err != nil {
+		if err = mysql.QueryUserByPhone(user); err != nil {
 			log.Println("该手机号未注册", user.Phone)
-			return err
+			return str.ErrPhoneEmpty
 		}
 		// 将用户信息缓存到Redis中并设置超时时间
-		redis.Set(ctx, cacheKey, user, 24*time.Hour)
+		_ = redis.SetUser(ctx, cacheKey, user, 2*24*time.Hour)
 	}
 	accessToken, refreshToken, err := utils.GetToken(user)
 	if err != nil {
-		zap.L().Error("获取JWT令牌失败", zap.Error(err))
-		return err
+		log.Println("获取JWT令牌失败", err)
+		return str.ErrLoginError
 	}
 
 	resp.Token = &userPb.LoginResponse_Token{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}
-	return nil
+
+	return
 }
 
 // createUser 创建一个新的用户对象

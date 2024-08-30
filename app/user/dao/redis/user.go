@@ -3,9 +3,8 @@ package redis
 import (
 	"context"
 	"fmt"
+	"star/app/models"
 	"time"
-
-	"star/models"
 )
 
 // GetCaptcha 获取验证码
@@ -13,12 +12,12 @@ func GetCaptcha(phone string) (string, error) {
 	return rdb.Get(context.Background(), fmt.Sprintf("captcha:%s", phone)).Result()
 }
 
-// Get 获取用户
-func Get(ctx context.Context, key string, user *models.User) error {
+// GetUser 获取用户
+func GetUser(ctx context.Context, key string, user *models.User) error {
 	return rdb.Get(ctx, key).Scan(user)
 }
 
-// Set 储存用户
-func Set(ctx context.Context, key string, user *models.User, overtime time.Duration) {
-	rdb.Set(ctx, key, user, overtime)
+// SetUser 储存用户
+func SetUser(ctx context.Context, key string, user *models.User, overtime time.Duration) error {
+	return rdb.Set(ctx, key, user, overtime).Err()
 }

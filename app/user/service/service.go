@@ -1,8 +1,12 @@
 package service
 
-import "sync"
+import (
+	"star/proto/user/userPb"
+	"sync"
+)
 
 type UserSrv struct {
+	userPb.UserService
 }
 
 var (

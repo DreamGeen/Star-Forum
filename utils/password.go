@@ -12,7 +12,7 @@ func EncryptPassword(password string) (string, error) {
 }
 
 // EqualsPassword 匹配密码与加密密码是否相等
-func EqualsPassword(password string, encryptPassword string) bool {
+func EqualsPassword(password string, encryptPassword string) error {
 	err := bcrypt.CompareHashAndPassword([]byte(encryptPassword), []byte(password))
-	return err == nil
+	return err
 }

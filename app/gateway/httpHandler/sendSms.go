@@ -1,14 +1,11 @@
 package httpHandler
 
 import (
-	"log"
-
 	"github.com/gin-gonic/gin"
-
 	"star/app/gateway/client"
+	"star/constant/settings"
+	"star/constant/str"
 	"star/proto/sendSms/sendSmsPb"
-	"star/settings"
-	"star/utils"
 )
 
 // SendSetupHandler 发送注册短信
@@ -23,27 +20,23 @@ func SendLoginHandler(c *gin.Context) {
 
 // 发送短信处理
 func sendHandler(c *gin.Context, templateCode string) {
-	req, err := validatePhone(c, templateCode)
-	if err != nil {
-		utils.ResponseErr(c, utils.ErrPhoneEmpty)
+	req, empty := validatePhone(c, templateCode)
+	if empty {
+		str.Response(c, str.ErrPhoneEmpty, str.Empty, nil)
 		return
 	}
 	if _, err := client.HandleSendSms(c, req); err != nil {
-		utils.ResponseErr(c, err)
+		str.Response(c, err, str.Empty, nil)
 		return
 	}
-	utils.ResponseMessage(c, utils.CodeSendSmsSuccess)
+	str.Response(c, nil, str.Empty, nil)
 }
 
 // 验证手机号是否为空
-func validatePhone(c *gin.Context, templateCode string) (*sendSmsPb.SendRequest, error) {
+func validatePhone(c *gin.Context, templateCode string) (*sendSmsPb.SendRequest, bool) {
 	phone := c.Query("phone")
-	if phone == "" {
-		log.Println("手机号为空")
-		return nil, utils.ErrPhoneEmpty
-	}
 	return &sendSmsPb.SendRequest{
 		Phone:        phone,
 		TemplateCode: templateCode,
-	}, nil
+	}, phone == ""
 }

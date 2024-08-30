@@ -6,13 +6,14 @@ import (
 )
 
 func LoginPassword(ctx context.Context, in *userPb.LSRequest) (*userPb.LoginResponse, error) {
-	return userService.LoginPassword(ctx, in)
+	return userServiceClient.LoginPassword(ctx, in)
+
 }
 
 func LoginCaptcha(ctx context.Context, in *userPb.LSRequest) (*userPb.LoginResponse, error) {
-	return userService.LoginCaptcha(ctx, in)
+	return userServiceClient.LoginCaptcha(ctx, in)
 }
 
 func Signup(ctx context.Context, in *userPb.LSRequest) (*userPb.EmptyLSResponse, error) {
-	return userService.Signup(ctx, in)
+	return userServiceClient.Signup(ctx, in)
 }

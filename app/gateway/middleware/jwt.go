@@ -1,18 +1,18 @@
 package middleware
 
 import (
+	"star/constant/str"
+	"star/utils"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-
-	"star/utils"
 )
 
 func JWTAuthHandler(c *gin.Context) {
 	//获取请求头中的授权字段
 	auth := c.Request.Header.Get("Authorization")
 	if auth == "" {
-		utils.ResponseMessage(c, utils.CodeNotLogin)
+		str.Response(c, str.ErrNotLogin, str.Empty, nil)
 		c.Abort()
 	}
 	//按空格分割取token
@@ -20,7 +20,7 @@ func JWTAuthHandler(c *gin.Context) {
 	//解析token
 	claims, err := utils.ParseToken(token)
 	if err != nil {
-		utils.ResponseMessageWithData(c, utils.CodeNotLogin, err)
+		str.Response(c, str.ErrNotLogin, str.Empty, nil)
 		c.Abort()
 	}
 	//将获取的用户id和用户名保存下来

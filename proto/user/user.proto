@@ -23,4 +23,5 @@ message LoginResponse{
     string refreshToken = 2;
   }
 }
-message EmptyLSResponse{}
+message EmptyLSResponse{
+}
