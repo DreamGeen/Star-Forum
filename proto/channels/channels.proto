@@ -1,0 +1,22 @@
+syntax="proto3";
+
+option go_package=".;channelsPb";
+
+
+service Channels{
+  rpc SendMsgToServer(SendToServerRequest)returns(SendToServerResponse);
+  rpc SendMsgToClient(SendToClientRequest)returns(SendToClientResponse);
+}
+
+
+message SendToServerRequest{
+  int64  CommunityId =1;
+}
+message SendToServerResponse{
+}
+message SendToClientRequest{
+
+}
+message SendToClientResponse{
+
+}

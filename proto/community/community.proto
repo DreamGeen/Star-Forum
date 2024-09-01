@@ -1,0 +1,45 @@
+syntax="proto3";
+
+option  go_package = ".;communityPb";
+
+service community{
+  rpc CreateCommunity(CreateCommunityRequest)returns(EmptyCommunityResponse);
+  rpc GetCommunityList(EmptyCommunityRequest)returns(GetCommunityListResponse);
+  rpc ShowCommunity(ShowCommunityRequest)returns(ShowCommunityResponse);
+}
+
+
+message CreateCommunityRequest{
+  string CommunityName=1;
+  string Description=2;
+  int64  LeaderId=3;
+}
+
+
+message EmptyCommunityRequest{
+
+}
+message EmptyCommunityResponse{
+}
+
+message GetCommunityListResponse{
+}
+
+
+message ShowCommunityRequest{
+   int64  CommunityId=1;
+}
+
+message ShowCommunityResponse{
+
+}
+
+
+
+
+
+
+
+
+
+
