@@ -2,7 +2,6 @@ package settings
 
 import (
 	"fmt"
-
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 )
@@ -18,7 +17,7 @@ type AppConfig struct {
 	*AliyunConfig   `mapstructure:"aliyun"`
 	*ServiceConfig  `mapstructure:"service"`
 	*EtcdConfig     `mapstructure:"etcd"`
-	*RabbitmqConfig `mapstructure:"rabbitmq"`
+	*RabbitMQConfig `mapstructure:"rabbitmq"`
 }
 
 type GinConfig struct {
@@ -59,39 +58,42 @@ type ServiceConfig struct {
 	SendSmsServiceAddress string `mapstructure:"send_sms_service_address"`
 }
 
+// EtcdConfig etcd配置
 type EtcdConfig struct {
 	EtcdHost string `mapstructure:"host"`
 	EtcdPort int    `mapstructure:"port"`
 }
 
-type RabbitmqConfig struct {
-	RabbitmqAgreement string `mapstructure:"agreement"`
-	RabbitmqUser      string `mapstructure:"user"`
-	RabbitmqPassword  string `mapstructure:"password"`
-	RabbitmqHost      string `mapstructure:"host"`
-	RabbitmqPort      int    `mapstructure:"port"`
+// RabbitMQConfig 消息队列配置
+type RabbitMQConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	Username string `mapstructure:"username"`
+	Password string `mapstructure:"password"`
 }
 
 func Init() (err error) {
 	//设置读取配置文件路径
-	viper.SetConfigFile("C:\\Users\\浅梦\\Desktop\\star\\constant\\settings\\config.yaml")
-	//viper.SetConfigFile("../../../settings/config.yaml")
+	viper.SetConfigFile("../../../settings/config.yaml")
 	//读取配置文件
 	if err = viper.ReadInConfig(); err != nil {
-		fmt.Printf("viper ReadInConfig failed, err:%v\n", err)
+		//utils.Logger.Error("读取配置文件失败", zap.Error(err))
+		fmt.Printf("viper.ReadInConfig failed, err:%v\n", err)
 		return
 	}
 	//将读取配置信息反序列化入全局变量
 	if err = viper.Unmarshal(Conf); err != nil {
-		fmt.Printf("viper Unmarshal failed, err:%v\n", err)
+		//utils.Logger.Error("配置文件反序列化入全局变量失败", zap.Error(err))
+		fmt.Printf("viper.Unmarshal failed, err:%v\n", err)
 		return
 	}
 	viper.WatchConfig()
 	viper.OnConfigChange(func(e fsnotify.Event) {
-		fmt.Println("配置文件修改了")
+		//utils.Logger.Info("配置文件修改了")
 		//将更改的配置文件信息反序列化入全局变量
 		if err = viper.Unmarshal(Conf); err != nil {
-			fmt.Printf("viper Unmarshal failed, err:%v\n", err)
+			//utils.Logger.Error("配置文件反序列化入全局变量失败", zap.Error(err))
+			fmt.Printf("viper.Unmarshal failed, err:%v\n", err)
 			return
 		}
 	})

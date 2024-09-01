@@ -21,7 +21,6 @@ func Init() (err error) {
 	})
 	_, err = rdb.Ping(context.Background()).Result()
 	if err != nil {
-		log.Println("连接redis失败")
 		return err
 	}
 	return nil

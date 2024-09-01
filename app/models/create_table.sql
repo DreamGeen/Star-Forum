@@ -54,6 +54,7 @@ CREATE TABLE post
     userId      BIGINT(20) UNIQUE NOT NULL COMMENT '用户id',
     collection  BIGINT   DEFAULT 0 COMMENT '收藏数',
     star        BIGINT   DEFAULT 0 COMMENT '点赞数',
+    comment     BIGINT   DEFAULT 0 COMMENT '评论数',
     content     VARCHAR(2047)     NOT NULL COMMENT '帖子内容',
     title       VARCHAR(20)       NOT NULL COMMENT '标题',
     isScan      BOOL     DEFAULT 1 COMMENT '可见性',
@@ -65,9 +66,11 @@ CREATE TABLE postComment
     createdAt   DATETIME   DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     deletedAt   DATETIME   DEFAULT NULL COMMENT '删除时间',
     commentId   BIGINT(20) PRIMARY KEY COMMENT '评论id',
-    postId      BIGINT(20) UNIQUE NOT NULL COMMENT '帖子id',
+    postId      BIGINT(20)  NOT NULL COMMENT '帖子id',
     userId      BIGINT(20)        NOT NULL COMMENT '用户id',
-    content     VARCHAR(255)      NOT NULL COMMENT '评论内容',
+    content     VARCHAR(511)      NOT NULL COMMENT '评论内容',
+    star        BIGINT   DEFAULT 0 COMMENT '点赞数',
+    reply       BIGINT   DEFAULT 0 COMMENT '回复数',
     beCommentId BIGINT(20) DEFAULT NULL COMMENT '关联评论id'
 ) COMMENT '评论表';
 
