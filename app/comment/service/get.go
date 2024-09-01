@@ -2,8 +2,9 @@ package service
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"star/app/comment/dao/mysql"
+	"star/constant/str"
 	"star/models"
 	"star/proto/comment/commentPb"
 )
@@ -19,13 +20,14 @@ func (s *CommentService) GetComments(ctx context.Context, req *commentPb.GetComm
 	// 按照点赞数排序，获取所有评论
 	comments, err := mysql.GetCommentsStar(req.PostId)
 	if err != nil {
-		return fmt.Errorf("获取评论失败, err: %v", err)
+		return str.ErrCommentError
 	}
 
 	// 构建评论树
 	commentTree, err := buildCommentTree(comments)
 	if err != nil {
-		return fmt.Errorf("构建评论树失败, err: %v", err)
+		log.Println("构建评论树失败")
+		return str.ErrCommentError
 	}
 
 	// 将评论树转换为 protobuf 格式

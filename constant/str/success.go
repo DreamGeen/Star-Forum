@@ -1,6 +1,6 @@
 package str
 
 const (
-	SuccessCode = 0
-	Success     = "success"
+	SuccessCode int32 = 0
+	Success           = "success"
 )

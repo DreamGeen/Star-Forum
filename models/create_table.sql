@@ -85,18 +85,27 @@ CREATE TABLE community
     member        BIGINT      DEFAULT 0 COMMENT '成员数',
     leaderId      BIGINT(20)         NOT NULL COMMENT '社区主持',
     manageId      BIGINT(20)         NOT NULL COMMENT '管理员',
-    grade         SMALLINT    DEFAULT 0 COMMENT '社区等级', -- CHECK (grade BETWEEN 0 AND 100 )
-    exp           SMALLINT    DEFAULT 0 COMMENT '社区经验', -- CHECK(exp BETWEEN 0 AND 499)
     img           VARCHAR(255) /* DEFAULT 默认头像*/ COMMENT '社区头像',
     PRIMARY KEY (communityId, leaderId)                     -- communityId 和 leaderId 共同为主键
 ) COMMENT '社区表';
 
-CREATE TABLE chat
-(
-    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    deletedAt DATETIME DEFAULT NULL COMMENT '删除时间',
-    chatId    BIGINT(20) PRIMARY KEY COMMENT '私信id',
-    sdUserId BIGINT(20) NOT NULL COMMENT '发送方',
-    acUserId BIGINT(20) NOT NULL COMMENT '接受方',
-    content VARCHAR(255) NOT NULL COMMENT '内容'
-)COMMENT '私信表';
+CREATE TABLE `private_messages` (
+    `deletedAt` datetime DEFAULT NULL COMMENT '删除时间',
+    `chatId` bigint NOT NULL COMMENT '消息id',
+    `type`   varchar(20)  NOT NULL  COMMENT  '类型', -- "like", "reply", "system", "mention", "whisper"
+    `sendTime`  datetime   NOT NULL  COMMENT  '发送时间',
+    `sdUserId` bigint NOT NULL COMMENT '发送方',
+    `acUserId` bigint NOT NULL COMMENT '接受方',
+    `content` varchar(255) NOT NULL COMMENT '内容',
+    `isRead`  boolean    DEFAULT FALSE  COMMENT '是否已读',
+     PRIMARY KEY (`chatId`),
+     INDEX (acUserId)
+)  COMMENT='消息表';
+
+CREATE TABLE `group_messages` (
+    `chatId`     bigint(20) PRIMARY KEY ,
+    `sendTime` datetime NOT NULL COMMENT '消息发送时间',
+    `content` varchar(255) NOT NULL COMMENT '内容',
+    `sdUserId` bigint NOT NULL COMMENT '发送方id',
+    `communityId` bigint NOT NULL COMMENT '社区id'
+)  COMMENT='群聊表';

@@ -8,10 +8,10 @@ import (
 	"log"
 	"os"
 	"star/app/gateway/client"
+	"star/constant/settings"
 
 	logger "star/app/gateway/logger"
 	"star/app/gateway/router"
-	"star/settings"
 )
 
 func main() {

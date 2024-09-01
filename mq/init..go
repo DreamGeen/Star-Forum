@@ -12,12 +12,11 @@ var mq *amqp091.Connection
 // Init 初始化消息队列
 func Init() error {
 	//连接rabbitmq
-	amqpUrl := fmt.Sprintf("%s://%s:%s@%s:%d/",
-		settings.Conf.RabbitmqAgreement,
-		settings.Conf.RabbitmqUser,
-		settings.Conf.RabbitmqPassword,
-		settings.Conf.RabbitmqHost,
-		settings.Conf.RabbitmqPort)
+	amqpUrl := fmt.Sprintf("amqp://%s:%s@%s:%d/",
+		settings.Conf.Username,
+		settings.Conf.Password,
+		settings.Conf.Host,
+		settings.Conf.Port)
 	conn, err := amqp091.Dial(amqpUrl)
 	mq = conn
 	if err != nil {

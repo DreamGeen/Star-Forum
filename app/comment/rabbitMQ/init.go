@@ -5,7 +5,7 @@ import (
 	"github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
 	logger "star/app/comment/logger"
-	"star/settings"
+	"star/constant/settings"
 )
 
 var rabbitMQConn *amqp091.Connection

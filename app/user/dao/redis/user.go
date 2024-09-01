@@ -3,7 +3,7 @@ package redis
 import (
 	"context"
 	"fmt"
-	"star/app/models"
+	"star/models"
 	"time"
 )
 

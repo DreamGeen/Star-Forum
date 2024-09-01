@@ -7,6 +7,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 	logger "star/app/comment/logger"
+	"star/constant/str"
 	"star/models"
 	"star/utils"
 )
@@ -34,12 +35,12 @@ func CheckComment(commentId int64) error {
 	err := db.Get(&exists, checkComment, commentId)
 	if err != nil {
 		logger.CommentLogger.Error("检查评论是否存在失败", zap.Error(err))
-		return err
+		return str.ErrCommentError
 	}
 	if !exists {
 		// 如果评论不存在
 		logger.CommentLogger.Error("评论不存在或已被删除", zap.Int64("commentId", commentId))
-		return fmt.Errorf("评论ID: %d 不存在或已被删除", commentId)
+		return str.ErrCommentError
 	}
 	return nil
 }
@@ -50,12 +51,12 @@ func CheckPost(postId int64) error {
 	var exists bool
 	if err := db.Get(&exists, checkPost, postId); err != nil {
 		logger.CommentLogger.Error("检查帖子是否存在失败", zap.Error(err))
-		return err
+		return str.ErrCommentError
 	}
 	if !exists {
 		// 如果帖子不存在
 		logger.CommentLogger.Error("帖子不存在或已被删除", zap.Int64("postId", postId))
-		return fmt.Errorf("帖子ID: %d 不存在或已被删除", postId)
+		return str.ErrCommentNotExists
 	}
 	return nil
 }
@@ -103,7 +104,7 @@ func CreateComment(comment *models.Comment) error {
 	tx, err := db.Beginx()
 	if err != nil {
 		logger.CommentLogger.Error("发布评论事务开启失败", zap.Error(err))
-		return err
+		return str.ErrCommentError
 	}
 	defer func() {
 		if err != nil {
@@ -368,10 +369,10 @@ func GetStar(commentId int64) (int64, error) {
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.CommentLogger.Error("获取点赞数:评论不存在或已被删除", zap.Int64("commentId", commentId))
-			return 0, fmt.Errorf("评论ID: %d 不存在或已被删除", commentId)
+			return 0, str.ErrCommentNotExists
 		}
 		logger.CommentLogger.Error("获取点赞数时出错", zap.Error(err))
-		return 0, fmt.Errorf("点赞数更新失败，err:%v", err)
+		return 0, str.ErrCommentError
 	}
 
 	// 返回点赞数

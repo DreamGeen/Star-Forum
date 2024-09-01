@@ -2,8 +2,8 @@ package utils
 
 import (
 	"errors"
-	"star/app/models"
 	"star/constant/settings"
+	"star/models"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"

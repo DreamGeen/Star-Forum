@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"log"
-	"star/app/models"
 	"star/constant/str"
+	"star/models"
 )
 
 const (

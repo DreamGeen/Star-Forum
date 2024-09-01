@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/redis/go-redis/v9"
-	"star/settings"
+	"star/constant/settings"
 )
 
 var Client *redis.Client

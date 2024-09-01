@@ -2,7 +2,7 @@ package mysql
 
 import (
 	"fmt"
-	"star/settings"
+	"star/constant/settings"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"

@@ -5,6 +5,7 @@ import (
 	"github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
 	logger "star/app/comment/logger"
+	"star/constant/str"
 	"time"
 )
 
@@ -49,13 +50,13 @@ func PublishDeleteEvent(commentId int64) error {
 	if rabbitMQConn == nil {
 		err := fmt.Errorf("rabbitMQ 连接未初始化")
 		logger.CommentLogger.Error("MQ评论删除生产通道获取失败", zap.Error(err))
-		return err
+		return str.ErrCommentError
 	}
 
 	ch, err := rabbitMQConn.Channel()
 	if err != nil {
 		logger.CommentLogger.Error("MQ评论删除生产通道获取失败", zap.Error(err))
-		return err
+		return str.ErrCommentError
 	}
 	defer func() {
 		_ = ch.Close()
@@ -75,7 +76,7 @@ func PublishDeleteEvent(commentId int64) error {
 		})
 	if err != nil {
 		logger.CommentLogger.Error("MQ发布删除评论消息失败", zap.Error(err))
-		return err
+		return str.ErrCommentError
 	}
 
 	logger.CommentLogger.Info("成功发布删除评论消息", zap.String("message", body))

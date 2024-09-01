@@ -6,5 +6,5 @@ import (
 )
 
 func HandleSendSms(ctx context.Context, in *sendSmsPb.SendRequest) (*sendSmsPb.EmptySendResponse, error) {
-	return sendSmsServiceClient.HandleSendSms(ctx, in)
+	return sendSmsService.HandleSendSms(ctx, in)
 }

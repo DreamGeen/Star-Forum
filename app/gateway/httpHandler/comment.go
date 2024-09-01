@@ -4,9 +4,10 @@ import (
 	"go.uber.org/zap"
 	"star/app/gateway/client"
 	logger "star/app/gateway/logger"
-	"star/models"
+	"star/app/gateway/models"
+	"star/constant/str"
+
 	"star/proto/comment/commentPb"
-	"star/utils"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -24,7 +25,7 @@ func PostComment(c *gin.Context) {
 	p := new(models.PostComment)
 	if err := c.ShouldBindJSON(p); err != nil {
 		logger.GatewayLogger.Error("参数错误", zap.Error(err))
-		utils.ResponseMessage(c, utils.CodeInvalidParam)
+		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
 		return
 	}
 	// 发布处理
@@ -37,11 +38,11 @@ func PostComment(c *gin.Context) {
 	resp, err := client.PostComment(c, req)
 	if err != nil {
 		logger.GatewayLogger.Error("评论发布失败", zap.Error(err))
-		utils.ResponseErr(c, err)
+		str.Response(c, err, str.Empty, nil)
 		return
 	}
 	// 成功响应
-	utils.ResponseMessageWithData(c, utils.CodePostCommentSuccess, resp)
+	str.Response(c, nil, "comment", resp.Content)
 }
 
 func DeleteComment(c *gin.Context) {
@@ -49,18 +50,18 @@ func DeleteComment(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		logger.GatewayLogger.Error("参数错误", zap.Error(err))
-		utils.ResponseMessage(c, utils.CodeInvalidParam)
+		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
 		return
 	}
 	req := &commentPb.DeleteCommentRequest{CommentId: id}
 	_, err = client.DeleteComment(c, req)
 	if err != nil {
 		logger.GatewayLogger.Error("评论删除失败", zap.Error(err))
-		utils.ResponseErr(c, err)
+		str.Response(c, err, str.Empty, nil)
 		return
 	}
 	// 成功响应
-	utils.ResponseMessage(c, utils.CodeDeleteCommentSuccess)
+	str.Response(c, nil, str.Empty, nil)
 }
 
 func GetComments(c *gin.Context) {
@@ -68,18 +69,18 @@ func GetComments(c *gin.Context) {
 	postId, err := strconv.ParseInt(c.Query("postId"), 10, 64)
 	if err != nil {
 		logger.GatewayLogger.Error("参数错误", zap.Error(err))
-		utils.ResponseMessage(c, utils.CodeInvalidParam)
+		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
 		return
 	}
 	req := &commentPb.GetCommentsRequest{PostId: postId}
 	resp, err := client.GetComments(c, req)
 	if err != nil {
 		logger.GatewayLogger.Error("评论获取失败", zap.Error(err))
-		utils.ResponseErr(c, err)
+		str.Response(c, err, str.Empty, nil)
 		return
 	}
 	// 成功响应
-	utils.ResponseMessageWithData(c, utils.CodeGetCommentsSuccess, resp)
+	str.Response(c, nil, "comments", resp.Comments)
 }
 
 func StarComment(c *gin.Context) {
@@ -87,16 +88,16 @@ func StarComment(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		logger.GatewayLogger.Error("参数错误", zap.Error(err))
-		utils.ResponseMessage(c, utils.CodeInvalidParam)
+		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
 		return
 	}
 	req := &commentPb.StarCommentRequest{CommentId: id}
 	resp, err := client.StarComment(c, req)
 	if err != nil {
 		logger.GatewayLogger.Error("点赞评论失败", zap.Error(err))
-		utils.ResponseErr(c, err)
+		str.Response(c, err, str.Empty, nil)
 		return
 	}
 	// 成功响应
-	utils.ResponseMessageWithData(c, utils.CodeStarCommentSuccess, resp)
+	str.Response(c, nil, "star", resp.Star)
 }

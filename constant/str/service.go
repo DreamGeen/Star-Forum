@@ -6,4 +6,7 @@ const (
 
 	SendSmsServiceClient = "SendSmsService.client"
 	SendSmsService       = "SendSmsService"
+
+	CommentServiceClient = "CommentService.client"
+	CommentService       = "CommentService"
 )

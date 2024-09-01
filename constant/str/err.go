@@ -18,6 +18,7 @@ const (
 	PhoneEmptyCode
 	PhoneRegisteredCode
 	PhoneUnregisteredCode
+	CommentNotExistsCode
 )
 
 const (
@@ -25,6 +26,7 @@ const (
 	LoginErrorCode
 	SignupErrorCode
 	SendSmsErrorCode
+	CommentErrorCode
 )
 
 var (
@@ -39,12 +41,14 @@ var (
 	ErrPhoneEmpty        = errors.New("手机号为空")
 	ErrPhoneRegistered   = errors.New("手机号已注册")
 	ErrPhoneUnregistered = errors.New("该手机号未注册")
+	ErrCommentNotExists  = errors.New("评论不存在或已被删除")
 )
 
 var (
 	ErrLoginError   = errors.New("登录服务出现内部错误，请稍后再试！")
 	ErrSignupError  = errors.New("注册服务出现内部错误，请稍后再试！")
 	ErrSendSmsError = errors.New("发送短信失败，请稍后再试！")
+	ErrCommentError = errors.New("评论服务出现内部错误，请稍后再试！")
 )
 
 var codeMap = map[error]int32{
@@ -59,10 +63,12 @@ var codeMap = map[error]int32{
 	ErrPhoneEmpty:        PhoneEmptyCode,
 	ErrPhoneRegistered:   PhoneRegisteredCode,
 	ErrPhoneUnregistered: PhoneUnregisteredCode,
+	ErrCommentNotExists:  CommentNotExistsCode,
 
 	ErrLoginError:   LoginErrorCode,
 	ErrSignupError:  SignupErrorCode,
 	ErrSendSmsError: SendSmsErrorCode,
+	ErrCommentError: CommentErrorCode,
 }
 
 func getCode(err error) int32 {
@@ -74,22 +80,24 @@ func getCode(err error) int32 {
 }
 
 func Response(c *gin.Context, err error, dataFieldName string, data interface{}) {
+	statusCode := SuccessCode
 	statusMsg := Success
 	if err != nil {
 		statusMsg = err.Error()
 	}
-	statusCode := getCode(err)
+	statusCode = getCode(err)
 	// 构建响应 JSON
 	response := gin.H{
 		"statusCode": statusCode,
 		"statusMsg":  statusMsg,
 	}
-
-	// 根据传入的 dataFieldName 动态设置字段名
-	if dataFieldName != "" {
-		response[dataFieldName] = data
-	} else {
-		response["data"] = data // 默认使用 "data" 字段名
+	if data != nil {
+		// 根据传入的 dataFieldName 动态设置字段名
+		if dataFieldName != Empty {
+			response[dataFieldName] = data
+		} else {
+			response["data"] = data // 默认使用 "data" 字段名
+		}
 	}
 	c.JSON(http.StatusOK, response)
 	return

@@ -13,11 +13,3 @@ type Comment struct {
 	BeCommentId   int64      `db:"beCommentId"` // 关联评论id
 	ChildComments []*Comment `db:"-"`           // 子评论列表，不存储在数据库中
 }
-
-// PostComment 校验评论发布结构体
-type PostComment struct {
-	PostId      int64  `json:"postId" binding:"required"`
-	UserId      int64  `json:"userId" binding:"required"`
-	Content     string `json:"content" binding:"required"`
-	BeCommentId int64  `json:"beCommentId"`
-}

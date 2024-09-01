@@ -13,8 +13,9 @@ import (
 	logger "star/app/comment/logger"
 	"star/app/comment/rabbitMQ"
 	commentService "star/app/comment/service"
+	"star/constant/settings"
 	"star/proto/comment/commentPb"
-	"star/settings"
+
 	"star/utils"
 	"time"
 )

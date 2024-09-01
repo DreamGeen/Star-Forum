@@ -8,6 +8,7 @@ import (
 	"star/app/comment/dao/redis"
 	logger "star/app/comment/logger"
 	"star/app/comment/rabbitMQ"
+	"star/constant/str"
 	"star/proto/comment/commentPb"
 )
 
@@ -40,7 +41,7 @@ func (s *CommentService) StarComment(ctx context.Context, req *commentPb.StarCom
 	// Redis中点赞
 	if err := redis.IncrementCommentStar(req.CommentId); err != nil {
 		logger.CommentLogger.Error("Redis中点赞失败", zap.Error(err))
-		return err
+		return str.ErrCommentError
 	}
 
 	// 使用RabbitMQ异步存储至MySQL数据库中
@@ -49,7 +50,7 @@ func (s *CommentService) StarComment(ctx context.Context, req *commentPb.StarCom
 		if err := redis.Client.Del(ctx, fmt.Sprintf("comment:star:%d", req.CommentId)).Err(); err != nil {
 			logger.CommentLogger.Error("删除Redis中点赞数缓存失败", zap.Error(err))
 		}
-		return err
+		return str.ErrCommentError
 	}
 
 	rsp.Star = rsp.Star + 1
