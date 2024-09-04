@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/redis/go-redis/v9"
+	"log"
 	"star/constant/settings"
 )
 
-var rdb *redis.Client
+var Client *redis.Client
 
-func Init() (err error) {
-	rdb = redis.NewClient(&redis.Options{
+func init() {
+	rdb := redis.NewClient(&redis.Options{
 		Addr: fmt.Sprintf("%s:%d",
 			settings.Conf.RedisHost,
 			settings.Conf.RedisPort),
@@ -18,12 +19,10 @@ func Init() (err error) {
 		DB:       settings.Conf.RedisDb,       // 数据库
 		PoolSize: settings.Conf.RedisPoolSize, // 连接池大小
 	})
-	_, err = rdb.Ping(context.Background()).Result()
+	Client = rdb
+	_, err := rdb.Ping(context.Background()).Result()
 	if err != nil {
-		return err
+		log.Println("redis connect fail", err)
+		panic(err)
 	}
-	return nil
-}
-func Close() {
-	_ = rdb.Close()
 }

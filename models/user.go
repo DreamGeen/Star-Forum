@@ -11,7 +11,15 @@ type User struct {
 	Signature  string  `db:"sign"`      //签名
 	Img        string  `db:"img"`       //头像
 	Birth      string  `db:"birth"`     //生日
-	Grade      uint8   `db:"grade"`     //等级
-	Exp        int     `db:"exp"`       //经验值
+	Grade      uint32  `db:"grade"`     //等级
+	Exp        int64   `db:"exp"`       //经验值
 	DeleteTime *string `db:"deletedAt"` //删除时间
+}
+
+func (u *User) GetID() int64 {
+	return u.UserId
+}
+
+func (u *User) IsDirty() bool {
+	return u.Username != ""
 }

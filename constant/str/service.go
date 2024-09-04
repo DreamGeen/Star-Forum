@@ -9,4 +9,10 @@ const (
 
 	CommentServiceClient = "CommentService.client"
 	CommentService       = "CommentService"
+
+	CommunityServiceClient = "CommunityService.client"
+	CommunityService       = "CommunityService"
+
+	PostServiceClient = "PostService.client"
+	PostService       = "PostService"
 )

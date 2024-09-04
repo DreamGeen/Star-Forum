@@ -5,8 +5,6 @@ import (
 	"github.com/go-micro/plugins/v4/registry/etcd"
 	"go-micro.dev/v4"
 	"go-micro.dev/v4/registry"
-	"star/app/user/dao/mysql"
-	"star/app/user/dao/redis"
 	"star/app/user/service"
 	"star/constant/settings"
 	"star/constant/str"
@@ -16,20 +14,6 @@ import (
 )
 
 func main() {
-	//初始化配置
-	if err := settings.Init(); err != nil {
-		panic(err)
-	}
-	//初始化mysql
-	if err := mysql.Init(); err != nil {
-		panic(err)
-	}
-	defer mysql.Close()
-	//初始化redis
-	if err := redis.Init(); err != nil {
-		panic(err)
-	}
-	defer redis.Close()
 	//雪花算法初始化
 	if err := utils.Init(1); err != nil {
 		panic(err)
@@ -48,8 +32,6 @@ func main() {
 		micro.Version("v1"),         //服务版本
 		micro.Registry(etcdReg),     //etcd注册件
 	)
-	//初始化
-	microSevice.Init()
 	//服务注册
 	if err := userPb.RegisterUserHandler(microSevice.Server(), service.GetUserSrv()); err != nil {
 		panic(err)

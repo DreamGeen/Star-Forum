@@ -5,7 +5,6 @@ import (
 	"github.com/go-micro/plugins/v4/registry/etcd"
 	"go-micro.dev/v4"
 	"go-micro.dev/v4/registry"
-	"star/app/sendSms/dao"
 	"star/app/sendSms/service"
 	"star/constant/settings"
 	"star/constant/str"
@@ -13,15 +12,6 @@ import (
 )
 
 func main() {
-	//初始化配置
-	if err := settings.Init(); err != nil {
-		panic(err)
-	}
-	//初始化redis
-	if err := redis.Init(); err != nil {
-		panic(err)
-	}
-	defer redis.Close()
 	etcdReg := etcd.NewRegistry(
 		registry.Addrs(fmt.Sprintf("%s:%d", settings.Conf.EtcdHost, settings.Conf.EtcdPort)),
 	)

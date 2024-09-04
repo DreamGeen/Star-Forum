@@ -27,18 +27,19 @@ var _ context.Context
 var _ client.Option
 var _ server.Option
 
-// Api Endpoints for User service
+// Api Endpoints for UserService service
 
-func NewUserEndpoints() []*api.Endpoint {
+func NewUserServiceEndpoints() []*api.Endpoint {
 	return []*api.Endpoint{}
 }
 
-// Client API for User service
+// Client API for UserService service
 
 type UserService interface {
 	LoginPassword(ctx context.Context, in *LSRequest, opts ...client.CallOption) (*LoginResponse, error)
 	LoginCaptcha(ctx context.Context, in *LSRequest, opts ...client.CallOption) (*LoginResponse, error)
 	Signup(ctx context.Context, in *LSRequest, opts ...client.CallOption) (*EmptyLSResponse, error)
+	GetUserInfo(ctx context.Context, in *GetUserInfoRequest, opts ...client.CallOption) (*GetUserInfoResponse, error)
 }
 
 type userService struct {
@@ -54,7 +55,7 @@ func NewUserService(name string, c client.Client) UserService {
 }
 
 func (c *userService) LoginPassword(ctx context.Context, in *LSRequest, opts ...client.CallOption) (*LoginResponse, error) {
-	req := c.c.NewRequest(c.name, "User.LoginPassword", in)
+	req := c.c.NewRequest(c.name, "UserService.LoginPassword", in)
 	out := new(LoginResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
@@ -64,7 +65,7 @@ func (c *userService) LoginPassword(ctx context.Context, in *LSRequest, opts ...
 }
 
 func (c *userService) LoginCaptcha(ctx context.Context, in *LSRequest, opts ...client.CallOption) (*LoginResponse, error) {
-	req := c.c.NewRequest(c.name, "User.LoginCaptcha", in)
+	req := c.c.NewRequest(c.name, "UserService.LoginCaptcha", in)
 	out := new(LoginResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
@@ -74,7 +75,7 @@ func (c *userService) LoginCaptcha(ctx context.Context, in *LSRequest, opts ...c
 }
 
 func (c *userService) Signup(ctx context.Context, in *LSRequest, opts ...client.CallOption) (*EmptyLSResponse, error) {
-	req := c.c.NewRequest(c.name, "User.Signup", in)
+	req := c.c.NewRequest(c.name, "UserService.Signup", in)
 	out := new(EmptyLSResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
@@ -83,39 +84,55 @@ func (c *userService) Signup(ctx context.Context, in *LSRequest, opts ...client.
 	return out, nil
 }
 
-// Server API for User service
+func (c *userService) GetUserInfo(ctx context.Context, in *GetUserInfoRequest, opts ...client.CallOption) (*GetUserInfoResponse, error) {
+	req := c.c.NewRequest(c.name, "UserService.GetUserInfo", in)
+	out := new(GetUserInfoResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
 
-type UserHandler interface {
+// Server API for UserService service
+
+type UserServiceHandler interface {
 	LoginPassword(context.Context, *LSRequest, *LoginResponse) error
 	LoginCaptcha(context.Context, *LSRequest, *LoginResponse) error
 	Signup(context.Context, *LSRequest, *EmptyLSResponse) error
+	GetUserInfo(context.Context, *GetUserInfoRequest, *GetUserInfoResponse) error
 }
 
-func RegisterUserHandler(s server.Server, hdlr UserHandler, opts ...server.HandlerOption) error {
-	type user interface {
+func RegisterUserServiceHandler(s server.Server, hdlr UserServiceHandler, opts ...server.HandlerOption) error {
+	type userService interface {
 		LoginPassword(ctx context.Context, in *LSRequest, out *LoginResponse) error
 		LoginCaptcha(ctx context.Context, in *LSRequest, out *LoginResponse) error
 		Signup(ctx context.Context, in *LSRequest, out *EmptyLSResponse) error
+		GetUserInfo(ctx context.Context, in *GetUserInfoRequest, out *GetUserInfoResponse) error
 	}
-	type User struct {
-		user
+	type UserService struct {
+		userService
 	}
-	h := &userHandler{hdlr}
-	return s.Handle(s.NewHandler(&User{h}, opts...))
+	h := &userServiceHandler{hdlr}
+	return s.Handle(s.NewHandler(&UserService{h}, opts...))
 }
 
-type userHandler struct {
-	UserHandler
+type userServiceHandler struct {
+	UserServiceHandler
 }
 
-func (h *userHandler) LoginPassword(ctx context.Context, in *LSRequest, out *LoginResponse) error {
-	return h.UserHandler.LoginPassword(ctx, in, out)
+func (h *userServiceHandler) LoginPassword(ctx context.Context, in *LSRequest, out *LoginResponse) error {
+	return h.UserServiceHandler.LoginPassword(ctx, in, out)
 }
 
-func (h *userHandler) LoginCaptcha(ctx context.Context, in *LSRequest, out *LoginResponse) error {
-	return h.UserHandler.LoginCaptcha(ctx, in, out)
+func (h *userServiceHandler) LoginCaptcha(ctx context.Context, in *LSRequest, out *LoginResponse) error {
+	return h.UserServiceHandler.LoginCaptcha(ctx, in, out)
 }
 
-func (h *userHandler) Signup(ctx context.Context, in *LSRequest, out *EmptyLSResponse) error {
-	return h.UserHandler.Signup(ctx, in, out)
+func (h *userServiceHandler) Signup(ctx context.Context, in *LSRequest, out *EmptyLSResponse) error {
+	return h.UserServiceHandler.Signup(ctx, in, out)
+}
+
+func (h *userServiceHandler) GetUserInfo(ctx context.Context, in *GetUserInfoRequest, out *GetUserInfoResponse) error {
+	return h.UserServiceHandler.GetUserInfo(ctx, in, out)
 }

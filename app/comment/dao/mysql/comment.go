@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
-	logger "star/app/comment/logger"
+	"log"
 	"star/constant/str"
 	"star/models"
 	"star/utils"
@@ -34,12 +34,12 @@ func CheckComment(commentId int64) error {
 	var exists bool
 	err := db.Get(&exists, checkComment, commentId)
 	if err != nil {
-		logger.CommentLogger.Error("检查评论是否存在失败", zap.Error(err))
+		log.Println("检查评论是否存在失败", err)
 		return str.ErrCommentError
 	}
 	if !exists {
 		// 如果评论不存在
-		logger.CommentLogger.Error("评论不存在或已被删除", zap.Int64("commentId", commentId))
+		log.Println("评论不存在或已被删除", "commentId", commentId)
 		return str.ErrCommentError
 	}
 	return nil
@@ -50,12 +50,12 @@ func CheckPost(postId int64) error {
 	// 检查一下帖子是否存在
 	var exists bool
 	if err := db.Get(&exists, checkPost, postId); err != nil {
-		logger.CommentLogger.Error("检查帖子是否存在失败", zap.Error(err))
+		log.Println("检查帖子是否存在失败", err)
 		return str.ErrCommentError
 	}
 	if !exists {
 		// 如果帖子不存在
-		logger.CommentLogger.Error("帖子不存在或已被删除", zap.Int64("postId", postId))
+		log.Println("帖子不存在或已被删除", "postId", postId)
 		return str.ErrCommentNotExists
 	}
 	return nil
@@ -66,12 +66,12 @@ func CheckUser(userId int64) error {
 	// 检查一下用户是否存在
 	var exists bool
 	if err := db.Get(&exists, checkUser, userId); err != nil {
-		logger.CommentLogger.Error("检查用户是否存在失败", zap.Error(err))
+		log.Println("检查用户是否存在失败", err)
 		return err
 	}
 	if !exists {
 		// 如果用户不存在
-		logger.CommentLogger.Error("用户不存在或已被删除", zap.Int64("userId", userId))
+		log.Println("用户不存在或已被删除", "userId", userId)
 		return fmt.Errorf("用户ID: %d 不存在或已被删除", userId)
 	}
 	return nil
@@ -81,7 +81,7 @@ func CheckUser(userId int64) error {
 func UpdatePostComment(tx *sqlx.Tx, postId, count int64) error {
 	_, err := tx.Exec(updatePostComment, count, postId)
 	if err != nil {
-		logger.CommentLogger.Error("更新帖子评论数失败", zap.Error(err), zap.Int64("postId", postId))
+		log.Println("更新帖子评论数失败", err, "postId", postId)
 		return err
 	}
 	return nil
@@ -91,7 +91,7 @@ func UpdatePostComment(tx *sqlx.Tx, postId, count int64) error {
 func UpdateReplyComment(tx *sqlx.Tx, commentId, count int64) error {
 	_, err := tx.Exec(updateReplyComment, count, commentId)
 	if err != nil {
-		logger.CommentLogger.Error("更新评论回复数失败", zap.Error(err), zap.Int64("commentId", commentId))
+		log.Println("更新评论回复数失败", err, "commentId", commentId)
 		return err
 	}
 	return nil
@@ -99,23 +99,23 @@ func UpdateReplyComment(tx *sqlx.Tx, commentId, count int64) error {
 
 // CreateComment 发布评论
 func CreateComment(comment *models.Comment) error {
-	logger.CommentLogger.Info("开始发布评论")
+	log.Println("开始发布评论")
 	// 开始事务
 	tx, err := db.Beginx()
 	if err != nil {
-		logger.CommentLogger.Error("发布评论事务开启失败", zap.Error(err))
+		log.Println("发布评论事务开启失败", err)
 		return str.ErrCommentError
 	}
 	defer func() {
 		if err != nil {
 			// 如果发生错误，则回滚事务
 			if err = tx.Rollback(); err != nil {
-				logger.CommentLogger.Error("发布评论回滚事务失败", zap.Error(err))
+				log.Println("发布评论回滚事务失败", err)
 			}
 		} else {
 			// 如果没有错误，则提交事务
 			if err = tx.Commit(); err != nil {
-				logger.CommentLogger.Error("发布评论事务提交失败", zap.Error(err))
+				log.Println("发布评论事务提交失败", err)
 			}
 		}
 	}()
@@ -140,11 +140,11 @@ func CreateComment(comment *models.Comment) error {
 			var parentPostId int64
 			err := tx.Get(&parentPostId, queryPostId, comment.BeCommentId)
 			if err != nil {
-				logger.CommentLogger.Error("评论发布:检查父评论的帖子ID失败", zap.Error(err))
+				log.Println("评论发布:检查父评论的帖子ID失败", err)
 				return err
 			}
 			if parentPostId != comment.PostId {
-				logger.CommentLogger.Error("评论发布:父评论的帖子ID与当前评论的帖子ID不一致", zap.Int64("parentPostId", parentPostId), zap.Int64("commentPostId", comment.PostId))
+				log.Println("评论发布:父评论的帖子ID与当前评论的帖子ID不一致", "parentPostId", parentPostId, "commentPostId", comment.PostId)
 				return fmt.Errorf("父评论的帖子ID: %d 与当前评论的帖子ID: %d 不一致", parentPostId, comment.PostId)
 			}
 		}
@@ -154,14 +154,14 @@ func CreateComment(comment *models.Comment) error {
 	commentId := utils.GetID()
 	_, err = db.Exec(insertComment, commentId, comment.PostId, comment.UserId, comment.Content, comment.BeCommentId)
 	if err != nil {
-		logger.CommentLogger.Error("评论发布:评论插入数据库失败", zap.Error(err))
+		log.Println("评论发布:评论插入数据库失败", err)
 		return err
 	}
 
 	// 更新帖子评论数(+1)
 	err = UpdatePostComment(tx, comment.PostId, 1)
 	if err != nil {
-		logger.CommentLogger.Error("评论发布:更新帖子评论数失败", zap.Error(err))
+		log.Println("评论发布:更新帖子评论数失败", err)
 		return err
 	}
 
@@ -169,35 +169,35 @@ func CreateComment(comment *models.Comment) error {
 	if comment.BeCommentId != 0 {
 		err := UpdateReplyComment(tx, comment.BeCommentId, 1)
 		if err != nil {
-			logger.CommentLogger.Error("更新父评论回复数失败", zap.Error(err))
+			log.Println("更新父评论回复数失败", err)
 			return err
 		}
 	}
 
-	logger.CommentLogger.Info("评论发布成功", zap.Int64("commentId", commentId))
+	log.Println("评论发布成功", "commentId", commentId)
 
 	return err
 }
 
 // DeleteComment 删除评论入口
 func DeleteComment(commentId int64) error {
-	logger.CommentLogger.Info("开始删除评论")
+	log.Println("开始删除评论")
 	// 开始事务
 	tx, err := db.Beginx()
 	if err != nil {
-		logger.CommentLogger.Error("开启事务失败", zap.Error(err))
+		log.Println("开启事务失败", err)
 		return err
 	}
 	defer func() {
 		if err != nil {
 			// 如果发生错误，则回滚事务
 			if err = tx.Rollback(); err != nil {
-				logger.CommentLogger.Error("删除评论事务回滚失败", zap.Error(err))
+				log.Println("删除评论事务回滚失败", zap.Error(err))
 			}
 		} else {
 			// 如果没有错误，则提交事务
 			if err = tx.Commit(); err != nil {
-				logger.CommentLogger.Error("删除评论事务提交失败", zap.Error(err))
+				log.Println("删除评论事务提交失败", err)
 			}
 		}
 	}()
@@ -208,22 +208,22 @@ func DeleteComment(commentId int64) error {
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			// 评论不存在或已被删除
-			logger.CommentLogger.Error("尝试删除的评论ID不存在或已被删除", zap.Int64("commentId", commentId))
+			log.Println("尝试删除的评论ID不存在或已被删除", "commentId", commentId)
 			return fmt.Errorf("评论ID: %d 不存在或已被删除", commentId)
 		}
-		logger.CommentLogger.Error("评论删除:查询评论关联的postId失败", zap.Error(err))
+		log.Println("评论删除:查询评论关联的postId失败", err)
 		return err
 	}
 
-	logger.CommentLogger.Info("准备递归删除评论")
+	log.Println("准备递归删除评论")
 
 	// 递归删除评论
 	if err := deleteComments(tx, commentId, postId); err != nil {
-		logger.CommentLogger.Error("递归删除评论失败", zap.Error(err))
+		log.Println("递归删除评论失败", err)
 		return err
 	}
 
-	logger.CommentLogger.Info("评论ID: %d 删除成功", zap.Int64("commentId", commentId))
+	log.Println("评论ID:  删除成功", "commentId", commentId)
 	return nil
 }
 
@@ -267,7 +267,7 @@ func deleteComments(tx *sqlx.Tx, commentId int64, postId int64) error {
 	}
 	defer func() {
 		if err := rows.Close(); err != nil {
-			logger.CommentLogger.Error("递归删除评论:关闭rows失败", zap.Error(err))
+			log.Println("递归删除评论:关闭rows失败", err)
 		}
 	}()
 
@@ -295,20 +295,20 @@ func deleteComments(tx *sqlx.Tx, commentId int64, postId int64) error {
 
 // GetCommentsStar 获取评论（按照点赞数排序）
 func GetCommentsStar(postId int64) ([]*models.Comment, error) {
-	logger.CommentLogger.Info("开始获取评论")
+	log.Println("开始获取评论")
 
 	// 执行SQL查询，包含分页和软删除检查
 	rows, err := db.Query(queryCommentsStar, postId)
 	if err != nil {
 		// 如果查询失败，返回错误。
-		logger.CommentLogger.Error("评论获取:查询数据库错误", zap.Error(err))
+		log.Println("评论获取:查询数据库错误", err)
 		return nil, fmt.Errorf("查询数据库错误，err:%v", err)
 	}
 
 	// 延迟关闭rows，确保在函数退出前释放数据库连接
 	defer func() {
 		if err := rows.Close(); err != nil {
-			logger.CommentLogger.Error("评论获取:关闭rows时出错", zap.Error(err))
+			log.Println("评论获取:关闭rows时出错", err)
 		}
 	}()
 
@@ -323,7 +323,7 @@ func GetCommentsStar(postId int64) ([]*models.Comment, error) {
 		// 将当前行的数据扫描到comment实例中
 		if err := rows.Scan(&comment.CommentId, &comment.PostId, &comment.UserId, &comment.Content, &comment.Star, &comment.Reply, &comment.BeCommentId, &comment.CreatedAt); err != nil {
 			// 如果扫描失败，返回错误
-			logger.CommentLogger.Error("评论获取:调用Scan错误", zap.Error(err))
+			log.Println("评论获取:调用Scan错误", err)
 			return nil, fmt.Errorf("调用Scan错误，err:%v", err)
 		}
 
@@ -334,7 +334,7 @@ func GetCommentsStar(postId int64) ([]*models.Comment, error) {
 	// 检查是否有在迭代过程中发生的错误
 	if err := rows.Err(); err != nil {
 		// 如果有错误，返回错误
-		logger.CommentLogger.Error("评论获取:迭代出错", zap.Error(err))
+		log.Println("评论获取:迭代出错", err)
 		return nil, fmt.Errorf("迭代出错，err:%v", err)
 	}
 
@@ -344,20 +344,20 @@ func GetCommentsStar(postId int64) ([]*models.Comment, error) {
 	//}
 
 	// 返回查询到的评论列表，如果为空，返回空评论
-	logger.CommentLogger.Info("评论获取成功", zap.Int64("postId", postId))
+	log.Println("评论获取成功", "postId", postId)
 	return comments, nil
 }
 
 // UpdateStar 点赞评论
 func UpdateStar(commentId int64, increment int8) error {
-	logger.CommentLogger.Info("开始点赞评论")
+	log.Println("开始点赞评论")
 	_, err := db.Exec(starComment, increment, commentId)
 	if err != nil {
-		logger.CommentLogger.Error("更新点赞数时出错", zap.Error(err))
+		log.Println("更新点赞数时出错", err)
 		return err
 	}
 
-	logger.CommentLogger.Info("评论点赞成功", zap.Int64("commentId", commentId))
+	log.Println("评论点赞成功", "commentId", commentId)
 	return nil
 }
 
@@ -368,10 +368,10 @@ func GetStar(commentId int64) (int64, error) {
 	err := db.Get(&starCount, queryStar, commentId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			logger.CommentLogger.Error("获取点赞数:评论不存在或已被删除", zap.Int64("commentId", commentId))
+			log.Println("获取点赞数:评论不存在或已被删除", "commentId", commentId)
 			return 0, str.ErrCommentNotExists
 		}
-		logger.CommentLogger.Error("获取点赞数时出错", zap.Error(err))
+		log.Println("获取点赞数时出错", err)
 		return 0, str.ErrCommentError
 	}
 

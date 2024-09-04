@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"go.uber.org/zap"
+	"log"
 	"star/app/comment/dao/mysql"
 	"star/app/comment/dao/redis"
 	logger "star/app/comment/logger"
 	"star/app/comment/rabbitMQ"
+	redis2 "star/app/storage/redis"
 	"star/constant/str"
 	"star/proto/comment/commentPb"
 )
@@ -20,7 +22,7 @@ func (s *CommentService) StarComment(ctx context.Context, req *commentPb.StarCom
 		return err
 	}
 	// 尝试从Redis中获取点赞数
-	star, err := redis.GetCommentStar(req.CommentId)
+	star, err := redis2.GetCommentStar(req.CommentId)
 	// 缓存未命中或已过期
 	if err != nil || star == 0 {
 		// 如果Redis获取失败或返回0，则从MySQL中获取点赞数
@@ -28,9 +30,9 @@ func (s *CommentService) StarComment(ctx context.Context, req *commentPb.StarCom
 			return err
 		} else {
 			// 将从MySQL获取的点赞数更新回Redis缓存
-			err = redis.SetCommentStar(req.CommentId, dbStar)
+			err = redis2.SetCommentStar(req.CommentId, dbStar)
 			if err != nil {
-				logger.CommentLogger.Error("更新点赞数至Redis失败", zap.Error(err))
+				log.Println("更新点赞数至Redis失败", err)
 			}
 			rsp.Star = dbStar
 		}
@@ -39,8 +41,8 @@ func (s *CommentService) StarComment(ctx context.Context, req *commentPb.StarCom
 	}
 
 	// Redis中点赞
-	if err := redis.IncrementCommentStar(req.CommentId); err != nil {
-		logger.CommentLogger.Error("Redis中点赞失败", zap.Error(err))
+	if err := redis2.IncrementCommentStar(req.CommentId); err != nil {
+		log.Println("Redis中点赞失败", err)
 		return str.ErrCommentError
 	}
 
@@ -48,7 +50,7 @@ func (s *CommentService) StarComment(ctx context.Context, req *commentPb.StarCom
 	// 生产者发布点赞消息
 	if err := rabbitMQ.PublishStarEvent(req.CommentId); err != nil {
 		if err := redis.Client.Del(ctx, fmt.Sprintf("comment:star:%d", req.CommentId)).Err(); err != nil {
-			logger.CommentLogger.Error("删除Redis中点赞数缓存失败", zap.Error(err))
+			log.Println("删除Redis中点赞数缓存失败", err)
 		}
 		return str.ErrCommentError
 	}

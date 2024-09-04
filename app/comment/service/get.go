@@ -4,19 +4,21 @@ import (
 	"context"
 	"log"
 	"star/app/comment/dao/mysql"
+	"star/app/gateway/client"
 	"star/constant/str"
 	"star/models"
 	"star/proto/comment/commentPb"
+	"star/proto/post/postPb"
 )
 
 // GetComments 获取一个帖子的评论
 // 根据页面获取，第几页，每一页多少个评论
 func (s *CommentService) GetComments(ctx context.Context, req *commentPb.GetCommentsRequest, rsp *commentPb.GetCommentsResponse) error {
 	// 检查帖子是否存在
-	if err := mysql.CheckPost(req.PostId); err != nil {
+	if _, err := client.QueryPostExist(ctx, &postPb.QueryPostExistRequest{PostId: req.PostId}); err != nil {
+		log.Println("QueryPostExist:", err)
 		return err
 	}
-
 	// 按照点赞数排序，获取所有评论
 	comments, err := mysql.GetCommentsStar(req.PostId)
 	if err != nil {

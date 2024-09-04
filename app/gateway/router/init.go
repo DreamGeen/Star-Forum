@@ -25,6 +25,12 @@ func Setup() *gin.Engine {
 	v.GET("/comments", httpHandler.GetComments)
 	v.POST("/comment/star/:id", httpHandler.StarComment)
 
+	//v2 := v.Group("/community")
+	//{
+	//	//v2.POST()
+	//
+	//}
+
 	v.POST("community/:communityId/chat", httpHandler.ChatHandler)
 
 	return v

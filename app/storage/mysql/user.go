@@ -14,11 +14,12 @@ const (
 	queryUserByEmailSQL    = "SELECT userid,username, email, password,deletedAt FROM userLogin WHERE email=?"
 	insertUserLoginSQL     = "INSERT INTO userLogin(userId, username, password, phone) VALUES (?, ?, ?, ?)"
 	insertUserSQL          = "INSERT INTO user(userId, username,img,sign) VALUES (?, ?, ?,?)"
+	queryUserInfoSQL       = "select  userId,userName,gender,sign,birth,grade,exp,img,updatedAt,createdAt,deletedAt from user  where userId=?"
 )
 
 // QueryUserByPhone 通过手机号查询用户密码
 func QueryUserByPhone(u *models.User) error {
-	return queryUser(u, queryUserByPhoneSQL, u.Phone)
+	return queryUser(u, queryUserByPhoneSQL, u.Username)
 }
 
 // QueryUserByUsername 通过用户名查询用户密码
@@ -32,7 +33,7 @@ func QueryUserByEmail(u *models.User) error {
 }
 
 func queryUser(u *models.User, sqlStr string, args ...interface{}) error {
-	err := db.Get(u, sqlStr, args...)
+	err := Client.Get(u, sqlStr, args...)
 	if err != nil {
 		log.Println("查询用户信息失败", err)
 		if errors.Is(err, sql.ErrNoRows) {
@@ -49,34 +50,44 @@ func queryUser(u *models.User, sqlStr string, args ...interface{}) error {
 // InsertUser 将用户信息插入mysql
 func InsertUser(u *models.User) error {
 	//将用户信息插入mysql
-	transaction, err := db.Beginx()
+	transaction, err := Client.Beginx()
 	if err != nil {
 		log.Println("开启事务失败", err)
-		return err
+		return str.ErrSignupError
 	}
-	_, err = db.Exec(insertUserLoginSQL, u.UserId, u.Username, u.Password, u.Phone)
+	_, err = Client.Exec(insertUserLoginSQL, u.UserId, u.Username, u.Password, u.Phone)
 	if err != nil {
 		if err := transaction.Rollback(); err != nil {
 			log.Println("回滚事务失败", err)
 		}
 		log.Println("插入数据失败", err)
-		return err
+		return str.ErrSignupError
 	}
-	_, err = db.Exec(insertUserSQL, u.UserId, u.Username, u.Img, u.Signature)
+	_, err = Client.Exec(insertUserSQL, u.UserId, u.Username, u.Img, u.Signature)
 	if err != nil {
 		if err := transaction.Rollback(); err != nil {
 			log.Println("回滚事务失败", err)
 		}
 		log.Println("插入数据失败", err)
-		return err
+		return str.ErrSignupError
 	}
 	if err := transaction.Commit(); err != nil {
 		if err := transaction.Rollback(); err != nil {
 			log.Println("回滚事务失败", err)
-			return err
+			return str.ErrSignupError
 		}
 		log.Println("插入数据失败", err)
-		return err
+		return str.ErrSignupError
+	}
+	return nil
+}
+
+func QueryUserInfo(user *models.User, userId int64) error {
+	if err := Client.Get(user, queryUserInfoSQL, userId); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return str.ErrUserNotExists
+		}
+		return str.ErrUserError
 	}
 	return nil
 }

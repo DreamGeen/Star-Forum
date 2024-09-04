@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
+	"log"
 	logger "star/app/comment/logger"
 	"star/constant/str"
 	"time"
@@ -13,13 +14,13 @@ import (
 func PublishStarEvent(commentId int64) error {
 	if rabbitMQConn == nil {
 		err := fmt.Errorf("rabbitMQ 连接未初始化")
-		logger.CommentLogger.Error("MQ点赞生产通道获取失败", zap.Error(err))
+		log.Println("MQ点赞生产通道获取失败", err)
 		return err
 	}
 
 	ch, err := rabbitMQConn.Channel()
 	if err != nil {
-		logger.CommentLogger.Error("MQ点赞生产通道获取失败", zap.Error(err))
+		log.Println("MQ点赞生产通道获取失败", err)
 		return err
 	}
 	defer func() {
@@ -37,11 +38,11 @@ func PublishStarEvent(commentId int64) error {
 			Body:        []byte(body),
 		})
 	if err != nil {
-		logger.CommentLogger.Error("MQ发布点赞消息失败", zap.Error(err))
+		log.Println("MQ发布点赞消息失败", err)
 		return err
 	}
 
-	logger.CommentLogger.Info("成功发布点赞消息", zap.String("message", body))
+	log.Println("成功发布点赞消息", "message", body)
 	return nil
 }
 
@@ -49,13 +50,13 @@ func PublishStarEvent(commentId int64) error {
 func PublishDeleteEvent(commentId int64) error {
 	if rabbitMQConn == nil {
 		err := fmt.Errorf("rabbitMQ 连接未初始化")
-		logger.CommentLogger.Error("MQ评论删除生产通道获取失败", zap.Error(err))
+		log.Println("MQ评论删除生产通道获取失败", err)
 		return str.ErrCommentError
 	}
 
 	ch, err := rabbitMQConn.Channel()
 	if err != nil {
-		logger.CommentLogger.Error("MQ评论删除生产通道获取失败", zap.Error(err))
+		log.Println("MQ评论删除生产通道获取失败", err)
 		return str.ErrCommentError
 	}
 	defer func() {
@@ -75,11 +76,11 @@ func PublishDeleteEvent(commentId int64) error {
 			Body:         []byte(body),
 		})
 	if err != nil {
-		logger.CommentLogger.Error("MQ发布删除评论消息失败", zap.Error(err))
+		log.Println("MQ发布删除评论消息失败", err)
 		return str.ErrCommentError
 	}
 
-	logger.CommentLogger.Info("成功发布删除评论消息", zap.String("message", body))
+	log.Println("成功发布删除评论消息", "message", body)
 	return nil
 }
 
@@ -87,13 +88,13 @@ func PublishDeleteEvent(commentId int64) error {
 func SendHeartbeat(queueName string) error {
 	if rabbitMQConn == nil {
 		err := fmt.Errorf("rabbitMQ 连接未初始化")
-		logger.CommentLogger.Error("发送心跳消息失败", zap.Error(err))
+		log.Println("发送心跳消息失败", err)
 		return err
 	}
 
 	ch, err := rabbitMQConn.Channel()
 	if err != nil {
-		logger.CommentLogger.Error("创建通道失败", zap.Error(err))
+		log.Println("创建通道失败", err)
 		return err
 	}
 	defer func() {
@@ -127,11 +128,11 @@ func SendHeartbeat(queueName string) error {
 			Body:        body,
 		})
 	if err != nil {
-		logger.CommentLogger.Error("发送心跳消息失败", zap.Error(err))
+		log.Println("发送心跳消息失败", err)
 		return err
 	}
 
-	logger.CommentLogger.Info("成功发送心跳消息")
+	log.Println("成功发送心跳消息")
 	return nil
 }
 

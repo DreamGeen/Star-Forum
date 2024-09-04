@@ -4,14 +4,18 @@ import (
 	"go-micro.dev/v4"
 	"star/constant/str"
 	"star/proto/comment/commentPb"
+	"star/proto/community/communityPb"
+	"star/proto/post/postPb"
 	"star/proto/sendSms/sendSmsPb"
 	"star/proto/user/userPb"
 )
 
 var (
-	userService    userPb.UserService
-	sendSmsService sendSmsPb.SendMsgService
-	commentService commentPb.CommentService
+	userService      userPb.UserService
+	sendSmsService   sendSmsPb.SendMsgService
+	commentService   commentPb.CommentService
+	communityService communityPb.CommunityService
+	postService      postPb.PostService
 )
 
 func Init() {
@@ -26,5 +30,13 @@ func Init() {
 	// 创建一个评论微服务客户端
 	commentMicroService := micro.NewService(micro.Name(str.CommentServiceClient))
 	commentService = commentPb.NewCommentService(str.CommentService, commentMicroService.Client())
+
+	//创建一个社区微服务客户端
+	communityMicroService := micro.NewService(micro.Name(str.CommunityServiceClient))
+	communityService = communityPb.NewCommunityService(str.CommunityService, communityMicroService.Client())
+
+	//创建一个帖子服务客户端
+	postMicroService := micro.NewService(micro.Name(str.PostServiceClient))
+	postService = postPb.NewPostService(str.PostService, postMicroService.Client())
 
 }

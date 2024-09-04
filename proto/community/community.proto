@@ -18,11 +18,19 @@ message CreateCommunityRequest{
 
 message EmptyCommunityRequest{
 
+
 }
 message EmptyCommunityResponse{
 }
 
 message GetCommunityListResponse{
+  repeated  Community Communitys=1;
+}
+
+message Community{
+  int64  CommunityId=1;
+  string CommunityName=2;
+  string Img=3;
 }
 
 
@@ -31,7 +39,6 @@ message ShowCommunityRequest{
 }
 
 message ShowCommunityResponse{
-
 }
 
 

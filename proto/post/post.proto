@@ -1,0 +1,55 @@
+syntax="proto3";
+
+
+
+option go_package=".;postPb";
+
+
+service PostService{
+    rpc QueryPostExist(QueryPostExistRequest)returns(QueryPostExistResponse);
+    rpc CreatePost(CreatePostRequest)returns(CreatePostResponse);
+    rpc GetPostByStar(GetPostListByStarRequest)returns(GetPostListByStarResponse);
+    rpc GetPostByTime(GetPostListByTimeRequest)returns(GetPostListByTimeResponse);
+}
+
+
+message QueryPostExistRequest {
+    int64 PostId=1;
+}
+
+message QueryPostExistResponse{
+
+}
+
+message CreatePostRequest{
+   int64  UserId=1;
+   int64  CommunityId=2;
+   string  Tile=3;
+   string  Content=4;
+   bool    IsScan=5;
+}
+
+message Post{
+  int64  CommunityId=2;
+  string  Tile=3;
+  string  Content=4;
+  string   CreateTime=5;
+  bool    IsScan=6;
+}
+
+message CreatePostResponse{
+}
+
+message GetPostListByStarRequest{
+
+}
+
+message GetPostListByStarResponse{
+
+}
+message GetPostListByTimeRequest{
+}
+
+message GetPostListByTimeResponse{
+
+}

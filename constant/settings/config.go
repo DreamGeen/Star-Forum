@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
+	"log"
 )
 
 // Conf 定义一个全局配置变量
@@ -72,30 +73,29 @@ type RabbitMQConfig struct {
 	Password string `mapstructure:"password"`
 }
 
-func Init() (err error) {
+func init() {
 	//设置读取配置文件路径
-	viper.SetConfigFile("../../../settings/config.yaml")
+	viper.SetConfigFile("C:\\Users\\浅梦\\Desktop\\star\\constant\\settings\\config.yaml")
 	//读取配置文件
-	if err = viper.ReadInConfig(); err != nil {
+	if err := viper.ReadInConfig(); err != nil {
 		//utils.Logger.Error("读取配置文件失败", zap.Error(err))
-		fmt.Printf("viper.ReadInConfig failed, err:%v\n", err)
+		log.Println("viper.ReadInConfig failed, err:", err)
 		return
 	}
 	//将读取配置信息反序列化入全局变量
-	if err = viper.Unmarshal(Conf); err != nil {
+	if err := viper.Unmarshal(Conf); err != nil {
 		//utils.Logger.Error("配置文件反序列化入全局变量失败", zap.Error(err))
-		fmt.Printf("viper.Unmarshal failed, err:%v\n", err)
+		log.Println("viper.Unmarshal failed, err:", err)
 		return
 	}
 	viper.WatchConfig()
 	viper.OnConfigChange(func(e fsnotify.Event) {
 		//utils.Logger.Info("配置文件修改了")
 		//将更改的配置文件信息反序列化入全局变量
-		if err = viper.Unmarshal(Conf); err != nil {
+		if err := viper.Unmarshal(Conf); err != nil {
 			//utils.Logger.Error("配置文件反序列化入全局变量失败", zap.Error(err))
 			fmt.Printf("viper.Unmarshal failed, err:%v\n", err)
 			return
 		}
 	})
-	return nil
 }

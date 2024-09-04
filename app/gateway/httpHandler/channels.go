@@ -2,25 +2,28 @@ package httpHandler
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
-	"log"
-	"net/http"
+	websocket2 "star/app/channels/websocket"
+	"star/constant/str"
+	"star/models"
+	"star/utils"
+	"strconv"
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}
-
 func ChatHandler(c *gin.Context) {
-	//将http连接升级为websocket连接
-	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+	//获取communityId
+	communityIdStr := c.Param("communityId")
+	communityId, err := strconv.ParseInt(communityIdStr, 10, 64)
 	if err != nil {
-		log.Println(err)
+		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
 		return
 	}
-
+	//获取userId
+	userId, err := utils.GetUserId(c)
+	if err != nil {
+		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
+		return
+	}
+	user := &models.User{UserId: userId}
+	hubManager := websocket2.NewHubManager()
+	websocket2.ServeWs(communityId, communityIdStr, user, hubManager, c.Writer, c.Request)
 }

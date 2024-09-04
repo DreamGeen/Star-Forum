@@ -3,7 +3,6 @@ package utils
 import (
 	"errors"
 	"star/constant/settings"
-	"star/constant/str"
 	"star/models"
 	"time"
 
@@ -18,9 +17,7 @@ const (
 
 // MyClaims token配置结构体
 type MyClaims struct {
-	UserID   int64  `json:"userid"`
-	UserName string `json:"username"`
-	Img      string `json:"img"`
+	UserID int64 `json:"userid"`
 	jwt.RegisteredClaims
 }
 
@@ -34,12 +31,12 @@ var (
 // GetToken 获取token
 func GetToken(user *models.User) (accessTokenString string, refreshTokenString string, err error) {
 	//获取accessToken
-	accessTokenString, err = generateToken(user.UserId, user.Username, user.Img, expireAccessToken)
+	accessTokenString, err = generateToken(user.UserId, expireAccessToken)
 	if err != nil {
 		return "", "", err
 	}
 	//获取refreshToken
-	refreshTokenString, err = generateToken(0, str.Empty, str.Empty, expireRefreshToken)
+	refreshTokenString, err = generateToken(0, expireRefreshToken)
 	if err != nil {
 		return "", "", err
 	}
@@ -58,7 +55,7 @@ func RefreshAccessToken(accessToken, refreshToken string) (string, error) {
 	if !errors.Is(err, tokenExpired) {
 		return "", tokenInValid
 	}
-	return generateToken(claims.UserID, claims.UserName, claims.Img, expireAccessToken)
+	return generateToken(claims.UserID, expireAccessToken)
 }
 
 // ParseToken 解析token
@@ -79,11 +76,9 @@ func ParseToken(tokenString string) (*MyClaims, error) {
 }
 
 // generateToken 生成JWT token
-func generateToken(userID int64, userName string, img string, expiration time.Duration) (string, error) {
+func generateToken(userID int64, expiration time.Duration) (string, error) {
 	claims := &MyClaims{
-		UserID:   userID,
-		UserName: userName,
-		Img:      img,
+		UserID: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    settings.Conf.AliyunConfig.SignName,            //发行人
 			IssuedAt:  jwt.NewNumericDate(time.Now()),                 //发行时间

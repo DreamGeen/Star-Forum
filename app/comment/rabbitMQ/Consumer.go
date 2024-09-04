@@ -1,9 +1,8 @@
 package rabbitMQ
 
 import (
-	"go.uber.org/zap"
+	"log"
 	"star/app/comment/dao/mysql"
-	logger "star/app/comment/logger"
 	"strconv"
 	"strings"
 )
@@ -11,13 +10,13 @@ import (
 // ConsumeStarEvents 消费点赞消息
 func ConsumeStarEvents() {
 	if rabbitMQConn == nil {
-		logger.CommentLogger.Error("rabbitMQ 连接未初始化")
+		log.Println("rabbitMQ 连接未初始化")
 		return
 	}
 
 	ch, err := rabbitMQConn.Channel()
 	if err != nil {
-		logger.CommentLogger.Error("MQ点赞消费通道获取失败", zap.Error(err))
+		log.Println("MQ点赞消费通道获取失败", err)
 		return
 	}
 
@@ -31,7 +30,7 @@ func ConsumeStarEvents() {
 		nil,            // 其他参数
 	)
 	if err != nil {
-		logger.CommentLogger.Error("MQ点赞消息接收失败", zap.Error(err))
+		log.Println("MQ点赞消息接收失败", err)
 	}
 
 	go func() {
@@ -39,23 +38,23 @@ func ConsumeStarEvents() {
 			body := string(d.Body)
 			if body == "heartbeat" {
 				// 心跳消息
-				logger.CommentLogger.Info("comment_star接收到心跳消息", zap.String("message", body))
+				log.Println("comment_star接收到心跳消息", "message", body)
 				continue
 			}
 			if strings.HasPrefix(body, "star:") {
 				commentIdStr := body[5:]
 				commentId, err := strconv.ParseInt(commentIdStr, 10, 64)
 				if err != nil {
-					logger.CommentLogger.Error("MQ解析消息体失败", zap.Error(err))
+					log.Println("MQ解析消息体失败", err)
 					continue
 				}
 				if err := mysql.UpdateStar(commentId, 1); err != nil {
-					logger.CommentLogger.Error("MQ更新点赞数失败", zap.Error(err))
+					log.Println("MQ更新点赞数失败", err)
 				} else {
-					logger.CommentLogger.Info("成功更新点赞数", zap.Int64("commentId", commentId))
+					log.Println("成功更新点赞数", "commentId", commentId)
 				}
 			} else {
-				logger.CommentLogger.Error("MQ消息体格式错误", zap.String("body", body))
+				log.Println("MQ消息体格式错误", "body", body)
 			}
 		}
 	}()
@@ -64,13 +63,13 @@ func ConsumeStarEvents() {
 // ConsumeDeleteCommentEvents 消费评论删除事件
 func ConsumeDeleteCommentEvents() {
 	if rabbitMQConn == nil {
-		logger.CommentLogger.Error("rabbitMQ 连接未初始化")
+		log.Println("rabbitMQ 连接未初始化")
 		return
 	}
 
 	ch, err := rabbitMQConn.Channel()
 	if err != nil {
-		logger.CommentLogger.Error("MQ评论删除消费通道获取失败", zap.Error(err))
+		log.Println("MQ评论删除消费通道获取失败", err)
 		return
 	}
 
@@ -84,7 +83,7 @@ func ConsumeDeleteCommentEvents() {
 		nil,              // 其他参数
 	)
 	if err != nil {
-		logger.CommentLogger.Error("MQ评论删除消息接收失败", zap.Error(err))
+		log.Println("MQ评论删除消息接收失败", err)
 		return
 	}
 
@@ -93,23 +92,23 @@ func ConsumeDeleteCommentEvents() {
 			body := string(d.Body)
 			if body == "heartbeat" {
 				// 心跳消息
-				logger.CommentLogger.Info("comment_delete接收到心跳消息", zap.String("message", body))
+				log.Println("comment_delete接收到心跳消息", "message", body)
 				continue
 			}
 			if strings.HasPrefix(body, "delete-comment:") {
 				commentIdStr := body[15:]
 				commentId, err := strconv.ParseInt(commentIdStr, 10, 64)
 				if err != nil {
-					logger.CommentLogger.Error("MQ解析删除评论消息体失败", zap.Error(err))
+					log.Println("MQ解析删除评论消息体失败", err)
 					continue
 				}
 				if err := mysql.DeleteComment(commentId); err != nil {
-					logger.CommentLogger.Error("MQ处理删除评论失败", zap.Error(err))
+					log.Println("MQ处理删除评论失败", err)
 				} else {
-					logger.CommentLogger.Info("成功处理删除评论", zap.Int64("commentId", commentId))
+					log.Println("成功处理删除评论", "commentId", commentId)
 				}
 			} else {
-				logger.CommentLogger.Error("MQ删除评论消息体格式错误", zap.String("body", body))
+				log.Println("MQ删除评论消息体格式错误", "body", body)
 			}
 		}
 	}()

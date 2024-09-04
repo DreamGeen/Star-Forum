@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"log"
 	"math/rand/v2"
-	redis "star/app/sendSms/dao"
+	"star/app/storage/cached"
 	"star/constant/settings"
 	"star/constant/str"
 	"star/proto/sendSms/sendSmsPb"
 	"strconv"
 	"sync"
+	"time"
 
 	openapi "github.com/alibabacloud-go/darabonba-openapi/client"
 	dysmsapi "github.com/alibabacloud-go/dysmsapi-20170525/v2/client"
@@ -34,7 +35,7 @@ func GetSendSmsSrv() *SendSmsSrv {
 }
 
 func (s *SendSmsSrv) HandleSendSms(ctx context.Context, req *sendSmsPb.SendRequest, resp *sendSmsPb.EmptySendResponse) error {
-	if err := sendMsg(req.Phone, req.TemplateCode); err != nil {
+	if err := sendMsg(ctx, req.Phone, req.TemplateCode); err != nil {
 		log.Println("发送短信失败", err)
 		return str.ErrSendSmsError
 	}
@@ -52,7 +53,7 @@ func createClient() (client *dysmsapi.Client, err error) {
 }
 
 // 发送短信
-func sendMsg(phone, templateCode string) error {
+func sendMsg(ctx context.Context, phone, templateCode string) error {
 	client, err := createClient()
 	if err != nil {
 		return err
@@ -77,7 +78,8 @@ func sendMsg(phone, templateCode string) error {
 		return err
 	}
 	//将验证码储存在redis中
-	redis.SaveCaptcha(code, phone)
+	key := "captcha:" + phone
+	cached.Write(ctx, key, code, true, 5*time.Minute)
 	return nil
 }
 

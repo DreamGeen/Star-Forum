@@ -17,3 +17,7 @@ func LoginCaptcha(ctx context.Context, in *userPb.LSRequest) (*userPb.LoginRespo
 func Signup(ctx context.Context, in *userPb.LSRequest) (*userPb.EmptyLSResponse, error) {
 	return userService.Signup(ctx, in)
 }
+
+func GetUserInfo(ctx context.Context, in *userPb.GetUserInfoRequest) (*userPb.GetUserInfoResponse, error) {
+	return userService.GetUserInfo(ctx, in)
+}

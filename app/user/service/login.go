@@ -4,14 +4,13 @@ import (
 	"context"
 	"log"
 	"regexp"
-	"star/app/user/dao/mysql"
-	"star/app/user/dao/redis"
+	"star/app/storage/cached"
+	"star/app/storage/mysql"
 	"star/constant/str"
 	"star/models"
 	"star/proto/user/userPb"
 	"star/utils"
 	"strings"
-	"time"
 )
 
 // 正则表达式用于匹配手机号
@@ -79,20 +78,19 @@ func loginByEmail(ctx context.Context, u *models.User) error {
 // 验证密码，检查用户是否存在并验证密码
 func validatePassword(ctx context.Context, user *models.User, queryFunc func(*models.User) error) error {
 	password := user.Password
-	// 先尝试从缓存中获取用户信息
+	// 获取用户密码
 	cacheKey := "user:" + getUserIdentifier(user)
-	if err := redis.GetUser(ctx, cacheKey, user); err == nil {
-		// 从缓存中获取到了用户信息
-	} else {
-		// 缓存中没有，从数据库中获取
+	checkedPassword, err := cached.GetWithFunc(ctx, cacheKey, func(key string) (string, error) {
 		if err := queryFunc(user); err != nil {
-			log.Println("query user err:", err)
-			return str.ErrUserNotExists
+			return "", err
 		}
-		// 将用户信息缓存到Redis中并设置超时时间
-		_ = redis.SetUser(ctx, cacheKey, user, 2*24*time.Hour)
+		return user.Password, nil
+	})
+	if err != nil {
+		log.Println("query user error", err)
+		return err
 	}
-	if err := utils.EqualsPassword(password, user.Password); err != nil {
+	if err := utils.EqualsPassword(password, checkedPassword); err != nil {
 		log.Println("密码错误,err:", err, user.Username, user.UserId)
 		return str.ErrInvalidPassword
 	}
@@ -112,22 +110,21 @@ func getUserIdentifier(u *models.User) string {
 // LoginCaptcha 用验证码的方式登录
 func (u *UserSrv) LoginCaptcha(ctx context.Context, req *userPb.LSRequest, resp *userPb.LoginResponse) (err error) {
 
-	if ok := utils.ValidateCaptcha(req.Phone, req.Captcha); !ok {
+	if ok := utils.ValidateCaptcha(ctx, req.Phone, req.Captcha); !ok {
 		return str.ErrInvalidCaptcha
 	}
-	// 先尝试从缓存中获取用户信息
+	// 查询用户是否存在
 	user := createUser(0, "", "", req.Phone, "")
 	cacheKey := "user:" + user.Phone
-	if err = redis.GetUser(ctx, cacheKey, user); err == nil {
-		// 从缓存中获取到了用户信息
-	} else {
-		// 缓存中没有，从数据库中获取
-		if err = mysql.QueryUserByPhone(user); err != nil {
-			log.Println("该手机号未注册", user.Phone)
-			return str.ErrPhoneEmpty
+	_, err = cached.GetWithFunc(ctx, cacheKey, func(key string) (string, error) {
+		if err := mysql.QueryUserByPhone(user); err != nil {
+			return "", err
 		}
-		// 将用户信息缓存到Redis中并设置超时时间
-		_ = redis.SetUser(ctx, cacheKey, user, 2*24*time.Hour)
+		return user.Password, nil
+	})
+	if err != nil {
+		log.Println("query user error", err)
+		return err
 	}
 	accessToken, refreshToken, err := utils.GetToken(user)
 	if err != nil {

@@ -2,10 +2,12 @@ syntax ="proto3";
 
 option go_package=".;userPb";
 
-service user{
+
+service userService{
    rpc LoginPassword(LSRequest)returns (LoginResponse){};
    rpc LoginCaptcha(LSRequest)returns(LoginResponse){};
    rpc Signup(LSRequest)returns(EmptyLSResponse){};
+   rpc GetUserInfo(GetUserInfoRequest)returns(GetUserInfoResponse);
 }
 
 //LSRequest 登录或注册请求,其中User可以表示用户名或邮箱
@@ -24,4 +26,23 @@ message LoginResponse{
   }
 }
 message EmptyLSResponse{
+}
+
+message GetUserInfoRequest{
+   int64   UserId=1;
+}
+
+message  GetUserInfoResponse{
+    User  user=1;
+}
+
+message User{
+    int64  UserId=1;
+    int64   exp=2;
+    uint32    grade=3;
+    string  UserName=4;
+    string   Img=5;
+    string   Gender=6;
+    string   Birth=7;
+    string   Sign=8;
 }

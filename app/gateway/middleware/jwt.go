@@ -25,7 +25,5 @@ func JWTAuthHandler(c *gin.Context) {
 	}
 	//将获取的用户id和用户名保存下来
 	c.Set("userid", claims.UserID)
-	c.Set("username", claims.UserName)
-	c.Set("img", claims.Img)
 	c.Next()
 }

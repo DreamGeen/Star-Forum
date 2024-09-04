@@ -2,14 +2,16 @@ package mysql
 
 import (
 	"fmt"
+
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
+
 	"star/constant/settings"
 )
 
-var db *sqlx.DB
+var Client *sqlx.DB
 
-func Init() (err error) {
+func init() {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8&parseTime=True&loc=Local",
 		settings.Conf.MysqlUser,
 		settings.Conf.MysqlPassword,
@@ -17,12 +19,9 @@ func Init() (err error) {
 		settings.Conf.MysqlPort,
 		settings.Conf.MysqlDbname,
 	)
-	db, err = sqlx.Connect("mysql", dsn)
+	var err error
+	Client, err = sqlx.Connect("mysql", dsn)
 	if err != nil {
-		return err
+		panic(err)
 	}
-	return nil
-}
-func Close() {
-	_ = db.Close()
 }

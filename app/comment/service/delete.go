@@ -3,10 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
-	"go.uber.org/zap"
+	"log"
 	"star/app/comment/dao/mysql"
 	"star/app/comment/dao/redis"
-	logger "star/app/comment/logger"
 	"star/app/comment/rabbitMQ"
 	"star/proto/comment/commentPb"
 )
@@ -20,7 +19,7 @@ func (s *CommentService) DeleteComment(ctx context.Context, req *commentPb.Delet
 
 	// 清除对应评论的Redis缓存
 	if err := redis.Client.Del(ctx, fmt.Sprintf("comment:star:%d", req.CommentId)).Err(); err != nil {
-		logger.CommentLogger.Error("删除Redis中点赞数缓存失败", zap.Error(err))
+		log.Println("删除Redis中点赞数缓存失败", err)
 	}
 
 	// 使用RabbitMQ异步在MySQL数据库中删除
