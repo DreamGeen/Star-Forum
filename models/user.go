@@ -2,7 +2,7 @@ package models
 
 // User 用户结构体
 type User struct {
-	UserId     int64   `db:"userid"`    //用户id
+	UserId     int64   `db:"userId"`    //用户id
 	Username   string  `db:"username"`  //用户名
 	Password   string  `db:"password"`  //密码
 	Phone      string  `db:"phone"`     //手机号
@@ -14,6 +14,11 @@ type User struct {
 	Grade      uint32  `db:"grade"`     //等级
 	Exp        int64   `db:"exp"`       //经验值
 	DeleteTime *string `db:"deletedAt"` //删除时间
+}
+
+type LoginCheck struct {
+	UserId   int64  `json:"userid"`
+	Password string `json:"password"`
 }
 
 func (u *User) GetID() int64 {

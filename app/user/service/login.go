@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"regexp"
 	"star/app/storage/cached"
@@ -78,22 +79,38 @@ func loginByEmail(ctx context.Context, u *models.User) error {
 // 验证密码，检查用户是否存在并验证密码
 func validatePassword(ctx context.Context, user *models.User, queryFunc func(*models.User) error) error {
 	password := user.Password
-	// 获取用户密码
+	// 获取用户密码和用户Id
 	cacheKey := "user:" + getUserIdentifier(user)
-	checkedPassword, err := cached.GetWithFunc(ctx, cacheKey, func(key string) (string, error) {
+	checkJson, err := cached.GetWithFunc(ctx, cacheKey, func(key string) (string, error) {
 		if err := queryFunc(user); err != nil {
 			return "", err
 		}
-		return user.Password, nil
+		check := &models.LoginCheck{
+			UserId:   user.UserId,
+			Password: user.Password,
+		}
+		checkJson, err := json.Marshal(check)
+		if err != nil {
+			log.Println("json marshal checkJson error", err)
+			return "", str.ErrLoginError
+		}
+		return string(checkJson), nil
 	})
 	if err != nil {
 		log.Println("query user error", err)
 		return err
 	}
-	if err := utils.EqualsPassword(password, checkedPassword); err != nil {
+	check := new(models.LoginCheck)
+	if err := json.Unmarshal([]byte(checkJson), &check); err != nil {
+		log.Println("json unmarshal checkJson error", err)
+		return str.ErrLoginError
+	}
+	if err := utils.EqualsPassword(password, check.Password); err != nil {
 		log.Println("密码错误,err:", err, user.Username, user.UserId)
 		return str.ErrInvalidPassword
 	}
+	//将获取的userId赋值给user
+	user.UserId = check.UserId
 	return nil
 }
 
@@ -110,28 +127,42 @@ func getUserIdentifier(u *models.User) string {
 // LoginCaptcha 用验证码的方式登录
 func (u *UserSrv) LoginCaptcha(ctx context.Context, req *userPb.LSRequest, resp *userPb.LoginResponse) (err error) {
 
-	if ok := utils.ValidateCaptcha(ctx, req.Phone, req.Captcha); !ok {
+	if ok := validateCaptcha(ctx, req.Phone, req.Captcha); !ok {
 		return str.ErrInvalidCaptcha
 	}
 	// 查询用户是否存在
 	user := createUser(0, "", "", req.Phone, "")
 	cacheKey := "user:" + user.Phone
-	_, err = cached.GetWithFunc(ctx, cacheKey, func(key string) (string, error) {
+	checkJson, err := cached.GetWithFunc(ctx, cacheKey, func(key string) (string, error) {
 		if err := mysql.QueryUserByPhone(user); err != nil {
 			return "", err
 		}
-		return user.Password, nil
+		check := &models.LoginCheck{
+			UserId:   user.UserId,
+			Password: user.Password,
+		}
+		checkJson, err := json.Marshal(check)
+		if err != nil {
+			log.Println("json marshal checkJson error", err)
+			return "", str.ErrLoginError
+		}
+		return string(checkJson), nil
 	})
 	if err != nil {
 		log.Println("query user error", err)
 		return err
 	}
+	check := new(models.LoginCheck)
+	if err := json.Unmarshal([]byte(checkJson), &check); err != nil {
+		log.Println("json unmarshal checkJson error", err)
+		return str.ErrLoginError
+	}
+	user.UserId = check.UserId
 	accessToken, refreshToken, err := utils.GetToken(user)
 	if err != nil {
 		log.Println("获取JWT令牌失败", err)
 		return str.ErrLoginError
 	}
-
 	resp.Token = &userPb.LoginResponse_Token{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,

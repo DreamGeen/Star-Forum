@@ -15,4 +15,7 @@ const (
 
 	PostServiceClient = "PostService.client"
 	PostService       = "PostService"
+
+	MessageServiceClient = "MessageService.client"
+	MessageService       = "MessageService"
 )

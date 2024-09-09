@@ -5,18 +5,14 @@ import (
 	"github.com/go-micro/plugins/v4/registry/etcd"
 	"go-micro.dev/v4"
 	"go-micro.dev/v4/registry"
-	"log"
+	"star/app/message/service"
 	"star/constant/settings"
 	"star/constant/str"
-	"star/proto/post/postPb"
+	"star/proto/message/messagePb"
 	"star/utils"
 )
 
 func main() {
-	////初始化配置
-	//if err := settings.Init(); err != nil {
-	//	panic(err)
-	//}
 	//雪花算法初始化
 	if err := utils.Init(1); err != nil {
 		panic(err)
@@ -28,15 +24,13 @@ func main() {
 	)
 	//得到一个微服务实例
 	microSevice := micro.NewService(
-		micro.Name(str.PostService), //服务名称
-		micro.Version("v1"),         //服务版本
-		micro.Registry(etcdReg),     //etcd注册件
+		micro.Name(str.MessageService), //服务名称
+		micro.Version("v1"),            //服务版本
+		micro.Registry(etcdReg),        //etcd注册件
 	)
-	//初始化
-	microSevice.Init()
+	message := new(service.MessageSrv)
 	//服务注册
-	if err := postPb.RegisterPostHandler(microSevice.Server(), post); err != nil {
-		log.Println("failed to register post handler")
+	if err := messagePb.RegisterMessageServiceHandler(microSevice.Server(), message); err != nil {
 		panic(err)
 	}
 	//服务启动

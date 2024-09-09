@@ -19,6 +19,8 @@ type AppConfig struct {
 	*ServiceConfig  `mapstructure:"service"`
 	*EtcdConfig     `mapstructure:"etcd"`
 	*RabbitMQConfig `mapstructure:"rabbitmq"`
+	*QiniuConfig    `mapstructure:"qiniuyv"`
+	*LogConfig      `mapstructure:"log"`
 }
 
 type GinConfig struct {
@@ -71,6 +73,23 @@ type RabbitMQConfig struct {
 	Port     int    `mapstructure:"port"`
 	Username string `mapstructure:"username"`
 	Password string `mapstructure:"password"`
+}
+
+// QiniuConfig 七牛云配置
+type QiniuConfig struct {
+	AccessKey   string `mapstructure:"access_key"`
+	SecretKey   string `mapstructure:"secret_key"`
+	Bucket      string `mapstructure:"bucket"`
+	QiniuServer string `mapstructure:"qiniuServer"`
+}
+
+// LogConfig 日志配置
+type LogConfig struct {
+	FileName   string `mapstructure:"file_name"`
+	Level      string `mapstructure:"level"`
+	MaxSize    int    `mapstructure:"max_size"`
+	MaxAge     int    `mapstructure:"max_age"`
+	MaxBackups int    `mapstructure:"max_backups"`
 }
 
 func init() {

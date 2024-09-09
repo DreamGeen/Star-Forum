@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	queryUserByPhoneSQL    = "SELECT userid,username,phone,password,deletedAt FROM userLogin WHERE phone=?"
-	queryUserByUsernameSQL = "SELECT userid, username,password,deletedAt FROM userLogin WHERE username=?"
-	queryUserByEmailSQL    = "SELECT userid,username, email, password,deletedAt FROM userLogin WHERE email=?"
+	queryUserByPhoneSQL    = "SELECT userId,username,phone,password,deletedAt FROM userLogin WHERE phone=?"
+	queryUserByUsernameSQL = "SELECT userId, username,password,deletedAt FROM userLogin WHERE username=?"
+	queryUserByEmailSQL    = "SELECT userId,username, email, password,deletedAt FROM userLogin WHERE email=?"
 	insertUserLoginSQL     = "INSERT INTO userLogin(userId, username, password, phone) VALUES (?, ?, ?, ?)"
 	insertUserSQL          = "INSERT INTO user(userId, username,img,sign) VALUES (?, ?, ?,?)"
 	queryUserInfoSQL       = "select  userId,userName,gender,sign,birth,grade,exp,img,updatedAt,createdAt,deletedAt from user  where userId=?"

@@ -42,7 +42,7 @@ func PublishStarEvent(commentId int64) error {
 		return err
 	}
 
-	log.Println("成功发布点赞消息", "message", body)
+	log.Println("成功发布点赞消息", "websocket", body)
 	return nil
 }
 
@@ -80,7 +80,7 @@ func PublishDeleteEvent(commentId int64) error {
 		return str.ErrCommentError
 	}
 
-	log.Println("成功发布删除评论消息", "message", body)
+	log.Println("成功发布删除评论消息", "websocket", body)
 	return nil
 }
 
@@ -190,6 +190,6 @@ func StartHeartbeatTicker(queueName string, interval time.Duration, stopCh <-cha
 //		return err
 //	}
 //
-//	logger.CommentLogger.Info("成功发布评论事件", zap.String("message", string(body)))
+//	logger.CommentLogger.Info("成功发布评论事件", zap.String("websocket", string(body)))
 //	return nil
 //}

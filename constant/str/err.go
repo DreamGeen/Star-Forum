@@ -30,6 +30,7 @@ const (
 	CommunityNotExitsCode
 	PostNotExistsCode
 	PostErrorCode
+	UploadCode
 )
 
 const (
@@ -40,6 +41,7 @@ const (
 	SendSmsErrorCode
 	CommentErrorCode
 	CommunityErrorCode
+	MessageErrorCode
 )
 
 var (
@@ -65,6 +67,7 @@ var (
 	ErrCommunityNameExists = errors.New("该社区名已存在")
 	ErrCommunityNotExists  = errors.New("该社区不存在")
 	ErrPostNotExists       = errors.New("该帖子不存在")
+	ErrUpload              = errors.New("上传失败")
 )
 
 var (
@@ -76,6 +79,7 @@ var (
 	ErrCommentError   = errors.New("评论服务出现内部错误，请稍后再试！")
 	ErrCommunityError = errors.New("社区服务内部出现错误，请稍后再试！")
 	ErrPostError      = errors.New("帖子服务内部出现问题，请稍后再试！")
+	ErrMessageError   = errors.New("消息服务内部出现问题，请稍后再试！")
 )
 
 var codeMap = map[error]int32{
@@ -101,6 +105,7 @@ var codeMap = map[error]int32{
 	ErrCommunityNameExists: CommunityNameExistsCode,
 	ErrCommunityNotExists:  CommunityNotExitsCode,
 	ErrPostNotExists:       PostNotExistsCode,
+	ErrUpload:              UploadCode,
 
 	ErrServiceBusy:    ServiceBusyCode,
 	ErrUserError:      UserErrorCode,
@@ -110,6 +115,7 @@ var codeMap = map[error]int32{
 	ErrCommentError:   CommentErrorCode,
 	ErrCommunityError: CommunityErrorCode,
 	ErrPostError:      PostErrorCode,
+	ErrMessageError:   MessageErrorCode,
 }
 
 func getCode(err error) int32 {
@@ -139,6 +145,7 @@ func Response(c *gin.Context, err error, dataFieldName string, data interface{})
 		} else {
 			response["data"] = data // 默认使用 "data" 字段名
 		}
+
 	}
 	c.JSON(http.StatusOK, response)
 	return

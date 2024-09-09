@@ -38,7 +38,7 @@ func ConsumeStarEvents() {
 			body := string(d.Body)
 			if body == "heartbeat" {
 				// 心跳消息
-				log.Println("comment_star接收到心跳消息", "message", body)
+				log.Println("comment_star接收到心跳消息", "websocket", body)
 				continue
 			}
 			if strings.HasPrefix(body, "star:") {
@@ -92,7 +92,7 @@ func ConsumeDeleteCommentEvents() {
 			body := string(d.Body)
 			if body == "heartbeat" {
 				// 心跳消息
-				log.Println("comment_delete接收到心跳消息", "message", body)
+				log.Println("comment_delete接收到心跳消息", "websocket", body)
 				continue
 			}
 			if strings.HasPrefix(body, "delete-comment:") {
@@ -145,7 +145,7 @@ func ConsumeDeleteCommentEvents() {
 //			body := string(d.Body)
 //			if body == "heartbeat" {
 //				// 心跳消息
-//				logger.CommentLogger.Info("comment_post接收到心跳消息", zap.String("message", body))
+//				logger.CommentLogger.Info("comment_post接收到心跳消息", zap.String("websocket", body))
 //			} else {
 //				var comment models.Comment
 //				if err := json.Unmarshal(d.Body, &comment); err != nil {

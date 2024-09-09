@@ -24,17 +24,17 @@ func (u *UserSrv) GetUserInfo(ctx context.Context, req *userPb.GetUserInfoReques
 		log.Println("GetUserInfo err:user not found")
 		return str.ErrUserNotExists
 	}
-	resp = &userPb.GetUserInfoResponse{
-		User: &userPb.User{
-			UserId:   user.UserId,
-			Exp:      user.Exp,
-			Grade:    user.Grade,
-			Gender:   user.Gender,
-			UserName: user.Username,
-			Img:      user.Img,
-			Sign:     user.Signature,
-			Birth:    user.Birth,
-		},
+
+	//返回user信息
+	resp.User = &userPb.User{
+		UserId:   user.UserId,
+		Exp:      user.Exp,
+		Grade:    user.Grade,
+		Gender:   user.Gender,
+		UserName: user.Username,
+		Img:      user.Img,
+		Sign:     user.Signature,
+		Birth:    user.Birth,
 	}
 	return nil
 }

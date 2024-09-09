@@ -5,6 +5,7 @@ import (
 	"star/constant/str"
 	"star/proto/comment/commentPb"
 	"star/proto/community/communityPb"
+	"star/proto/message/messagePb"
 	"star/proto/post/postPb"
 	"star/proto/sendSms/sendSmsPb"
 	"star/proto/user/userPb"
@@ -16,6 +17,7 @@ var (
 	commentService   commentPb.CommentService
 	communityService communityPb.CommunityService
 	postService      postPb.PostService
+	messageService   messagePb.MessageService
 )
 
 func Init() {
@@ -38,5 +40,9 @@ func Init() {
 	//创建一个帖子服务客户端
 	postMicroService := micro.NewService(micro.Name(str.PostServiceClient))
 	postService = postPb.NewPostService(str.PostService, postMicroService.Client())
+
+	//创建一个消息服务客户端
+	messageMicroService := micro.NewService(micro.Name(str.MessageServiceClient))
+	messageService = messagePb.NewMessageService(str.MessageService, messageMicroService.Client())
 
 }

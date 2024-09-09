@@ -13,7 +13,7 @@ import (
 func (u *UserSrv) Signup(ctx context.Context, req *userPb.LSRequest, resp *userPb.EmptyLSResponse) (err error) {
 
 	//校验验证码
-	if ok := utils.ValidateCaptcha(ctx, req.Phone, req.Captcha); !ok {
+	if ok := validateCaptcha(ctx, req.Phone, req.Captcha); !ok {
 		return str.ErrInvalidCaptcha
 	}
 	//检查用户名和手机号是否已经注册过

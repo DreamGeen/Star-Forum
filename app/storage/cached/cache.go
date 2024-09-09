@@ -6,6 +6,7 @@ import (
 	"github.com/patrickmn/go-cache"
 	redis2 "github.com/redis/go-redis/v9"
 	"log"
+	"math/rand/v2"
 	"reflect"
 	"star/app/storage/mysql"
 	"star/app/storage/redis"
@@ -16,6 +17,9 @@ import (
 )
 
 //只适用于那些读多写少的小型数据的储存，不能储存大规模数据
+
+// 随机写入redis的时间范围
+const redisRandom = 60
 
 var cacheMap = make(map[string]*cache.Cache)
 var mu sync.RWMutex
@@ -122,7 +126,7 @@ func GetWithFunc(ctx context.Context, key string, f func(string) (string, error)
 	if err != nil {
 		return "", err
 	}
-	Write(ctx, key, value, true, 120*time.Hour)
+	Write(ctx, key, value, true, 72*time.Hour+time.Duration(rand.IntN(redisRandom))*time.Minute)
 	return value, nil
 }
 

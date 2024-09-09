@@ -1,4 +1,4 @@
-package utils
+package service
 
 import (
 	"context"
@@ -6,8 +6,8 @@ import (
 	"star/app/storage/cached"
 )
 
-// ValidateCaptcha 校验验证码是否正确
-func ValidateCaptcha(ctx context.Context, phone, captcha string) bool {
+// 校验验证码是否正确
+func validateCaptcha(ctx context.Context, phone, captcha string) bool {
 	cacheKey := "captcha:" + phone
 	storedCaptcha, ok, err := cached.Get(ctx, cacheKey)
 	if err != nil {

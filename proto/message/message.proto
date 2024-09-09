@@ -1,0 +1,82 @@
+syntax="proto3";
+
+
+option go_package=".;messagePb";
+
+
+service MessageService{
+  rpc ListMessageCount(ListMessageCountRequest)returns(ListMessageCountResponse);
+  rpc SendSystemMessage(SendSystemMessageRequest)returns(SendSystemMessageResponse);
+  rpc SendPrivateMessage(SendPrivateMessageRequest)returns(SendPrivateMessageResponse);
+  rpc SendRemindMessage(SendRemindMessageRequest)returns(SendRemindMessageResponse);
+  rpc SendMessage(SendMessageRequest)returns(SendMessageResponse);
+}
+
+message ListMessageCountRequest{
+   int64  userId =1;
+}
+
+message ListMessageCountResponse{
+  Counts count=1;
+}
+
+message Counts{
+  uint32  LikeCount=1;
+  uint32  ReplyCount=2;
+  uint32  SystemCount=3;
+  uint32  MentionCount=4;
+  uint32  PrivateMsgCount=5;
+  uint32  TotalCount=6;
+}
+
+message SendSystemMessageRequest{
+   int64 RecipientId=1;
+   int64  ManagerId=2;
+   string  Type=3;
+   string  Title=4;
+   string  Content=5;
+}
+message SendSystemMessageResponse{
+
+}
+
+
+message SendPrivateMessageRequest{
+  int64   SenderId =1;
+  int64   RecipientId=2;
+  string  Content=3;
+}
+
+message SendPrivateMessageResponse{
+
+}
+
+
+message SendRemindMessageRequest{
+   int64 SenderId=1;
+   int64 RecipientId=2;
+   int64  SourceId=3;
+   string SourceType=4;
+   string RemindType=5;
+   string Content=6;
+   string  Url=7;
+
+}
+message SendRemindMessageResponse{
+
+}
+
+message SendMessageRequest{
+    int64 SenderId=1;
+    int64 RecipientId=2;
+    string InstanceId=3;
+    string Content=4;
+}
+message SendMessageResponse{
+   int64 SenderId=1;
+   int64 RecipientId=2;
+   string Content=3;
+}
+
+
+

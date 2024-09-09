@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+	"log"
 	"star/constant/settings"
 	"star/models"
 	"time"
@@ -17,7 +18,7 @@ const (
 
 // MyClaims token配置结构体
 type MyClaims struct {
-	UserID int64 `json:"userid"`
+	UserID int64 `json:"userId"`
 	jwt.RegisteredClaims
 }
 
@@ -66,10 +67,12 @@ func ParseToken(tokenString string) (*MyClaims, error) {
 		return key, nil
 	})
 	if err != nil {
+		log.Println("不合法的token,err:", err)
 		return nil, tokenInValid
 	}
 	//基于过期时间判断token是否合法
 	if !jwtToken.Valid {
+		log.Println("token 已过期,err:", err)
 		return nil, tokenExpired
 	}
 	return claims, nil

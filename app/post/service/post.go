@@ -1,4 +1,4 @@
-package main
+package service
 
 import (
 	"context"
@@ -13,8 +13,6 @@ import (
 
 type PostSrv struct {
 }
-
-var post *PostSrv
 
 func (p *PostSrv) QueryPostExist(ctx context.Context, req *postPb.QueryPostExistRequest, resp *postPb.QueryPostExistResponse) error {
 	key := fmt.Sprintf("QueryPostExist:%d", req.PostId)
