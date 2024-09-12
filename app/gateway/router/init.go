@@ -19,6 +19,7 @@ func Setup() *gin.Engine {
 		v1.GET("/captcha/send", httpHandler.SendLoginHandler)
 		v1.POST("/captcha", httpHandler.LoginWithCaptcha)
 	}
+	v.GET("/test", httpHandler.SendSystemHandler)
 	//使用登录鉴权中间件
 	v.Use(middleware.JWTAuthHandler)
 	{
@@ -33,8 +34,6 @@ func Setup() *gin.Engine {
 		//	//v2.POST()
 		//
 		//}
-
-		v.POST("/community/:communityId/chat", httpHandler.ChatHandler)
 		v.GET("/websocket", httpHandler.ListMessageCountHandler)
 	}
 

@@ -8,7 +8,7 @@ option go_package=".;postPb";
 service PostService{
     rpc QueryPostExist(QueryPostExistRequest)returns(QueryPostExistResponse);
     rpc CreatePost(CreatePostRequest)returns(CreatePostResponse);
-    rpc GetPostByStar(GetPostListByStarRequest)returns(GetPostListByStarResponse);
+    rpc GetPostByPopularity(GetPostListByPopularityRequest)returns(GetPostListByPopularityResponse);
     rpc GetPostByTime(GetPostListByTimeRequest)returns(GetPostListByTimeResponse);
 }
 
@@ -30,26 +30,32 @@ message CreatePostRequest{
 }
 
 message Post{
+  int64  PostId=1;
   int64  CommunityId=2;
-  string  Tile=3;
-  string  Content=4;
-  string   CreateTime=5;
-  bool    IsScan=6;
+  int64  UserId=3;
+  string  UserName=4;
+  string  UserImg=5;
+  string CommunityName=6;
+  string  CommunityImg=7;
+  string  Tile=8;
+  string  Content=9;
+  string   CreateTime=10;
 }
 
 message CreatePostResponse{
 }
 
-message GetPostListByStarRequest{
-
+message GetPostListByPopularityRequest{
+  int64 LastPostId=1;
 }
 
-message GetPostListByStarResponse{
-
+message GetPostListByPopularityResponse{
+  repeated Post Posts=1;
 }
 message GetPostListByTimeRequest{
+  int64 LastPostId=1;
 }
 
 message GetPostListByTimeResponse{
-
+    repeated  Post Posts=1;
 }

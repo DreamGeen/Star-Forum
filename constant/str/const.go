@@ -14,4 +14,11 @@ const (
 	DefaultCommunityImg = "" //默认社区头像
 )
 
-const ()
+const (
+	ParseTimeFormat = "2006-01-02 15:04:05.999999999 -0700 MST"
+)
+
+const (
+	DefaultLoadMessageNumber = 50
+	DefaultLoadPostNumber    = 200
+)

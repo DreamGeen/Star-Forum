@@ -14,15 +14,17 @@ type Counts struct {
 	TotalCount      uint32 `json:"total_count"`
 }
 type PrivateMessage struct {
-	Id          int64     `db:"private_message_id" json:"private_msg_id"`
-	SenderId    int64     `db:"sender_id" json:"sender_id"`
-	RecipientId int64     `db:"recipient_id" json:"receiver_id"`
-	Content     string    `db:"content" json:"content"`
-	Status      bool      `db:"status" json:"status"`
-	SendTime    time.Time `db:"send_time" json:"send_time"`
+	Id            int64     `db:"private_message_id" json:"private_msg_id"`
+	SenderId      int64     `db:"sender_id" json:"sender_id"`
+	RecipientId   int64     `db:"recipient_id" json:"receiver_id"`
+	Content       string    `db:"content" json:"content"`
+	Status        bool      `db:"status" json:"status"`
+	SendTime      time.Time `db:"send_time" json:"send_time"`
+	PrivateChatId int64     `db:"private_chat_id" json:"private_chat_id"`
 }
 
 type PrivateChat struct {
+	Id             int64     `db:"private_chat_id" json:"private_chat_id"`
 	User1Id        int64     `db:"user1_id" json:"user1_id"`
 	User2Id        int64     `db:"user2_id" json:"user2_id"`
 	LastMsgContent string    `db:"last_message_content" json:"last_message_content"`
@@ -49,7 +51,7 @@ type SystemMessageUser struct {
 }
 
 func (s *SystemMessageUser) Value() (driver.Value, error) {
-	return []interface{}{s.Id, s.SystemMessageId, s.RecipientId, s.Status, s.PullTime}, nil
+	return []interface{}{s.Id, s.SystemMessageId, s.RecipientId, s.Status}, nil
 }
 
 type RemindMessage struct {
@@ -74,6 +76,7 @@ func GetPrivateChat(m *PrivateMessage) *PrivateChat {
 		user2Id = m.SenderId
 	}
 	return &PrivateChat{
+		Id:             m.PrivateChatId,
 		User1Id:        user1Id,
 		User2Id:        user2Id,
 		LastMsgContent: m.Content,

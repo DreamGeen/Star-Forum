@@ -4,6 +4,7 @@ package str
 
 const (
 	MessageExchange = "message_exchange"
+	RetryExchange   = "retry_exchange"
 )
 
 //Queue

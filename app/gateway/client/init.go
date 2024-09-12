@@ -44,5 +44,4 @@ func Init() {
 	//创建一个消息服务客户端
 	messageMicroService := micro.NewService(micro.Name(str.MessageServiceClient))
 	messageService = messagePb.NewMessageService(str.MessageService, messageMicroService.Client())
-
 }

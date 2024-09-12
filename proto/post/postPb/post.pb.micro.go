@@ -27,16 +27,19 @@ var _ context.Context
 var _ client.Option
 var _ server.Option
 
-// Api Endpoints for Post service
+// Api Endpoints for PostService service
 
-func NewPostEndpoints() []*api.Endpoint {
+func NewPostServiceEndpoints() []*api.Endpoint {
 	return []*api.Endpoint{}
 }
 
-// Client API for Post service
+// Client API for PostService service
 
 type PostService interface {
 	QueryPostExist(ctx context.Context, in *QueryPostExistRequest, opts ...client.CallOption) (*QueryPostExistResponse, error)
+	CreatePost(ctx context.Context, in *CreatePostRequest, opts ...client.CallOption) (*CreatePostResponse, error)
+	GetPostByPopularity(ctx context.Context, in *GetPostListByPopularityRequest, opts ...client.CallOption) (*GetPostListByPopularityResponse, error)
+	GetPostByTime(ctx context.Context, in *GetPostListByTimeRequest, opts ...client.CallOption) (*GetPostListByTimeResponse, error)
 }
 
 type postService struct {
@@ -52,7 +55,7 @@ func NewPostService(name string, c client.Client) PostService {
 }
 
 func (c *postService) QueryPostExist(ctx context.Context, in *QueryPostExistRequest, opts ...client.CallOption) (*QueryPostExistResponse, error) {
-	req := c.c.NewRequest(c.name, "Post.QueryPostExist", in)
+	req := c.c.NewRequest(c.name, "PostService.QueryPostExist", in)
 	out := new(QueryPostExistResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
@@ -61,27 +64,75 @@ func (c *postService) QueryPostExist(ctx context.Context, in *QueryPostExistRequ
 	return out, nil
 }
 
-// Server API for Post service
+func (c *postService) CreatePost(ctx context.Context, in *CreatePostRequest, opts ...client.CallOption) (*CreatePostResponse, error) {
+	req := c.c.NewRequest(c.name, "PostService.CreatePost", in)
+	out := new(CreatePostResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
 
-type PostHandler interface {
+func (c *postService) GetPostByPopularity(ctx context.Context, in *GetPostListByPopularityRequest, opts ...client.CallOption) (*GetPostListByPopularityResponse, error) {
+	req := c.c.NewRequest(c.name, "PostService.GetPostByPopularity", in)
+	out := new(GetPostListByPopularityResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *postService) GetPostByTime(ctx context.Context, in *GetPostListByTimeRequest, opts ...client.CallOption) (*GetPostListByTimeResponse, error) {
+	req := c.c.NewRequest(c.name, "PostService.GetPostByTime", in)
+	out := new(GetPostListByTimeResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Server API for PostService service
+
+type PostServiceHandler interface {
 	QueryPostExist(context.Context, *QueryPostExistRequest, *QueryPostExistResponse) error
+	CreatePost(context.Context, *CreatePostRequest, *CreatePostResponse) error
+	GetPostByPopularity(context.Context, *GetPostListByPopularityRequest, *GetPostListByPopularityResponse) error
+	GetPostByTime(context.Context, *GetPostListByTimeRequest, *GetPostListByTimeResponse) error
 }
 
-func RegisterPostHandler(s server.Server, hdlr PostHandler, opts ...server.HandlerOption) error {
-	type post interface {
+func RegisterPostServiceHandler(s server.Server, hdlr PostServiceHandler, opts ...server.HandlerOption) error {
+	type postService interface {
 		QueryPostExist(ctx context.Context, in *QueryPostExistRequest, out *QueryPostExistResponse) error
+		CreatePost(ctx context.Context, in *CreatePostRequest, out *CreatePostResponse) error
+		GetPostByPopularity(ctx context.Context, in *GetPostListByPopularityRequest, out *GetPostListByPopularityResponse) error
+		GetPostByTime(ctx context.Context, in *GetPostListByTimeRequest, out *GetPostListByTimeResponse) error
 	}
-	type Post struct {
-		post
+	type PostService struct {
+		postService
 	}
-	h := &postHandler{hdlr}
-	return s.Handle(s.NewHandler(&Post{h}, opts...))
+	h := &postServiceHandler{hdlr}
+	return s.Handle(s.NewHandler(&PostService{h}, opts...))
 }
 
-type postHandler struct {
-	PostHandler
+type postServiceHandler struct {
+	PostServiceHandler
 }
 
-func (h *postHandler) QueryPostExist(ctx context.Context, in *QueryPostExistRequest, out *QueryPostExistResponse) error {
-	return h.PostHandler.QueryPostExist(ctx, in, out)
+func (h *postServiceHandler) QueryPostExist(ctx context.Context, in *QueryPostExistRequest, out *QueryPostExistResponse) error {
+	return h.PostServiceHandler.QueryPostExist(ctx, in, out)
+}
+
+func (h *postServiceHandler) CreatePost(ctx context.Context, in *CreatePostRequest, out *CreatePostResponse) error {
+	return h.PostServiceHandler.CreatePost(ctx, in, out)
+}
+
+func (h *postServiceHandler) GetPostByPopularity(ctx context.Context, in *GetPostListByPopularityRequest, out *GetPostListByPopularityResponse) error {
+	return h.PostServiceHandler.GetPostByPopularity(ctx, in, out)
+}
+
+func (h *postServiceHandler) GetPostByTime(ctx context.Context, in *GetPostListByTimeRequest, out *GetPostListByTimeResponse) error {
+	return h.PostServiceHandler.GetPostByTime(ctx, in, out)
 }

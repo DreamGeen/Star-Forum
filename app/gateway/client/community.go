@@ -16,3 +16,7 @@ func GetCommunityList(ctx context.Context, req *communityPb.EmptyCommunityReques
 func ShowCommunity(ctx context.Context, req *communityPb.ShowCommunityRequest) (*communityPb.ShowCommunityResponse, error) {
 	return communityService.ShowCommunity(ctx, req)
 }
+
+func GetCommunityInfo(ctx context.Context, req *communityPb.GetCommunityInfoRequest) (*communityPb.GetCommunityInfoResponse, error) {
+	return communityService.GetCommunityInfo(ctx, req)
+}

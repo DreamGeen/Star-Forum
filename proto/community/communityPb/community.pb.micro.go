@@ -39,6 +39,7 @@ type CommunityService interface {
 	CreateCommunity(ctx context.Context, in *CreateCommunityRequest, opts ...client.CallOption) (*EmptyCommunityResponse, error)
 	GetCommunityList(ctx context.Context, in *EmptyCommunityRequest, opts ...client.CallOption) (*GetCommunityListResponse, error)
 	ShowCommunity(ctx context.Context, in *ShowCommunityRequest, opts ...client.CallOption) (*ShowCommunityResponse, error)
+	GetCommunityInfo(ctx context.Context, in *GetCommunityInfoRequest, opts ...client.CallOption) (*GetCommunityInfoResponse, error)
 }
 
 type communityService struct {
@@ -83,12 +84,23 @@ func (c *communityService) ShowCommunity(ctx context.Context, in *ShowCommunityR
 	return out, nil
 }
 
+func (c *communityService) GetCommunityInfo(ctx context.Context, in *GetCommunityInfoRequest, opts ...client.CallOption) (*GetCommunityInfoResponse, error) {
+	req := c.c.NewRequest(c.name, "Community.GetCommunityInfo", in)
+	out := new(GetCommunityInfoResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for Community service
 
 type CommunityHandler interface {
 	CreateCommunity(context.Context, *CreateCommunityRequest, *EmptyCommunityResponse) error
 	GetCommunityList(context.Context, *EmptyCommunityRequest, *GetCommunityListResponse) error
 	ShowCommunity(context.Context, *ShowCommunityRequest, *ShowCommunityResponse) error
+	GetCommunityInfo(context.Context, *GetCommunityInfoRequest, *GetCommunityInfoResponse) error
 }
 
 func RegisterCommunityHandler(s server.Server, hdlr CommunityHandler, opts ...server.HandlerOption) error {
@@ -96,6 +108,7 @@ func RegisterCommunityHandler(s server.Server, hdlr CommunityHandler, opts ...se
 		CreateCommunity(ctx context.Context, in *CreateCommunityRequest, out *EmptyCommunityResponse) error
 		GetCommunityList(ctx context.Context, in *EmptyCommunityRequest, out *GetCommunityListResponse) error
 		ShowCommunity(ctx context.Context, in *ShowCommunityRequest, out *ShowCommunityResponse) error
+		GetCommunityInfo(ctx context.Context, in *GetCommunityInfoRequest, out *GetCommunityInfoResponse) error
 	}
 	type Community struct {
 		community
@@ -118,4 +131,8 @@ func (h *communityHandler) GetCommunityList(ctx context.Context, in *EmptyCommun
 
 func (h *communityHandler) ShowCommunity(ctx context.Context, in *ShowCommunityRequest, out *ShowCommunityResponse) error {
 	return h.CommunityHandler.ShowCommunity(ctx, in, out)
+}
+
+func (h *communityHandler) GetCommunityInfo(ctx context.Context, in *GetCommunityInfoRequest, out *GetCommunityInfoResponse) error {
+	return h.CommunityHandler.GetCommunityInfo(ctx, in, out)
 }

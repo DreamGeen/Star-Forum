@@ -17,7 +17,9 @@ func main() {
 	if err := utils.Init(1); err != nil {
 		panic(err)
 	}
-
+	defer service.CloseMQ()
+	message := new(service.MessageSrv)
+	message.New()
 	//etcd注册件
 	etcdReg := etcd.NewRegistry(
 		registry.Addrs(fmt.Sprintf("%s:%d", settings.Conf.EtcdHost, settings.Conf.EtcdPort)),
@@ -28,7 +30,6 @@ func main() {
 		micro.Version("v1"),            //服务版本
 		micro.Registry(etcdReg),        //etcd注册件
 	)
-	message := new(service.MessageSrv)
 	//服务注册
 	if err := messagePb.RegisterMessageServiceHandler(microSevice.Server(), message); err != nil {
 		panic(err)

@@ -20,3 +20,11 @@ func SendPrivateMessage(ctx context.Context, req *messagePb.SendPrivateMessageRe
 func SendRemindMessage(ctx context.Context, req *messagePb.SendRemindMessageRequest) (*messagePb.SendRemindMessageResponse, error) {
 	return messageService.SendRemindMessage(ctx, req)
 }
+
+func GetChatList(ctx context.Context, req *messagePb.GetChatListRequest) (*messagePb.GetChatListResponse, error) {
+	return messageService.GetChatList(ctx, req)
+}
+
+func LoadMessage(ctx context.Context, req *messagePb.LoadMessageRequest) (*messagePb.LoadMessageResponse, error) {
+	return messageService.LoadMessage(ctx, req)
+}

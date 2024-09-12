@@ -3,14 +3,17 @@ package mysql
 import (
 	"database/sql"
 	"errors"
+	"go.uber.org/zap"
 	"star/constant/str"
 	"star/models"
+	"star/utils"
 )
 
 const (
 	queryCommunityByNameSQL = "select communityId from community where communityName=?"
 	insertCommunitySQL      = "insert into community(communityId,communityName,description,member,leaderId,img) values (?,?,?,?,?,?)"
 	queryCommunityListSQL   = "select communityId,communityName,Img from community "
+	getCommunityInfo        = "select communityId, description, communityName, member, leaderId, manageId,img from community  where communityId=?"
 )
 
 func CheckCommunity(communityName string) error {
@@ -44,4 +47,13 @@ func InsertCommunity(community *models.Community) error {
 		return str.ErrCommentError
 	}
 	return nil
+}
+
+func GetCommunityInfo(communityId int64) (*models.Community, error) {
+	community := new(models.Community)
+	if err := Client.Get(community, getCommunityInfo, communityId); err != nil {
+		utils.Logger.Error("mysql query community info error", zap.Error(err), zap.Int64("communityId", communityId))
+		return nil, str.ErrCommunityError
+	}
+	return community, nil
 }

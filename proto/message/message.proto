@@ -9,6 +9,8 @@ service MessageService{
   rpc SendSystemMessage(SendSystemMessageRequest)returns(SendSystemMessageResponse);
   rpc SendPrivateMessage(SendPrivateMessageRequest)returns(SendPrivateMessageResponse);
   rpc SendRemindMessage(SendRemindMessageRequest)returns(SendRemindMessageResponse);
+  rpc GetChatList(GetChatListRequest)returns(GetChatListResponse);
+  rpc LoadMessage(LoadMessageRequest)returns(LoadMessageResponse);
   rpc SendMessage(SendMessageRequest)returns(SendMessageResponse);
 }
 
@@ -44,7 +46,8 @@ message SendSystemMessageResponse{
 message SendPrivateMessageRequest{
   int64   SenderId =1;
   int64   RecipientId=2;
-  string  Content=3;
+  int64   PrivateChatId=3;
+  string  Content=4;
 }
 
 message SendPrivateMessageResponse{
@@ -65,12 +68,49 @@ message SendRemindMessageRequest{
 message SendRemindMessageResponse{
 
 }
+message GetChatListRequest{
+    int64 UserId=1;
+}
+message GetChatListResponse{
+  repeated PrivateChat  PrivateChatList=1;
+}
+
+message PrivateChat{
+  int64 UserId=1;
+  string UserName=2;
+   string Img=3;
+  string LastMsg=4;
+  string LastMsgTime=5;
+}
+
+message LoadMessageRequest{
+  int64  SenderId=1;
+  int64  RecipientId=2;
+  int64  PrivateChatId=3;
+  string  lastMsgTime=4;
+}
+
+message LoadMessageResponse{
+   repeated  PrivateMessage PrivateMessages=1;
+}
+
+message PrivateMessage{
+   int64 SenderId=1;
+   int64 RecipientId=2;
+   string SenderName=3;
+   string SenderImg=4;
+   string Content =5;
+   bool   Status =6;
+   string  SendTime=7;
+}
+
 
 message SendMessageRequest{
     int64 SenderId=1;
     int64 RecipientId=2;
-    string InstanceId=3;
-    string Content=4;
+    int64  PrivateChatId=3;
+    string InstanceId=4;
+    string Content=5;
 }
 message SendMessageResponse{
    int64 SenderId=1;

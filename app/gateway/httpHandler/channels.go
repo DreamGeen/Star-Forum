@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-func ChatHandler(c *gin.Context) {
+func ChatCommunityHandler(c *gin.Context) {
 	//获取communityId
 	communityIdStr := c.Param("communityId")
 	communityId, err := strconv.ParseInt(communityIdStr, 10, 64)

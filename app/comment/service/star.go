@@ -7,7 +7,6 @@ import (
 	"log"
 	"star/app/comment/dao/mysql"
 	"star/app/comment/dao/redis"
-	logger "star/app/comment/logger"
 	"star/app/comment/rabbitMQ"
 	redis2 "star/app/storage/redis"
 	"star/constant/str"
@@ -18,7 +17,7 @@ import (
 func (s *CommentService) StarComment(ctx context.Context, req *commentPb.StarCommentRequest, rsp *commentPb.StarCommentResponse) error {
 	// 检查评论是否存在
 	if err := mysql.CheckComment(req.CommentId); err != nil {
-		logger.CommentLogger.Error("点赞评论: 检查评论是否存在返回错误", zap.Error(err))
+		zap.L().Error("点赞评论: 检查评论是否存在返回错误", zap.Error(err))
 		return err
 	}
 	// 尝试从Redis中获取点赞数

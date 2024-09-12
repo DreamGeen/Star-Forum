@@ -6,6 +6,7 @@ service community{
   rpc CreateCommunity(CreateCommunityRequest)returns(EmptyCommunityResponse);
   rpc GetCommunityList(EmptyCommunityRequest)returns(GetCommunityListResponse);
   rpc ShowCommunity(ShowCommunityRequest)returns(ShowCommunityResponse);
+  rpc GetCommunityInfo(GetCommunityInfoRequest)returns(GetCommunityInfoResponse);
 }
 
 
@@ -17,7 +18,6 @@ message CreateCommunityRequest{
 
 
 message EmptyCommunityRequest{
-
 
 }
 message EmptyCommunityResponse{
@@ -41,6 +41,23 @@ message ShowCommunityRequest{
 message ShowCommunityResponse{
 }
 
+
+message GetCommunityInfoRequest{
+  int64 CommunityId=1;
+}
+
+message GetCommunityInfoResponse{
+   CommunityInfo Community=1;
+}
+
+message CommunityInfo{
+  string CommunityName=1;
+  string  CommunityImg=2;
+  string  Description=3;
+  int64   member=4;
+  string  LeaderName=5;
+  string  LeaderImg=6;
+}
 
 
 

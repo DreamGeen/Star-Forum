@@ -40,6 +40,8 @@ type MessageService interface {
 	SendSystemMessage(ctx context.Context, in *SendSystemMessageRequest, opts ...client.CallOption) (*SendSystemMessageResponse, error)
 	SendPrivateMessage(ctx context.Context, in *SendPrivateMessageRequest, opts ...client.CallOption) (*SendPrivateMessageResponse, error)
 	SendRemindMessage(ctx context.Context, in *SendRemindMessageRequest, opts ...client.CallOption) (*SendRemindMessageResponse, error)
+	GetChatList(ctx context.Context, in *GetChatListRequest, opts ...client.CallOption) (*GetChatListResponse, error)
+	LoadMessage(ctx context.Context, in *LoadMessageRequest, opts ...client.CallOption) (*LoadMessageResponse, error)
 	SendMessage(ctx context.Context, in *SendMessageRequest, opts ...client.CallOption) (*SendMessageResponse, error)
 }
 
@@ -95,6 +97,26 @@ func (c *messageService) SendRemindMessage(ctx context.Context, in *SendRemindMe
 	return out, nil
 }
 
+func (c *messageService) GetChatList(ctx context.Context, in *GetChatListRequest, opts ...client.CallOption) (*GetChatListResponse, error) {
+	req := c.c.NewRequest(c.name, "MessageService.GetChatList", in)
+	out := new(GetChatListResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *messageService) LoadMessage(ctx context.Context, in *LoadMessageRequest, opts ...client.CallOption) (*LoadMessageResponse, error) {
+	req := c.c.NewRequest(c.name, "MessageService.LoadMessage", in)
+	out := new(LoadMessageResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *messageService) SendMessage(ctx context.Context, in *SendMessageRequest, opts ...client.CallOption) (*SendMessageResponse, error) {
 	req := c.c.NewRequest(c.name, "MessageService.SendMessage", in)
 	out := new(SendMessageResponse)
@@ -112,6 +134,8 @@ type MessageServiceHandler interface {
 	SendSystemMessage(context.Context, *SendSystemMessageRequest, *SendSystemMessageResponse) error
 	SendPrivateMessage(context.Context, *SendPrivateMessageRequest, *SendPrivateMessageResponse) error
 	SendRemindMessage(context.Context, *SendRemindMessageRequest, *SendRemindMessageResponse) error
+	GetChatList(context.Context, *GetChatListRequest, *GetChatListResponse) error
+	LoadMessage(context.Context, *LoadMessageRequest, *LoadMessageResponse) error
 	SendMessage(context.Context, *SendMessageRequest, *SendMessageResponse) error
 }
 
@@ -121,6 +145,8 @@ func RegisterMessageServiceHandler(s server.Server, hdlr MessageServiceHandler, 
 		SendSystemMessage(ctx context.Context, in *SendSystemMessageRequest, out *SendSystemMessageResponse) error
 		SendPrivateMessage(ctx context.Context, in *SendPrivateMessageRequest, out *SendPrivateMessageResponse) error
 		SendRemindMessage(ctx context.Context, in *SendRemindMessageRequest, out *SendRemindMessageResponse) error
+		GetChatList(ctx context.Context, in *GetChatListRequest, out *GetChatListResponse) error
+		LoadMessage(ctx context.Context, in *LoadMessageRequest, out *LoadMessageResponse) error
 		SendMessage(ctx context.Context, in *SendMessageRequest, out *SendMessageResponse) error
 	}
 	type MessageService struct {
@@ -148,6 +174,14 @@ func (h *messageServiceHandler) SendPrivateMessage(ctx context.Context, in *Send
 
 func (h *messageServiceHandler) SendRemindMessage(ctx context.Context, in *SendRemindMessageRequest, out *SendRemindMessageResponse) error {
 	return h.MessageServiceHandler.SendRemindMessage(ctx, in, out)
+}
+
+func (h *messageServiceHandler) GetChatList(ctx context.Context, in *GetChatListRequest, out *GetChatListResponse) error {
+	return h.MessageServiceHandler.GetChatList(ctx, in, out)
+}
+
+func (h *messageServiceHandler) LoadMessage(ctx context.Context, in *LoadMessageRequest, out *LoadMessageResponse) error {
+	return h.MessageServiceHandler.LoadMessage(ctx, in, out)
 }
 
 func (h *messageServiceHandler) SendMessage(ctx context.Context, in *SendMessageRequest, out *SendMessageResponse) error {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/rabbitmq/amqp091-go"
@@ -9,6 +10,8 @@ import (
 	"star/app/storage/mysql"
 	"star/constant/str"
 	"star/models"
+	"star/utils"
+	"sync"
 )
 
 var conn *amqp091.Connection
@@ -16,7 +19,7 @@ var channel *amqp091.Channel
 
 const (
 	//最大重试次数
-	maxRetries = 5
+	maxRetries = 3
 )
 
 func failOnError(err error, msg string) {
@@ -36,7 +39,10 @@ func closeMQ() {
 }
 
 func main() {
-
+	//雪花算法初始化
+	if err := utils.Init(1); err != nil {
+		panic(err)
+	}
 	//连接消息队列
 	var err error
 	conn, err = amqp091.Dial(mq.ReturnRabbitmqUrl())
@@ -51,6 +57,12 @@ func main() {
 		false, false, false, false,
 		nil)
 	failOnError(err, "Failed to declare an exchange")
+	err = channel.ExchangeDeclare(str.RetryExchange,
+		"x-delayed-message",
+		false, false, false, false,
+		amqp091.Table{
+			"x-delayed-type": "topic",
+		})
 	//声明队列
 	_, err = channel.QueueDeclare(str.MessageLike,
 		false, false, false, false,
@@ -72,31 +84,49 @@ func main() {
 		false, false, false, false,
 		nil)
 	failOnError(err, "Failed to declare a mention queue")
-
 	//绑定队列
 	// 绑定点赞消息
 	err = channel.QueueBind(str.MessageLike, str.RoutLike, str.MessageExchange, false, nil)
+	failOnError(err, "Failed to bind like queue")
+	err = channel.QueueBind(str.MessageLike, str.RoutLike, str.RetryExchange, false, nil)
 	failOnError(err, "Failed to bind like queue")
 
 	// 绑定@提及消息
 	err = channel.QueueBind(str.MessageMention, str.RoutMention, str.MessageExchange, false, nil)
 	failOnError(err, "Failed to bind mention queue")
+	err = channel.QueueBind(str.MessageMention, str.RoutMention, str.RetryExchange, false, nil)
+	failOnError(err, "Failed to bind mention queue")
 
 	// 绑定回复消息
 	err = channel.QueueBind(str.MessageReply, str.RoutMention, str.MessageExchange, false, nil)
+	failOnError(err, "Failed to bind reply queue")
+	err = channel.QueueBind(str.MessageReply, str.RoutMention, str.RetryExchange, false, nil)
 	failOnError(err, "Failed to bind reply queue")
 
 	// 绑定系统通知
 	err = channel.QueueBind(str.MessageSystem, str.RoutSystem, str.MessageExchange, false, nil)
 	failOnError(err, "Failed to bind system queue")
+	err = channel.QueueBind(str.MessageSystem, str.RoutSystem, str.RetryExchange, false, nil)
+	failOnError(err, "Failed to bind system queue")
 
 	// 绑定私信消息
 	err = channel.QueueBind(str.MessagePrivateMsg, str.RoutPrivateMsg, str.MessageExchange, false, nil)
 	failOnError(err, "Failed to bind private message queue")
+	err = channel.QueueBind(str.MessagePrivateMsg, str.RoutPrivateMsg, str.RetryExchange, false, nil)
+	failOnError(err, "Failed to bind private message queue")
+	var wg sync.WaitGroup
+	wg.Add(1)
 
 	go savePrivateMessage()
 
 	go saveSystemMessage()
+
+	go saveMentionMessage()
+
+	go saveReplyMessage()
+
+	go saveLikeMessage()
+	wg.Wait()
 }
 
 func savePrivateMessage() {
@@ -116,6 +146,31 @@ func saveSystemMessage() {
 		return mysql.InsertSystemMsg(message.(*models.SystemMessage))
 	}, str.MessageSystem)
 }
+func saveLikeMessage() {
+	delivery, err := channel.Consume(str.MessageLike,
+		str.Empty, false, false, false, false, nil)
+	failOnError(err, "Failed to register a like consumer")
+	handleMessage(delivery, func(message interface{}) error {
+		return mysql.InsertLikeMessage(message.(*models.RemindMessage))
+	}, str.MessageLike)
+}
+func saveMentionMessage() {
+	delivery, err := channel.Consume(str.MessageMention,
+		str.Empty, false, false, false, false, nil)
+	failOnError(err, "Failed to register a mention consumer")
+	handleMessage(delivery, func(message interface{}) error {
+		return mysql.InsertMentionMessage(message.(*models.RemindMessage))
+	}, str.MessageMention)
+}
+
+func saveReplyMessage() {
+	delivery, err := channel.Consume(str.MessageReply,
+		str.Empty, false, false, false, false, nil)
+	failOnError(err, "Failed to register a reply consumer")
+	handleMessage(delivery, func(message interface{}) error {
+		return mysql.InsertReplyMessage(message.(*models.RemindMessage))
+	}, str.MessageReply)
+}
 
 func getFuncNewInstance(msgType string) func() interface{} {
 	switch msgType {
@@ -125,7 +180,7 @@ func getFuncNewInstance(msgType string) func() interface{} {
 		}
 	case str.MessageSystem:
 		return func() interface{} {
-			return &models.PrivateMessage{}
+			return &models.SystemMessage{}
 		}
 	case str.MessageMention, str.MessageLike, str.MessageReply:
 		return func() interface{} {
@@ -138,38 +193,38 @@ func getFuncNewInstance(msgType string) func() interface{} {
 func handleMessage(delivery <-chan amqp091.Delivery, insertFunc func(interface{}) error, msgType string) {
 	getInstance := getFuncNewInstance(msgType)
 	for msg := range delivery {
+		_ = utils.ExtractAMQPHeaders(context.Background(), msg.Headers)
 		message := getInstance()
 		// 获取重试次数
-		retryCount := 0
-		if count, ok := msg.Headers["x-retry-count"].(int); ok {
+		retryCount := int32(0)
+		if count, ok := msg.Headers["x-retry-count"].(int32); ok {
 			retryCount = count
 		}
-
 		// 反序列化消息体
 		if err := json.Unmarshal(msg.Body, message); err != nil {
-			zap.L().Error(fmt.Sprintf("unmarshal %s message error", msgType),
+			utils.Logger.Error(fmt.Sprintf("unmarshal %s message error", msgType),
 				zap.ByteString("message body", msg.Body), zap.Error(err))
 			//序列化失败，拒绝消息且不重新入队
 			if nackErr := msg.Nack(false, false); nackErr != nil {
-				zap.L().Error("nack message error", zap.ByteString("message body", msg.Body), zap.Error(nackErr))
+				utils.Logger.Error("nack message error", zap.ByteString("message body", msg.Body), zap.Error(nackErr))
 			}
 			continue
 		}
 
 		// 插入消息到数据库
 		if err := insertFunc(message); err != nil {
-			zap.L().Error(fmt.Sprintf("insert %s message error", msgType), zap.Error(err))
+			utils.Logger.Error(fmt.Sprintf("insert %s message error", msgType), zap.Error(err))
 			if retryCount >= maxRetries {
 				// 达到最大重试次数，拒绝消息且不重新入队
 				if nackErr := msg.Nack(false, false); nackErr != nil {
-					zap.L().Error("nack message error", zap.ByteString("message body", msg.Body), zap.Error(nackErr))
+					utils.Logger.Error("nack message error", zap.ByteString("message body", msg.Body), zap.Error(nackErr))
 				}
-				zap.L().Warn("message discarded after max retries", zap.Int("retry count", retryCount))
+				utils.Logger.Warn("message discarded after max retries", zap.Int32("retry count", retryCount))
 			} else {
 				// 未达到最大重试次数，重试并重新入队
-				msg.Headers["x-retry-count"] = retryCount + 1
-				if nackErr := msg.Nack(false, true); nackErr != nil {
-					zap.L().Error("nack message error", zap.ByteString("message body", msg.Body), zap.Error(nackErr))
+				sendRetryMessage(msg, 100)
+				if nackErr := msg.Nack(false, false); nackErr != nil {
+					utils.Logger.Error("nack message error", zap.ByteString("message body", msg.Body), zap.Error(nackErr))
 				}
 			}
 
@@ -178,7 +233,7 @@ func handleMessage(delivery <-chan amqp091.Delivery, insertFunc func(interface{}
 
 		// 成功处理消息，确认 (ack)
 		if err := msg.Ack(false); err != nil {
-			zap.L().Error(fmt.Sprintf("ack %s message error", msgType), zap.Error(err))
+			utils.Logger.Error(fmt.Sprintf("ack %s message error", msgType), zap.Error(err))
 		}
 	}
 }
