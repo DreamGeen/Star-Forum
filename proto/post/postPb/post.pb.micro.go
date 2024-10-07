@@ -7,6 +7,8 @@ import (
 	fmt "fmt"
 	proto "google.golang.org/protobuf/proto"
 	math "math"
+	_ "star/proto/community/communityPb"
+	_ "star/proto/user/userPb"
 )
 
 import (
@@ -40,6 +42,7 @@ type PostService interface {
 	CreatePost(ctx context.Context, in *CreatePostRequest, opts ...client.CallOption) (*CreatePostResponse, error)
 	GetPostByPopularity(ctx context.Context, in *GetPostListByPopularityRequest, opts ...client.CallOption) (*GetPostListByPopularityResponse, error)
 	GetPostByTime(ctx context.Context, in *GetPostListByTimeRequest, opts ...client.CallOption) (*GetPostListByTimeResponse, error)
+	QueryPosts(ctx context.Context, in *QueryPostsRequest, opts ...client.CallOption) (*QueryPostsResponse, error)
 }
 
 type postService struct {
@@ -94,6 +97,16 @@ func (c *postService) GetPostByTime(ctx context.Context, in *GetPostListByTimeRe
 	return out, nil
 }
 
+func (c *postService) QueryPosts(ctx context.Context, in *QueryPostsRequest, opts ...client.CallOption) (*QueryPostsResponse, error) {
+	req := c.c.NewRequest(c.name, "PostService.QueryPosts", in)
+	out := new(QueryPostsResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for PostService service
 
 type PostServiceHandler interface {
@@ -101,6 +114,7 @@ type PostServiceHandler interface {
 	CreatePost(context.Context, *CreatePostRequest, *CreatePostResponse) error
 	GetPostByPopularity(context.Context, *GetPostListByPopularityRequest, *GetPostListByPopularityResponse) error
 	GetPostByTime(context.Context, *GetPostListByTimeRequest, *GetPostListByTimeResponse) error
+	QueryPosts(context.Context, *QueryPostsRequest, *QueryPostsResponse) error
 }
 
 func RegisterPostServiceHandler(s server.Server, hdlr PostServiceHandler, opts ...server.HandlerOption) error {
@@ -109,6 +123,7 @@ func RegisterPostServiceHandler(s server.Server, hdlr PostServiceHandler, opts .
 		CreatePost(ctx context.Context, in *CreatePostRequest, out *CreatePostResponse) error
 		GetPostByPopularity(ctx context.Context, in *GetPostListByPopularityRequest, out *GetPostListByPopularityResponse) error
 		GetPostByTime(ctx context.Context, in *GetPostListByTimeRequest, out *GetPostListByTimeResponse) error
+		QueryPosts(ctx context.Context, in *QueryPostsRequest, out *QueryPostsResponse) error
 	}
 	type PostService struct {
 		postService
@@ -135,4 +150,8 @@ func (h *postServiceHandler) GetPostByPopularity(ctx context.Context, in *GetPos
 
 func (h *postServiceHandler) GetPostByTime(ctx context.Context, in *GetPostListByTimeRequest, out *GetPostListByTimeResponse) error {
 	return h.PostServiceHandler.GetPostByTime(ctx, in, out)
+}
+
+func (h *postServiceHandler) QueryPosts(ctx context.Context, in *QueryPostsRequest, out *QueryPostsResponse) error {
+	return h.PostServiceHandler.QueryPosts(ctx, in, out)
 }

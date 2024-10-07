@@ -1,9 +1,15 @@
 package redis
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/redis/go-redis/v9"
+	"math/rand/v2"
 	redis2 "star/app/comment/dao/redis"
+	"star/app/storage/mysql"
+	"star/models"
 
 	"log"
 	"strconv"
@@ -53,6 +59,32 @@ func GetCommentStar(commentId int64) (int64, error) {
 	// 返回点赞数
 	log.Println("Redis获取点赞成功")
 	return starCount, nil
+}
+
+func GetCommentInfo(ctx context.Context, commentId int64) (*models.Comment, error) {
+	key := fmt.Sprintf("GetCommentInfo:%d", commentId)
+	commentInfoStr, err := Client.Get(ctx, key).Result()
+	if err != nil && !errors.Is(err, redis.Nil) {
+		return nil, err
+	}
+	if errors.Is(err, redis.Nil) {
+		comment, err := mysql.GetCommentInfo(commentId)
+		if err != nil {
+			return nil, err
+		}
+		commentJson, err := json.Marshal(comment)
+		if err != nil {
+			return comment, err
+		}
+		Client.Set(ctx, key, string(commentJson), 10*time.Minute+time.Duration(rand.IntN(60))*time.Second)
+		return comment, nil
+	}
+	comment := &models.Comment{}
+	if err := json.Unmarshal([]byte(commentInfoStr), &comment); err != nil {
+		return nil, err
+	}
+	return comment, nil
+
 }
 
 //// CreateComment 存储新发布的评论到Redis

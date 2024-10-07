@@ -2,7 +2,7 @@ package rabbitMQ
 
 import (
 	"log"
-	"star/app/comment/dao/mysql"
+	"star/app/storage/mysql"
 	"strconv"
 	"strings"
 )

@@ -126,16 +126,16 @@ func GetWithFunc(ctx context.Context, key string, f func(string) (string, error)
 	if err != nil {
 		return "", err
 	}
-	Write(ctx, key, value, true, 72*time.Hour+time.Duration(rand.IntN(redisRandom))*time.Minute)
+	Write(ctx, key, value, true)
 	return value, nil
 }
 
-// Write 写入字符串缓存，如果state为true，则也根据overtime设置过期时间写入redis缓存
-func Write(ctx context.Context, key string, value string, state bool, overtime time.Duration) {
+// Write 写入字符串缓存，如果state为true，则写入redis缓存
+func Write(ctx context.Context, key string, value string, state bool) {
 	c := getOrCreateCache("strings")
 	c.Set(key, value, cache.DefaultExpiration)
 	if state {
-		redis.Client.Set(ctx, key, value, overtime)
+		redis.Client.Set(ctx, key, value, 72*time.Hour+time.Duration(rand.IntN(redisRandom))*time.Minute)
 	}
 }
 
@@ -144,4 +144,11 @@ func Delete(ctx context.Context, key string) {
 	c := getOrCreateCache("strings")
 	c.Delete(key)
 	redis.Client.Del(ctx, key)
+}
+
+// WriteWithOvertime 根据overtime写入redis缓存
+func WriteWithOvertime(ctx context.Context, key string, value string, overtime time.Duration) {
+	c := getOrCreateCache("strings")
+	c.Set(key, value, cache.DefaultExpiration)
+	redis.Client.Set(ctx, key, value, overtime)
 }

@@ -34,7 +34,8 @@ func Setup() *gin.Engine {
 		//	//v2.POST()
 		//
 		//}
-		v.GET("/websocket", httpHandler.ListMessageCountHandler)
+		v.GET("/whisper", httpHandler.ListMessageCountHandler)
+		v.GET("/whisper/:userId", httpHandler.SendPrivateMessageHandler)
 	}
 
 	return v

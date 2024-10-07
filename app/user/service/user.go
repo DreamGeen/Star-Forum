@@ -3,12 +3,23 @@ package service
 import (
 	"context"
 	"fmt"
-	"log"
+	"go-micro.dev/v4"
+	"go.uber.org/zap"
 	"star/app/storage/cached"
 	"star/constant/str"
 	"star/models"
+	"star/proto/relation/relationPb"
 	"star/proto/user/userPb"
+	"star/utils"
+	"sync"
 )
+
+var relationService relationPb.RelationService
+
+func New() {
+	relationMicroService := micro.NewService(micro.Name(str.RelationServiceClient))
+	relationService = relationPb.NewRelationService(str.RelationService, relationMicroService.Client())
+}
 
 // GetUserInfo 获取用户具体信息
 func (u *UserSrv) GetUserInfo(ctx context.Context, req *userPb.GetUserInfoRequest, resp *userPb.GetUserInfoResponse) error {
@@ -17,15 +28,13 @@ func (u *UserSrv) GetUserInfo(ctx context.Context, req *userPb.GetUserInfoReques
 	user := new(models.User)
 	found, err := cached.ScanGetUser(ctx, key, user)
 	if err != nil {
-		log.Println("GetUserInfo err:", err)
+		utils.Logger.Error("GetUserInfo failed", zap.Error(err))
 		return err
 	}
 	if !found {
-		log.Println("GetUserInfo err:user not found")
+		utils.Logger.Info("GetUserInfo err:user not found", zap.Int64("userId", req.UserId))
 		return str.ErrUserNotExists
 	}
-
-	//返回user信息
 	resp.User = &userPb.User{
 		UserId:   user.UserId,
 		Exp:      user.Exp,
@@ -35,6 +44,28 @@ func (u *UserSrv) GetUserInfo(ctx context.Context, req *userPb.GetUserInfoReques
 		Img:      user.Img,
 		Sign:     user.Signature,
 		Birth:    user.Birth,
+		IsFollow: false,
 	}
+	var wg sync.WaitGroup
+	var isErr bool
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		isFollowResp, err := relationService.IsFollow(ctx, &relationPb.IsFollowRequest{
+			UserId:   req.UserId,
+			FollowId: req.ActorId,
+		})
+		if err != nil {
+			utils.Logger.Error("get is follow failed", zap.Error(err), zap.Int64("userId", req.UserId), zap.Any("followId", req.ActorId))
+			isErr = true
+			return
+		}
+		resp.User.IsFollow = isFollowResp.Result
+	}()
+	wg.Wait()
+	if isErr {
+		return str.ErrUserError
+	}
+	//返回user信息
 	return nil
 }

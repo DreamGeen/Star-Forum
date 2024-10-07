@@ -7,6 +7,7 @@ import (
 	"star/constant/str"
 	"star/proto/message/messagePb"
 	"star/utils"
+	"strconv"
 )
 
 func ListMessageCountHandler(c *gin.Context) {
@@ -42,5 +43,35 @@ func SendSystemHandler(c *gin.Context) {
 		return
 	}
 	str.Response(c, nil, "success", resp)
+}
 
+func SendPrivateMessageHandler(c *gin.Context) {
+	recipientIdStr := c.Param("userId")
+	recipientId, err := strconv.ParseInt(recipientIdStr, 10, 64)
+	if err != nil {
+		utils.Logger.Error("parse recipient id failed", zap.Error(err), zap.String("senderId", recipientIdStr))
+		str.Response(c, str.ErrMessageError, str.Empty, nil)
+		return
+	}
+	content := c.Query("content")
+	senderId, err := utils.GetUserId(c)
+	if err != nil {
+		utils.Logger.Error("get client id failed", zap.Error(err))
+		str.Response(c, err, str.Empty, nil)
+		return
+	}
+	_, err = client.SendPrivateMessage(c, &messagePb.SendPrivateMessageRequest{
+		SenderId:    senderId,
+		RecipientId: recipientId,
+		Content:     content,
+	})
+	if err != nil {
+		utils.Logger.Error("send private message failed", zap.Error(err),
+			zap.Int64("senderId", senderId),
+			zap.Int64("recipientId", recipientId),
+			zap.String("content", content))
+		str.Response(c, err, str.Empty, nil)
+		return
+	}
+	str.Response(c, nil, str.Empty, nil)
 }

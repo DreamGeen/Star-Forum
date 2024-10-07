@@ -1,0 +1,66 @@
+syntax="proto3";
+
+package relationPb;
+
+option go_package="star/proto/relation/relationPb;relationPb";
+
+import "star/proto/user/user.proto";
+
+service RelationService{
+  rpc GetFollowerList(GetFollowRequest)returns(GetFollowResponse);
+  rpc GetFansList(GetFansRequest)returns(GetFansResponse);
+  rpc CountFollower(CountFollowRequest)returns(CountFollowResponse);
+  rpc CountFans(CountFansRequest)returns(CountFansResponse);
+  rpc Follow(FollowRequest)returns(FollowResponse);
+  rpc UnFollow(UnFollowRequest)returns(UnFollowResponse);
+  rpc IsFollow(IsFollowRequest)returns(IsFollowResponse);
+}
+message GetFollowRequest{
+     int64  UserId=1;
+}
+message GetFollowResponse{
+  repeated   userPb.User  FollowList=1;
+}
+
+message GetFansRequest{
+  int64   UserId=1;
+}
+message GetFansResponse{
+  repeated  userPb.User  FansList=1;
+}
+
+message CountFollowRequest{
+  int64  UserId=1;
+}
+message CountFollowResponse{
+  int64  Count=1;
+}
+message CountFansRequest{
+  int64 UserId=1;
+}
+message CountFansResponse{
+  int64  Count=1;
+}
+message FollowRequest{
+  int64  UserId=1;
+  int64  BeFollowerId=2;
+}
+message FollowResponse{
+}
+message UnFollowRequest{
+  int64  UserId=1;
+  int64  UnBeFollowerId=2;
+}
+
+message UnFollowResponse{
+}
+message IsFollowRequest{
+  int64  userId=1;
+  int64  followId=2;
+}
+message IsFollowResponse{
+  bool  Result=1;
+}
+
+
+

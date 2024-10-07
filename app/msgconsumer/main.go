@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/rabbitmq/amqp091-go"
@@ -86,9 +85,9 @@ func main() {
 	failOnError(err, "Failed to declare a mention queue")
 	//绑定队列
 	// 绑定点赞消息
-	err = channel.QueueBind(str.MessageLike, str.RoutLike, str.MessageExchange, false, nil)
+	err = channel.QueueBind(str.MessageLike, str.RoutMessageLike, str.MessageExchange, false, nil)
 	failOnError(err, "Failed to bind like queue")
-	err = channel.QueueBind(str.MessageLike, str.RoutLike, str.RetryExchange, false, nil)
+	err = channel.QueueBind(str.MessageLike, str.RoutMessageLike, str.RetryExchange, false, nil)
 	failOnError(err, "Failed to bind like queue")
 
 	// 绑定@提及消息
@@ -151,7 +150,7 @@ func saveLikeMessage() {
 		str.Empty, false, false, false, false, nil)
 	failOnError(err, "Failed to register a like consumer")
 	handleMessage(delivery, func(message interface{}) error {
-		return mysql.InsertLikeMessage(message.(*models.RemindMessage))
+		return mysql.UpdateLikeMessage(message.(*models.RemindMessage))
 	}, str.MessageLike)
 }
 func saveMentionMessage() {
@@ -190,10 +189,9 @@ func getFuncNewInstance(msgType string) func() interface{} {
 	return nil
 }
 
-func handleMessage(delivery <-chan amqp091.Delivery, insertFunc func(interface{}) error, msgType string) {
+func handleMessage(delivery <-chan amqp091.Delivery, updateFunc func(interface{}) error, msgType string) {
 	getInstance := getFuncNewInstance(msgType)
 	for msg := range delivery {
-		_ = utils.ExtractAMQPHeaders(context.Background(), msg.Headers)
 		message := getInstance()
 		// 获取重试次数
 		retryCount := int32(0)
@@ -211,8 +209,8 @@ func handleMessage(delivery <-chan amqp091.Delivery, insertFunc func(interface{}
 			continue
 		}
 
-		// 插入消息到数据库
-		if err := insertFunc(message); err != nil {
+		// 更新消息到数据库
+		if err := updateFunc(message); err != nil {
 			utils.Logger.Error(fmt.Sprintf("insert %s message error", msgType), zap.Error(err))
 			if retryCount >= maxRetries {
 				// 达到最大重试次数，拒绝消息且不重新入队

@@ -79,7 +79,7 @@ func sendMsg(ctx context.Context, phone, templateCode string) error {
 	}
 	//将验证码储存在redis中
 	key := "captcha:" + phone
-	cached.Write(ctx, key, code, true, 5*time.Minute)
+	cached.WriteWithOvertime(ctx, key, code, 5*time.Minute)
 	return nil
 }
 

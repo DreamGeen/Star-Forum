@@ -1,6 +1,8 @@
 syntax="proto3";
 
-option go_package=".;sendSmsPb";
+package sendSmsPb;
+
+option go_package="star/proto/sendSms/sendSmsPb;sendSmsPb";
 
 
 service sendMsg{

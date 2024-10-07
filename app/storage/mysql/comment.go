@@ -7,9 +7,11 @@ import (
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 	"log"
+	"star/app/comment/dao/mysql"
 	"star/constant/str"
 	"star/models"
 	"star/utils"
+	"strconv"
 )
 
 const (
@@ -27,12 +29,14 @@ const (
 	queryCommentsTime  = "SELECT commentId, postId, userId, content, star, reply, beCommentId, createdAt FROM postComment WHERE postId = ? AND deletedAt IS NULL ORDER BY createdAt DESC, star DESC"
 	starComment        = "UPDATE postComment SET star = star + ? WHERE commentId = ?"
 	queryStar          = "SELECT star FROM postComment WHERE commentId = ? AND deletedAt IS NULL"
+	countCommentSQL    = "SELECT comment_count FROM post WHERE postId = ?"
+	getCommentInfoSQL  = "SELECT  createdAt, commentId, postId, userId, content, star, reply, beCommentId   FROM  postcomment  WHERE commentId=? AND  deletedAt IS NULL;"
 )
 
 // CheckComment 检查评论是否存在
 func CheckComment(commentId int64) error {
 	var exists bool
-	err := db.Get(&exists, checkComment, commentId)
+	err := Client.Get(&exists, checkComment, commentId)
 	if err != nil {
 		log.Println("检查评论是否存在失败", err)
 		return str.ErrCommentError
@@ -40,7 +44,7 @@ func CheckComment(commentId int64) error {
 	if !exists {
 		// 如果评论不存在
 		log.Println("评论不存在或已被删除", "commentId", commentId)
-		return str.ErrCommentError
+		return str.ErrCommentNotExists
 	}
 	return nil
 }
@@ -49,7 +53,7 @@ func CheckComment(commentId int64) error {
 func CheckPost(postId int64) error {
 	// 检查一下帖子是否存在
 	var exists bool
-	if err := db.Get(&exists, checkPost, postId); err != nil {
+	if err := Client.Get(&exists, checkPost, postId); err != nil {
 		log.Println("检查帖子是否存在失败", err)
 		return str.ErrCommentError
 	}
@@ -65,7 +69,7 @@ func CheckPost(postId int64) error {
 func CheckUser(userId int64) error {
 	// 检查一下用户是否存在
 	var exists bool
-	if err := db.Get(&exists, checkUser, userId); err != nil {
+	if err := Client.Get(&exists, checkUser, userId); err != nil {
 		log.Println("检查用户是否存在失败", err)
 		return err
 	}
@@ -101,7 +105,7 @@ func UpdateReplyComment(tx *sqlx.Tx, commentId, count int64) error {
 func CreateComment(comment *models.Comment) error {
 	log.Println("开始发布评论")
 	// 开始事务
-	tx, err := db.Beginx()
+	tx, err := mysql.db.Beginx()
 	if err != nil {
 		log.Println("发布评论事务开启失败", err)
 		return str.ErrCommentError
@@ -152,7 +156,7 @@ func CreateComment(comment *models.Comment) error {
 
 	// 雪花算法生成评论id
 	commentId := utils.GetID()
-	_, err = db.Exec(insertComment, commentId, comment.PostId, comment.UserId, comment.Content, comment.BeCommentId)
+	_, err = Client.Exec(insertComment, commentId, comment.PostId, comment.UserId, comment.Content, comment.BeCommentId)
 	if err != nil {
 		log.Println("评论发布:评论插入数据库失败", err)
 		return err
@@ -183,7 +187,7 @@ func CreateComment(comment *models.Comment) error {
 func DeleteComment(commentId int64) error {
 	log.Println("开始删除评论")
 	// 开始事务
-	tx, err := db.Beginx()
+	tx, err := mysql.db.Beginx()
 	if err != nil {
 		log.Println("开启事务失败", err)
 		return err
@@ -204,7 +208,7 @@ func DeleteComment(commentId int64) error {
 
 	// 查询对应的postId
 	var postId int64
-	err = db.Get(&postId, queryPostId, commentId)
+	err = mysql.db.Get(&postId, queryPostId, commentId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			// 评论不存在或已被删除
@@ -298,7 +302,7 @@ func GetCommentsStar(postId int64) ([]*models.Comment, error) {
 	log.Println("开始获取评论")
 
 	// 执行SQL查询，包含分页和软删除检查
-	rows, err := db.Query(queryCommentsStar, postId)
+	rows, err := mysql.db.Query(queryCommentsStar, postId)
 	if err != nil {
 		// 如果查询失败，返回错误。
 		log.Println("评论获取:查询数据库错误", err)
@@ -351,7 +355,7 @@ func GetCommentsStar(postId int64) ([]*models.Comment, error) {
 // UpdateStar 点赞评论
 func UpdateStar(commentId int64, increment int8) error {
 	log.Println("开始点赞评论")
-	_, err := db.Exec(starComment, increment, commentId)
+	_, err := Client.Exec(starComment, increment, commentId)
 	if err != nil {
 		log.Println("更新点赞数时出错", err)
 		return err
@@ -365,7 +369,7 @@ func UpdateStar(commentId int64, increment int8) error {
 func GetStar(commentId int64) (int64, error) {
 	// 执行查询
 	var starCount int64
-	err := db.Get(&starCount, queryStar, commentId)
+	err := Client.Get(&starCount, queryStar, commentId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			log.Println("获取点赞数:评论不存在或已被删除", "commentId", commentId)
@@ -377,4 +381,23 @@ func GetStar(commentId int64) (int64, error) {
 
 	// 返回点赞数
 	return starCount, nil
+}
+
+func CountComment(postId int64) (string, error) {
+	var count int
+	if err := Client.Get(&count, countCommentSQL, postId); err != nil {
+		return "", err
+	}
+	return strconv.Itoa(count), nil
+}
+
+func GetCommentInfo(commentId int64) (*models.Comment, error) {
+	comment := new(models.Comment)
+	if err := Client.Get(comment, getCommentInfoSQL, commentId); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, str.ErrCommentNotExists
+		}
+		return nil, err
+	}
+	return comment, nil
 }

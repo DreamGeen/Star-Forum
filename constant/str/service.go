@@ -18,4 +18,10 @@ const (
 
 	MessageServiceClient = "MessageService.client"
 	MessageService       = "MessageService"
+
+	RelationServiceClient = "RelationService.client"
+	RelationService       = "RelationService"
+
+	LikeServiceClient = "LikeService.client"
+	LikeService       = "LikeService"
 )

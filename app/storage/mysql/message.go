@@ -53,6 +53,7 @@ const (
 `
 	getAllPrivateChat     = "select user1_id,user2_id from private_chat"
 	insertBatchSystemUser = "insert into user_system_notice(user_notice_id,system_notice_id, recipient_id,status) values(:user_notice_id,:system_notice_id,:recipient_id,:status)"
+	deleteLikeMessageSQL  = "update like_remind set deletedAt=? where  "
 )
 
 func ListMessageCount(userId int64) (*models.Counts, error) {
@@ -89,7 +90,7 @@ func InsertPrivateMsg(message *models.PrivateMessage) (err error) {
 	if err = tx.Get(&privateChatId, checkPrivateChatExistSQL, privateChat.User1Id, privateChat.User2Id); err != nil {
 		//查询出错
 		utils.Logger.Error("select private_chat error:", zap.Error(err))
-		return str.ErrMessageError
+		return err
 	}
 	if privateChatId == 0 {
 		//不存在则插入会话
@@ -99,24 +100,24 @@ func InsertPrivateMsg(message *models.PrivateMessage) (err error) {
 		message.PrivateChatId = privateChatId
 		if _, err = tx.Exec(insertPrivateChatSQL, privateChat.User1Id, privateChat.User2Id, privateChat.LastMsgContent, privateChat.LastSendTime); err != nil {
 			utils.Logger.Error("insert private_chat error:", zap.Error(err))
-			return str.ErrMessageError
+			return err
 		}
 	} else {
 		message.PrivateChatId = privateChatId
 		//存在则更新数据
 		if _, err = tx.Exec(updatePrivateChatSQL, privateChat.LastMsgContent, privateChat.User1Id, privateChat.User2Id); err != nil {
 			utils.Logger.Error("update private_chat err:", zap.Error(err))
-			return str.ErrMessageError
+			return err
 		}
 	}
 	//插入私信
 	if _, err = tx.Exec(insertPrivateMsgSQL, message.PrivateChatId, message.Id, message.SenderId, message.RecipientId, message.Status, message.SendTime); err != nil {
 		utils.Logger.Error("insert private_msg error:", zap.Error(err))
-		return str.ErrMessageError
+		return err
 	}
 	if err = tx.Commit(); err != nil {
 		utils.Logger.Error("commit tx error:", zap.Error(err))
-		return str.ErrMessageError
+		return err
 	}
 	return nil
 }
@@ -142,21 +143,21 @@ func InsertSystemMsg(message *models.SystemMessage) (err error) {
 
 	if _, err = tx.Exec(insertSystemMsgSQL, message.Id, message.Title, message.Content, message.Type, message.Status, message.RecipientId, message.ManagerId, message.PublishTime); err != nil {
 		utils.Logger.Error("insert system_msg error:", zap.Error(err))
-		return str.ErrMessageError
+		return err
 	}
 
 	if message.Type == "single" {
 		// 单个用户
 		if _, err = tx.Exec(insertSystemMsgUserSQL, utils.GetID(), message.Id, message.RecipientId, false); err != nil {
 			utils.Logger.Error("insert user_system_msg error", zap.Error(err))
-			return str.ErrMessageError
+			return err
 		}
 	} else {
 		// 全体用户
 		var userIds []int64
 		if err = tx.Select(&userIds, queryAllUserIdSQL); err != nil {
 			utils.Logger.Error("query all users id error", zap.Error(err))
-			return str.ErrMessageError
+			return err
 		}
 		systemMessageUsers := make([]interface{}, 0, len(userIds))
 		for _, userId := range userIds {
@@ -170,17 +171,20 @@ func InsertSystemMsg(message *models.SystemMessage) (err error) {
 		}
 		if _, err = tx.NamedExec(insertBatchSystemUser, systemMessageUsers); err != nil {
 			utils.Logger.Error("insert system_msg error:", zap.Error(err))
-			return str.ErrMessageError
+			return err
 		}
 	}
 	if err = tx.Commit(); err != nil {
 		utils.Logger.Error("commit tx error:", zap.Error(err))
-		return str.ErrMessageError
+		return err
 	}
 	return nil
 }
 
-func InsertLikeMessage(message *models.RemindMessage) error {
+func UpdateLikeMessage(message *models.RemindMessage) error {
+	if message.IsDeleted {
+		return
+	}
 	return insertRemindMessage(insertLikeMessageSQL, message)
 }
 
@@ -196,7 +200,14 @@ func insertRemindMessage(query string, message *models.RemindMessage) error {
 	if _, err := Client.Exec(query, message.Id, message.SourceId, message.SourceType, message.Content,
 		message.Url, message.Status, message.SenderId, message.RecipientId, message.RemindTime); err != nil {
 		utils.Logger.Error("insert remind message error:", zap.Error(err), zap.Any("message", message))
-		return str.ErrMessageError
+		return err
+	}
+	return nil
+}
+func deleteRemindMessage(query string, message *models.RemindMessage) error {
+	if _, err := Client.Exec(query, time.Now().UTC()); err != nil {
+		utils.Logger.Error("delete remind message error:", zap.Error(err), zap.Any("message", message))
+		return err
 	}
 	return nil
 }
@@ -205,7 +216,7 @@ func LoadMessage(privateChatId int64, lastMsgTime time.Time, limit int) ([]*mode
 	var privateMessages []*models.PrivateMessage
 	if err := Client.Select(&privateMessages, loadMessageSQL, privateChatId, lastMsgTime, limit); err != nil {
 		utils.Logger.Error("load private_message error:", zap.Error(err), zap.Int64("privateChatId", privateChatId))
-		return nil, str.ErrMessageError
+		return nil, err
 	}
 	return privateMessages, nil
 }
@@ -214,7 +225,7 @@ func GetChatList(userId int64) ([]*models.PrivateChat, error) {
 	var list []*models.PrivateChat
 	if err := Client.Select(&list, getChatListSQL, userId, userId); err != nil {
 		utils.Logger.Error("getChatList error:", zap.Error(err))
-		return nil, str.ErrMessageError
+		return nil, err
 	}
 	return list, nil
 }
@@ -223,7 +234,7 @@ func GetAllPrivateChat() ([]*models.PrivateChat, error) {
 	var chats []*models.PrivateChat
 	if err := Client.Select(&chats, getChatListSQL); err != nil {
 		utils.Logger.Error("GetAllPrivateChat error:", zap.Error(err))
-		return nil, str.ErrMessageError
+		return nil, err
 	}
 	return chats, nil
 }

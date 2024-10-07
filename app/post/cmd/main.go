@@ -36,7 +36,7 @@ func main() {
 	//初始化
 	microSevice.Init()
 	//服务注册
-	if err := postPb.RegisterPostHandler(microSevice.Server(), post); err != nil {
+	if err := postPb.RegisterPostServiceHandler(microSevice.Server(), post); err != nil {
 		log.Println("failed to register post handler")
 		panic(err)
 	}

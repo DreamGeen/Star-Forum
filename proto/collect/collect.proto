@@ -1,0 +1,54 @@
+syntax="proto3";
+
+package collectPb;
+
+option go_package="star/proto/collect/collectPb;collectPb";
+
+import "star/proto/post/post.proto";
+
+service CollectService{
+  rpc IsCollect(IsCollectRequest)returns(IsCollectResponse);
+  rpc CollectAction(CollectActionRequest)returns(CollectActionResponse);
+  rpc CollectList(CollectListRequest)returns(CollectListResponse);
+  rpc GetCollectCount(GetCollectCountRequest)returns(GetCollectCountResponse);
+  rpc GetUserCollectCount(GetUserCollectCountRequest)returns(GetUserCollectCountResponse);
+}
+
+message IsCollectRequest{
+  int64  ActorId =1;
+  int64  PostId=2;
+}
+
+message IsCollectResponse{
+  bool Result=1;
+}
+
+message CollectActionRequest{
+  int64  ActorId=1;
+  int64   PostId=2;
+  uint32  ActionType=3;  //1  收藏   2 取消收藏
+}
+message CollectActionResponse{
+}
+message CollectListRequest{
+  int64  ActorId=1;
+}
+message  CollectListResponse{
+   repeated postPb.Post  posts=1;
+}
+message GetCollectCountRequest{
+  int64 postId=1;
+}
+message GetCollectCountResponse{
+  int64 Count=1;
+}
+message GetUserCollectCountRequest{
+  int64  UserId=1;
+}
+message GetUserCollectCountResponse{
+  int64  Count=1;
+}
+
+
+
+

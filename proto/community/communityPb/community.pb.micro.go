@@ -40,6 +40,11 @@ type CommunityService interface {
 	GetCommunityList(ctx context.Context, in *EmptyCommunityRequest, opts ...client.CallOption) (*GetCommunityListResponse, error)
 	ShowCommunity(ctx context.Context, in *ShowCommunityRequest, opts ...client.CallOption) (*ShowCommunityResponse, error)
 	GetCommunityInfo(ctx context.Context, in *GetCommunityInfoRequest, opts ...client.CallOption) (*GetCommunityInfoResponse, error)
+	FollowCommunity(ctx context.Context, in *FollowCommunityRequest, opts ...client.CallOption) (*FollowCommunityResponse, error)
+	UnFollowCommunity(ctx context.Context, in *UnFollowCommunityRequest, opts ...client.CallOption) (*UnFollowCommunityResponse, error)
+	IsFollowCommunity(ctx context.Context, in *IsFollowCommunityRequest, opts ...client.CallOption) (*IsFollowCommunityResponse, error)
+	CountCommunityFollow(ctx context.Context, in *CountCommunityFollowRequest, opts ...client.CallOption) (*CountCommunityFollowResponse, error)
+	GetFollowCommunityList(ctx context.Context, in *GetFollowCommunityListRequest, opts ...client.CallOption) (*GetFollowCommunityListResponse, error)
 }
 
 type communityService struct {
@@ -94,6 +99,56 @@ func (c *communityService) GetCommunityInfo(ctx context.Context, in *GetCommunit
 	return out, nil
 }
 
+func (c *communityService) FollowCommunity(ctx context.Context, in *FollowCommunityRequest, opts ...client.CallOption) (*FollowCommunityResponse, error) {
+	req := c.c.NewRequest(c.name, "Community.FollowCommunity", in)
+	out := new(FollowCommunityResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *communityService) UnFollowCommunity(ctx context.Context, in *UnFollowCommunityRequest, opts ...client.CallOption) (*UnFollowCommunityResponse, error) {
+	req := c.c.NewRequest(c.name, "Community.UnFollowCommunity", in)
+	out := new(UnFollowCommunityResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *communityService) IsFollowCommunity(ctx context.Context, in *IsFollowCommunityRequest, opts ...client.CallOption) (*IsFollowCommunityResponse, error) {
+	req := c.c.NewRequest(c.name, "Community.IsFollowCommunity", in)
+	out := new(IsFollowCommunityResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *communityService) CountCommunityFollow(ctx context.Context, in *CountCommunityFollowRequest, opts ...client.CallOption) (*CountCommunityFollowResponse, error) {
+	req := c.c.NewRequest(c.name, "Community.CountCommunityFollow", in)
+	out := new(CountCommunityFollowResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *communityService) GetFollowCommunityList(ctx context.Context, in *GetFollowCommunityListRequest, opts ...client.CallOption) (*GetFollowCommunityListResponse, error) {
+	req := c.c.NewRequest(c.name, "Community.GetFollowCommunityList", in)
+	out := new(GetFollowCommunityListResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for Community service
 
 type CommunityHandler interface {
@@ -101,6 +156,11 @@ type CommunityHandler interface {
 	GetCommunityList(context.Context, *EmptyCommunityRequest, *GetCommunityListResponse) error
 	ShowCommunity(context.Context, *ShowCommunityRequest, *ShowCommunityResponse) error
 	GetCommunityInfo(context.Context, *GetCommunityInfoRequest, *GetCommunityInfoResponse) error
+	FollowCommunity(context.Context, *FollowCommunityRequest, *FollowCommunityResponse) error
+	UnFollowCommunity(context.Context, *UnFollowCommunityRequest, *UnFollowCommunityResponse) error
+	IsFollowCommunity(context.Context, *IsFollowCommunityRequest, *IsFollowCommunityResponse) error
+	CountCommunityFollow(context.Context, *CountCommunityFollowRequest, *CountCommunityFollowResponse) error
+	GetFollowCommunityList(context.Context, *GetFollowCommunityListRequest, *GetFollowCommunityListResponse) error
 }
 
 func RegisterCommunityHandler(s server.Server, hdlr CommunityHandler, opts ...server.HandlerOption) error {
@@ -109,6 +169,11 @@ func RegisterCommunityHandler(s server.Server, hdlr CommunityHandler, opts ...se
 		GetCommunityList(ctx context.Context, in *EmptyCommunityRequest, out *GetCommunityListResponse) error
 		ShowCommunity(ctx context.Context, in *ShowCommunityRequest, out *ShowCommunityResponse) error
 		GetCommunityInfo(ctx context.Context, in *GetCommunityInfoRequest, out *GetCommunityInfoResponse) error
+		FollowCommunity(ctx context.Context, in *FollowCommunityRequest, out *FollowCommunityResponse) error
+		UnFollowCommunity(ctx context.Context, in *UnFollowCommunityRequest, out *UnFollowCommunityResponse) error
+		IsFollowCommunity(ctx context.Context, in *IsFollowCommunityRequest, out *IsFollowCommunityResponse) error
+		CountCommunityFollow(ctx context.Context, in *CountCommunityFollowRequest, out *CountCommunityFollowResponse) error
+		GetFollowCommunityList(ctx context.Context, in *GetFollowCommunityListRequest, out *GetFollowCommunityListResponse) error
 	}
 	type Community struct {
 		community
@@ -135,4 +200,24 @@ func (h *communityHandler) ShowCommunity(ctx context.Context, in *ShowCommunityR
 
 func (h *communityHandler) GetCommunityInfo(ctx context.Context, in *GetCommunityInfoRequest, out *GetCommunityInfoResponse) error {
 	return h.CommunityHandler.GetCommunityInfo(ctx, in, out)
+}
+
+func (h *communityHandler) FollowCommunity(ctx context.Context, in *FollowCommunityRequest, out *FollowCommunityResponse) error {
+	return h.CommunityHandler.FollowCommunity(ctx, in, out)
+}
+
+func (h *communityHandler) UnFollowCommunity(ctx context.Context, in *UnFollowCommunityRequest, out *UnFollowCommunityResponse) error {
+	return h.CommunityHandler.UnFollowCommunity(ctx, in, out)
+}
+
+func (h *communityHandler) IsFollowCommunity(ctx context.Context, in *IsFollowCommunityRequest, out *IsFollowCommunityResponse) error {
+	return h.CommunityHandler.IsFollowCommunity(ctx, in, out)
+}
+
+func (h *communityHandler) CountCommunityFollow(ctx context.Context, in *CountCommunityFollowRequest, out *CountCommunityFollowResponse) error {
+	return h.CommunityHandler.CountCommunityFollow(ctx, in, out)
+}
+
+func (h *communityHandler) GetFollowCommunityList(ctx context.Context, in *GetFollowCommunityListRequest, out *GetFollowCommunityListResponse) error {
+	return h.CommunityHandler.GetFollowCommunityList(ctx, in, out)
 }

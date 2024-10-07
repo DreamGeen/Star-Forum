@@ -1,7 +1,8 @@
 syntax="proto3";
 
+package messagePb;
 
-option go_package=".;messagePb";
+option go_package="star/proto/message/messagePb;messagePb";
 
 
 service MessageService{

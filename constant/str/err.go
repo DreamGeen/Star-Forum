@@ -42,6 +42,9 @@ const (
 	CommentErrorCode
 	CommunityErrorCode
 	MessageErrorCode
+	RelationErrorCode
+	LikeErrorCode
+	CollectErrorCode
 )
 
 var (
@@ -80,6 +83,9 @@ var (
 	ErrCommunityError = errors.New("社区服务内部出现错误，请稍后再试！")
 	ErrPostError      = errors.New("帖子服务内部出现问题，请稍后再试！")
 	ErrMessageError   = errors.New("消息服务内部出现问题，请稍后再试！")
+	ErrRelationError  = errors.New("关系服务内部出现问题，请稍后再试！")
+	ErrLikeError      = errors.New("点赞服务内部出现问题，请稍后再试！")
+	ErrCollectError   = errors.New("收藏服务内部出现问题，请稍后再试！")
 )
 
 var codeMap = map[error]int32{
@@ -116,6 +122,9 @@ var codeMap = map[error]int32{
 	ErrCommunityError: CommunityErrorCode,
 	ErrPostError:      PostErrorCode,
 	ErrMessageError:   MessageErrorCode,
+	ErrRelationError:  RelationErrorCode,
+	ErrLikeError:      LikeErrorCode,
+	ErrCollectError:   CollectErrorCode,
 }
 
 func getCode(err error) int32 {

@@ -1,0 +1,64 @@
+syntax="proto3";
+
+option go_package="star/proto/like/likePb;likePb";
+
+import "star/proto/post/post.proto";
+
+service LikeService{
+  rpc LikeAction(LikeActionRequest)returns(LikeActionResponse);
+  rpc GetUserTotalLike(GetUserTotalLikeRequest)returns(GetUserTotalLikeResponse);
+  rpc LikeList(LikeListRequest)returns(LikeListResponse);
+  rpc GetLikeCount(GetLikeCountRequest)returns(GetLikeCountResponse);
+  rpc IsLike(IsLikeRequest)returns(IsLikeResponse);
+  rpc GetUserLikeCount(GetUserLikeCountRequest)returns(GetUserLikeCountResponse);
+}
+
+message LikeActionRequest{
+    int64  UserId=1;
+    int64  SourceId=2;
+    uint32 SourceType=3; //1 帖子  2 评论
+    uint32  ActionTye=4; //1 点赞  2 取消点赞
+    string  Url=5;
+}
+
+message LikeActionResponse{
+
+}
+message GetUserTotalLikeRequest{
+   int64  UserId=1;
+}
+
+message GetUserTotalLikeResponse{
+   int64  Count=1;
+}
+
+message LikeListRequest{
+   int64  UserId=1;
+}
+
+message LikeListResponse{
+  repeated postPb.Post  posts=1;
+}
+
+message GetLikeCountRequest{
+   int64 SourceId=1;
+   uint32 SourceType=2; //1 帖子  2 评论
+}
+
+message GetLikeCountResponse{
+   int64  Count=1;
+}
+message IsLikeRequest{
+  int64 ActorId=1;
+  int64 SourceId=2;
+  uint32 SourceType=3;//1 帖子  2 评论
+}
+message IsLikeResponse{
+  bool   Result=1;
+}
+message GetUserLikeCountRequest{
+  int64  UserId=1;
+}
+message GetUserLikeCountResponse{
+  int64 Count=1;
+}

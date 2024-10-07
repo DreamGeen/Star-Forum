@@ -10,7 +10,6 @@ import (
 	"github.com/robfig/cron/v3"
 	"go-micro.dev/v4"
 	"go.uber.org/zap"
-	"log"
 	"star/app/storage/cached"
 	"star/app/storage/mq"
 	"star/app/storage/mysql"
@@ -28,25 +27,25 @@ type MessageSrv struct {
 }
 
 var userService userPb.UserService
-
 var conn *amqp091.Connection
 var channel *amqp091.Channel
+var manager = NewManager()
 
-var MessageTypes = []string{"mention", "like", "reply", "system", "privateMsg"}
+//var MessageTypes = []string{"mention", "like", "reply", "system", "privateMsg"}
 
 func failOnError(err error, msg string) {
 	if err != nil {
-		zap.L().Error(msg, zap.Error(err))
+		utils.Logger.Error(msg, zap.Error(err))
 	}
 }
 
 func CloseMQ() {
 	if err := conn.Close(); err != nil {
-		zap.L().Error("close rabbitmq conn error", zap.Error(err))
+		utils.Logger.Error("close rabbitmq conn error", zap.Error(err))
 		panic(err)
 	}
 	if err := channel.Close(); err != nil {
-		zap.L().Error("close rabbitmq channel error", zap.Error(err))
+		utils.Logger.Error("close rabbitmq channel error", zap.Error(err))
 		panic(err)
 	}
 }
@@ -89,7 +88,7 @@ func (m *MessageSrv) New() {
 
 	//绑定队列
 	// 绑定点赞消息
-	err = channel.QueueBind(str.MessageLike, str.RoutLike, str.MessageExchange, false, nil)
+	err = channel.QueueBind(str.MessageLike, str.RoutMessageLike, str.MessageExchange, false, nil)
 	failOnError(err, "Failed to bind like queue")
 
 	// 绑定@提及消息
@@ -117,6 +116,8 @@ func (m *MessageSrv) New() {
 
 	cronRunner.Start()
 
+	go manager.Run()
+
 }
 
 func (m *MessageSrv) ListMessageCount(ctx context.Context, req *messagePb.ListMessageCountRequest, resp *messagePb.ListMessageCountResponse) error {
@@ -130,7 +131,7 @@ func (m *MessageSrv) ListMessageCount(ctx context.Context, req *messagePb.ListMe
 		}
 		countsJson, err := json.Marshal(counts)
 		if err != nil {
-			log.Println("json marshal counts error:", err)
+			utils.Logger.Error("json marshal counts error:", zap.Error(err))
 			return "", str.ErrMessageError
 		}
 		return string(countsJson), nil
@@ -143,7 +144,7 @@ func (m *MessageSrv) ListMessageCount(ctx context.Context, req *messagePb.ListMe
 	counts := new(models.Counts)
 	err = json.Unmarshal([]byte(countsStr), counts)
 	if err != nil {
-		log.Println("json unmarshal counts error:", err)
+		utils.Logger.Error("json unmarshal counts error:", zap.Error(err))
 		return str.ErrMessageError
 	}
 	resp.Count = &messagePb.Counts{
@@ -222,13 +223,17 @@ func (m *MessageSrv) SendPrivateMessage(ctx context.Context, req *messagePb.Send
 		utils.Logger.Error("publish message error", zap.Error(err), zap.Any("message", message))
 		return err
 	}
+	client, ok := manager.GetClient(req.RecipientId)
+	if ok {
+		client.send <- message
+	}
 	return nil
 }
 
 func (m *MessageSrv) SendRemindMessage(ctx context.Context, req *messagePb.SendRemindMessageRequest, resp *messagePb.SendRemindMessageResponse) error {
 	switch req.RemindType {
 	case "like":
-		if err := addRemindMessage(ctx, req, str.RoutLike); err != nil {
+		if err := addRemindMessage(ctx, req, str.RoutMessageLike); err != nil {
 			utils.Logger.Error("add like message error", zap.Error(err), zap.Any("message", req))
 			return str.ErrMessageError
 		}
@@ -295,29 +300,26 @@ func (m *MessageSrv) GetChatList(ctx context.Context, req *messagePb.GetChatList
 		if len(list) == 0 {
 			return nil
 		}
-		listJson, err := json.Marshal(list)
-		if err != nil {
-			utils.Logger.Error("json marshal chatList error", zap.Error(err), zap.Any("list", list))
-			return str.ErrMessageError
-		}
-		redis.Client.Set(ctx, key, string(listJson), 24*time.Hour)
-		resp.PrivateChatList, err = convertChatListToPB(ctx, req.UserId, list)
+		privateChatList, err := convertChatListToPB(ctx, req.UserId, list)
 		if err != nil {
 			utils.Logger.Error("convertChatListToPB error", zap.Error(err), zap.Int64("UserId", req.UserId))
 			return str.ErrMessageError
 		}
+		resp.PrivateChatList = privateChatList
+		privateListJosn, err := json.Marshal(privateChatList)
+		if err != nil {
+			utils.Logger.Error("json marshal chatList error", zap.Error(err), zap.Any("list", list))
+			return str.ErrMessageError
+		}
+		redis.Client.Set(ctx, key, string(privateListJosn), 24*time.Hour)
 		return nil
 	}
-	var list []*models.PrivateChat
+	var list []*messagePb.PrivateChat
 	if err := json.Unmarshal([]byte(val), &list); err != nil {
 		utils.Logger.Error("json unmarshal message error", zap.Error(err), zap.Any("value", val))
 		return str.ErrMessageError
 	}
-	resp.PrivateChatList, err = convertChatListToPB(ctx, req.UserId, list)
-	if err != nil {
-		utils.Logger.Error("convertChatListToPB error", zap.Error(err), zap.Int64("UserId", req.UserId))
-		return str.ErrMessageError
-	}
+	resp.PrivateChatList = list
 	return nil
 }
 
@@ -431,13 +433,8 @@ func savePrivateMsgToRedisAsync(messages []*models.PrivateMessage) {
 	}()
 }
 
-func (m *MessageSrv) SendMessage(ctx context.Context, req *messagePb.SendMessageRequest, resp *messagePb.SendMessageResponse) error {
-
-	return nil
-}
-
 func removeMessage() {
-	goroutineChan := make(chan struct{}, 15)
+	goroutineLimiter := make(chan struct{}, 15)
 	chats, err := mysql.GetAllPrivateChat()
 	if err != nil {
 		return
@@ -445,9 +442,12 @@ func removeMessage() {
 	var wg sync.WaitGroup
 	for _, chat := range chats {
 		wg.Add(1)
-		goroutineChan <- struct{}{}
+		goroutineLimiter <- struct{}{}
 		go func() {
-			defer wg.Done()
+			defer func() {
+				wg.Done()
+				<-goroutineLimiter
+			}()
 			length := redis.GetMessageLength(chat.User1Id, chat.User2Id)
 			if length > 200 {
 				err := redis.RemoveMessage(chat.User1Id, chat.User2Id, 0, 100)
@@ -455,8 +455,14 @@ func removeMessage() {
 					utils.Logger.Error("remove message error", zap.Error(err), zap.Int64("chatId", chat.Id), zap.Int64("user1Id", chat.User1Id), zap.Int64("user2Id", chat.User2Id))
 				}
 			}
-			<-goroutineChan
+
 		}()
 	}
 	wg.Wait()
+	close(goroutineLimiter)
+}
+
+func (m *MessageSrv) SendMessage(ctx context.Context, req *messagePb.SendMessageRequest, resp *messagePb.SendMessageResponse) error {
+
+	return nil
 }

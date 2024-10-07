@@ -44,6 +44,8 @@ type CommentService interface {
 	GetComments(ctx context.Context, in *GetCommentsRequest, opts ...client.CallOption) (*GetCommentsResponse, error)
 	// 点赞评论服务
 	StarComment(ctx context.Context, in *StarCommentRequest, opts ...client.CallOption) (*StarCommentResponse, error)
+	CountComment(ctx context.Context, in *CountCommentRequest, opts ...client.CallOption) (*CountCommentResponse, error)
+	QueryCommentExist(ctx context.Context, in *QueryCommentExistRequest, opts ...client.CallOption) (*QueryCommentExistResponse, error)
 }
 
 type commentService struct {
@@ -98,6 +100,26 @@ func (c *commentService) StarComment(ctx context.Context, in *StarCommentRequest
 	return out, nil
 }
 
+func (c *commentService) CountComment(ctx context.Context, in *CountCommentRequest, opts ...client.CallOption) (*CountCommentResponse, error) {
+	req := c.c.NewRequest(c.name, "CommentService.CountComment", in)
+	out := new(CountCommentResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *commentService) QueryCommentExist(ctx context.Context, in *QueryCommentExistRequest, opts ...client.CallOption) (*QueryCommentExistResponse, error) {
+	req := c.c.NewRequest(c.name, "CommentService.QueryCommentExist", in)
+	out := new(QueryCommentExistResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for CommentService service
 
 type CommentServiceHandler interface {
@@ -109,6 +131,8 @@ type CommentServiceHandler interface {
 	GetComments(context.Context, *GetCommentsRequest, *GetCommentsResponse) error
 	// 点赞评论服务
 	StarComment(context.Context, *StarCommentRequest, *StarCommentResponse) error
+	CountComment(context.Context, *CountCommentRequest, *CountCommentResponse) error
+	QueryCommentExist(context.Context, *QueryCommentExistRequest, *QueryCommentExistResponse) error
 }
 
 func RegisterCommentServiceHandler(s server.Server, hdlr CommentServiceHandler, opts ...server.HandlerOption) error {
@@ -117,6 +141,8 @@ func RegisterCommentServiceHandler(s server.Server, hdlr CommentServiceHandler, 
 		DeleteComment(ctx context.Context, in *DeleteCommentRequest, out *DeleteCommentResponse) error
 		GetComments(ctx context.Context, in *GetCommentsRequest, out *GetCommentsResponse) error
 		StarComment(ctx context.Context, in *StarCommentRequest, out *StarCommentResponse) error
+		CountComment(ctx context.Context, in *CountCommentRequest, out *CountCommentResponse) error
+		QueryCommentExist(ctx context.Context, in *QueryCommentExistRequest, out *QueryCommentExistResponse) error
 	}
 	type CommentService struct {
 		commentService
@@ -143,4 +169,12 @@ func (h *commentServiceHandler) GetComments(ctx context.Context, in *GetComments
 
 func (h *commentServiceHandler) StarComment(ctx context.Context, in *StarCommentRequest, out *StarCommentResponse) error {
 	return h.CommentServiceHandler.StarComment(ctx, in, out)
+}
+
+func (h *commentServiceHandler) CountComment(ctx context.Context, in *CountCommentRequest, out *CountCommentResponse) error {
+	return h.CommentServiceHandler.CountComment(ctx, in, out)
+}
+
+func (h *commentServiceHandler) QueryCommentExist(ctx context.Context, in *QueryCommentExistRequest, out *QueryCommentExistResponse) error {
+	return h.CommentServiceHandler.QueryCommentExist(ctx, in, out)
 }

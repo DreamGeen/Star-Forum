@@ -1,6 +1,8 @@
 syntax ="proto3";
 
-option go_package=".;userPb";
+package userPb;
+
+option go_package="star/proto/user/userPb;userPb";
 
 
 service userService{
@@ -26,10 +28,12 @@ message LoginResponse{
   }
 }
 message EmptyLSResponse{
+
 }
 
 message GetUserInfoRequest{
-   int64   UserId=1;
+   int64   ActorId=1;
+   int64   UserId=2;
 }
 
 message  GetUserInfoResponse{
@@ -39,10 +43,11 @@ message  GetUserInfoResponse{
 message User{
     int64  UserId=1;
     int64   exp=2;
-    uint32    grade=3;
+    uint32   grade=3;
     string  UserName=4;
     string   Img=5;
     string   Gender=6;
     string   Birth=7;
     string   Sign=8;
+    bool   IsFollow=9;
 }

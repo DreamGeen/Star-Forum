@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package comment;
 
-option go_package = ".;commentPb";
+option go_package = "star/proto/comment/commentPb;commentPb";
 
 // 定义评论消息
 message Comment {
@@ -59,6 +59,22 @@ message StarCommentResponse {
   int64 star = 1;            // 点赞数
 }
 
+message CountCommentRequest{
+  int64  ActorId=1;
+  int64  PostId=2;
+}
+
+message CountCommentResponse{
+  int64  Count=1;
+}
+
+message QueryCommentExistRequest{
+  int64  CommentId=1;
+}
+
+message QueryCommentExistResponse{
+  bool  Result=1;
+}
 // 定义评论服务
 service CommentService {
   // 发布评论服务
@@ -69,4 +85,8 @@ service CommentService {
   rpc GetComments (GetCommentsRequest) returns (GetCommentsResponse);
   // 点赞评论服务
   rpc StarComment(StarCommentRequest) returns (StarCommentResponse);
+
+  rpc CountComment(CountCommentRequest)returns(CountCommentResponse);
+
+  rpc QueryCommentExist(QueryCommentExistRequest)returns(QueryCommentExistResponse);
 }

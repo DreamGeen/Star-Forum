@@ -1,12 +1,19 @@
 syntax="proto3";
 
-option  go_package = ".;communityPb";
+package communityPb;
+
+option  go_package = "star/proto/community/communityPb;communityPb";
 
 service community{
   rpc CreateCommunity(CreateCommunityRequest)returns(EmptyCommunityResponse);
   rpc GetCommunityList(EmptyCommunityRequest)returns(GetCommunityListResponse);
   rpc ShowCommunity(ShowCommunityRequest)returns(ShowCommunityResponse);
   rpc GetCommunityInfo(GetCommunityInfoRequest)returns(GetCommunityInfoResponse);
+  rpc FollowCommunity(FollowCommunityRequest)returns(FollowCommunityResponse);
+  rpc UnFollowCommunity(UnFollowCommunityRequest)returns(UnFollowCommunityResponse);
+  rpc  IsFollowCommunity(IsFollowCommunityRequest)returns(IsFollowCommunityResponse);
+  rpc  CountCommunityFollow(CountCommunityFollowRequest)returns(CountCommunityFollowResponse);
+  rpc  GetFollowCommunityList(GetFollowCommunityListRequest)returns(GetFollowCommunityListResponse);
 }
 
 
@@ -27,13 +34,6 @@ message GetCommunityListResponse{
   repeated  Community Communitys=1;
 }
 
-message Community{
-  int64  CommunityId=1;
-  string CommunityName=2;
-  string Img=3;
-}
-
-
 message ShowCommunityRequest{
    int64  CommunityId=1;
 }
@@ -47,16 +47,50 @@ message GetCommunityInfoRequest{
 }
 
 message GetCommunityInfoResponse{
-   CommunityInfo Community=1;
+   Community Community=1;
 }
 
-message CommunityInfo{
-  string CommunityName=1;
-  string  CommunityImg=2;
-  string  Description=3;
-  int64   member=4;
-  string  LeaderName=5;
-  string  LeaderImg=6;
+message Community{
+  int64   CommunityId=1;
+  int64   member=2;
+  string CommunityName=3;
+  string  CommunityImg=4;
+  string  Description=5;
+  string  LeaderName=6;
+  string  LeaderImg=7;
+}
+message FollowCommunityRequest{
+    int64 ActorId=1;
+    int64 CommunityId=2;
+}
+message FollowCommunityResponse{
+
+}
+message UnFollowCommunityRequest{
+  int64 ActorId=1;
+  int64 CommunityId=2;
+}
+message UnFollowCommunityResponse{
+
+}
+message IsFollowCommunityRequest{
+  int64 ActorId=1;
+  int64 CommunityId=2;
+}
+message IsFollowCommunityResponse{
+  bool Result=1;
+}
+message CountCommunityFollowRequest{
+  int64  UserId=1;
+}
+message CountCommunityFollowResponse{
+  int64  Count=1;
+}
+message GetFollowCommunityListRequest{
+  int64  UserId=1;
+}
+message GetFollowCommunityListResponse{
+  repeated Community  CommunityList=1;
 }
 
 

@@ -64,6 +64,7 @@ type RemindMessage struct {
 	Url         string    `db:"url" json:"url"`
 	Status      bool      `db:"status" json:"status"`
 	RemindTime  time.Time `db:"remind_time" json:"remind_time"`
+	IsDeleted   bool      `json:"is_deleted"`
 }
 
 func GetPrivateChat(m *PrivateMessage) *PrivateChat {
