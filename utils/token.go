@@ -2,7 +2,7 @@ package utils
 
 import (
 	"errors"
-	"log"
+	"go.uber.org/zap"
 	"star/constant/settings"
 	"star/models"
 	"time"
@@ -67,12 +67,14 @@ func ParseToken(tokenString string) (*MyClaims, error) {
 		return key, nil
 	})
 	if err != nil {
-		log.Println("不合法的token,err:", err)
+		Logger.Error("invalid token,err:",
+			zap.Error(err))
 		return nil, tokenInValid
 	}
 	//基于过期时间判断token是否合法
 	if !jwtToken.Valid {
-		log.Println("token 已过期,err:", err)
+		Logger.Error("token overdue,err:",
+			zap.Error(err))
 		return nil, tokenExpired
 	}
 	return claims, nil

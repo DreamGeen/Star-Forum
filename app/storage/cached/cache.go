@@ -5,13 +5,14 @@ import (
 	"errors"
 	"github.com/patrickmn/go-cache"
 	redis2 "github.com/redis/go-redis/v9"
-	"log"
+	"go.uber.org/zap"
 	"math/rand/v2"
 	"reflect"
 	"star/app/storage/mysql"
 	"star/app/storage/redis"
 	"star/constant/str"
 	"star/models"
+	"star/utils"
 	"sync"
 	"time"
 )
@@ -54,7 +55,8 @@ func ScanGetUser(ctx context.Context, key string, obj *models.User) (bool, error
 	//再在redis里找
 	if err := redis.Client.HGetAll(ctx, key).Scan(obj); err != nil {
 		if !errors.Is(err, redis2.Nil) {
-			log.Println("redis hGetAll obj error:", err)
+			utils.Logger.Error("redis hGetAll obj error:",
+				zap.Error(err))
 			return false, str.ErrServiceBusy
 		}
 	}
@@ -72,7 +74,8 @@ func ScanGetUser(ctx context.Context, key string, obj *models.User) (bool, error
 
 	//将查询的值储存到redis和缓存里
 	if err := redis.Client.HSet(ctx, key, obj).Err(); err != nil {
-		log.Println("set obj error", err)
+		utils.Logger.Error("set obj error",
+			zap.Error(err))
 		return true, str.ErrServiceBusy
 	}
 	c.Set(key, obj, cache.DefaultExpiration)
@@ -99,7 +102,8 @@ func Get(ctx context.Context, key string) (string, bool, error) {
 	//如果没查到往redis查
 	result := redis.Client.Get(ctx, key)
 	if result.Err() != nil && !errors.Is(result.Err(), redis2.Nil) {
-		log.Println("get cache error:", result.Err())
+		utils.Logger.Error("get cache error:",
+			zap.Error(result.Err()))
 		return "", false, str.ErrServiceBusy
 	}
 	value, err := result.Result()

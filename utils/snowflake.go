@@ -11,7 +11,7 @@ var sf *snowflake.Node
 func Init(node int64) (err error) {
 	sf, err = snowflake.NewNode(node)
 	if err != nil {
-		zap.L().Error("init snowflake err", zap.Error(err))
+		Logger.Error("init snowflake err", zap.Error(err))
 		return err
 	}
 	return nil
