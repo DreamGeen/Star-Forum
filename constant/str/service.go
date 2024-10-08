@@ -4,9 +4,6 @@ const (
 	UserServiceClient = "UserService.client"
 	UserService       = "UserService"
 
-	SendSmsServiceClient = "SendSmsService.client"
-	SendSmsService       = "SendSmsService"
-
 	CommentServiceClient = "CommentService.client"
 	CommentService       = "CommentService"
 
@@ -24,4 +21,7 @@ const (
 
 	LikeServiceClient = "LikeService.client"
 	LikeService       = "LikeService"
+
+	CollectServiceClient = "CollectService.client"
+	CollectService       = "CollectService"
 )

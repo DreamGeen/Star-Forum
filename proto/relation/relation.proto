@@ -7,9 +7,9 @@ option go_package="star/proto/relation/relationPb;relationPb";
 import "star/proto/user/user.proto";
 
 service RelationService{
-  rpc GetFollowerList(GetFollowRequest)returns(GetFollowResponse);
-  rpc GetFansList(GetFansRequest)returns(GetFansResponse);
-  rpc CountFollower(CountFollowRequest)returns(CountFollowResponse);
+  rpc GetFollowList(GetFollowRequest)returns(GetFollowResponse);
+  rpc GetFansList(GetFansListRequest)returns(GetFansListResponse);
+  rpc CountFollow(CountFollowRequest)returns(CountFollowResponse);
   rpc CountFans(CountFansRequest)returns(CountFansResponse);
   rpc Follow(FollowRequest)returns(FollowResponse);
   rpc UnFollow(UnFollowRequest)returns(UnFollowResponse);
@@ -22,10 +22,10 @@ message GetFollowResponse{
   repeated   userPb.User  FollowList=1;
 }
 
-message GetFansRequest{
+message GetFansListRequest{
   int64   UserId=1;
 }
-message GetFansResponse{
+message GetFansListResponse{
   repeated  userPb.User  FansList=1;
 }
 

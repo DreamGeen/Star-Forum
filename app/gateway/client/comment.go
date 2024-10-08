@@ -16,7 +16,3 @@ func DeleteComment(ctx context.Context, req *commentPb.DeleteCommentRequest) (*c
 func GetComments(ctx context.Context, req *commentPb.GetCommentsRequest) (*commentPb.GetCommentsResponse, error) {
 	return commentService.GetComments(ctx, req)
 }
-
-func StarComment(ctx context.Context, req *commentPb.StarCommentRequest) (*commentPb.StarCommentResponse, error) {
-	return commentService.StarComment(ctx, req)
-}

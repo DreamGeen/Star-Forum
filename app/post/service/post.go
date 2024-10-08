@@ -10,9 +10,9 @@ import (
 	"go-micro.dev/v4"
 	"go.uber.org/zap"
 	"log"
-	"star/app/comment/dao/redis"
 	"star/app/storage/cached"
 	"star/app/storage/mysql"
+	"star/app/storage/redis"
 	"star/constant/str"
 	"star/models"
 	"star/proto/comment/commentPb"
@@ -83,11 +83,16 @@ func (p *PostSrv) CreatePost(ctx context.Context, req *postPb.CreatePostRequest,
 	}
 	key := fmt.Sprintf("GetPostByTime:%d", req.CommunityId)
 	if err := redis.Client.LPush(ctx, key, post).Err(); err != nil {
-		utils.Logger.Error("create post error", zap.Int64("user_id", req.UserId), zap.Error(err))
+		utils.Logger.Error("CreatePost service error,create post error",
+			zap.Int64("user_id", req.UserId),
+			zap.Error(err))
 		return str.ErrPostError
 	}
 	if err := mysql.InsertPost(post); err != nil {
-		utils.Logger.Error("create post error", zap.Int64("user_id", req.UserId), zap.Error(err))
+		utils.Logger.Error("CreatePost service error,mysql insert post error",
+			zap.Int64("user_id", req.UserId),
+			zap.Error(err),
+			zap.Any("post", post))
 		return str.ErrPostError
 	}
 	return nil
@@ -97,31 +102,45 @@ func (p *PostSrv) GetPostByPopularity(ctx context.Context, req *postPb.GetPostLi
 	key := fmt.Sprintf("GetPostByPopularity:%d", req.CommunityId)
 	val, err := redis.Client.Get(ctx, key).Result()
 	if err != nil && !errors.Is(err, redis2.Nil) {
-		utils.Logger.Error("get post by popularity error", zap.Error(err))
+		utils.Logger.Error("GetPostByPopularity service error,get post by popularity error",
+			zap.Error(err),
+			zap.Int64("communityId", req.CommunityId),
+			zap.Int64("page", req.Page),
+			zap.Int64("limit", req.Limit))
 		return str.ErrPostError
 	}
 	if errors.Is(err, redis2.Nil) {
 		posts, err := mysql.GetPostByPopularity(str.DefaultLoadPostNumber, req.CommunityId)
 		if err != nil {
-			utils.Logger.Error("get post by popularity error", zap.Error(err))
+			utils.Logger.Error("GetPostByPopularity service error,get post by popularity error",
+				zap.Error(err),
+				zap.Int64("communityId", req.CommunityId),
+				zap.Int64("page", req.Page),
+				zap.Int64("limit", req.Limit))
 			return str.ErrPostError
 		}
 		pposts := convertGetPostToPB(ctx, posts)
 		resp.Posts = pposts
 		ppostJson, err := json.Marshal(pposts)
 		if err != nil {
-			utils.Logger.Error("json marshal error", zap.Error(err))
+			utils.Logger.Error("GetPostByPopularity service error,json marshal error",
+				zap.Error(err),
+				zap.Any("pposts", pposts),
+				zap.Int64("communityId", req.CommunityId))
 			return nil
 		}
 		if err = redis.Client.Set(ctx, key, ppostJson, time.Hour).Err(); err != nil {
-			utils.Logger.Error("redis set error", zap.Error(err))
+			utils.Logger.Error("GetPostByPopularity service error,redis set error",
+				zap.Error(err),
+				zap.Int64("communityId", req.CommunityId))
 			return nil
 		}
 		return nil
 	}
 	var posts []*postPb.Post
 	if err = json.Unmarshal([]byte(val), &posts); err != nil {
-		utils.Logger.Error("json unmarshal error", zap.Error(err))
+		utils.Logger.Error("GetPostByPopularity service error,json unmarshal error",
+			zap.Error(err))
 		return str.ErrPostError
 	}
 	resp.Posts = posts
@@ -148,14 +167,18 @@ func convertGetPostToPB(ctx context.Context, posts []*models.Post) []*postPb.Pos
 				UserId: post.UserId,
 			})
 			if err != nil {
-				utils.Logger.Error("get user info error", zap.Error(err))
+				utils.Logger.Error("get user info error",
+					zap.Error(err),
+					zap.Int64("userId", post.UserId))
 				return
 			}
 			communityResp, err := communityService.GetCommunityInfo(ctx, &communityPb.GetCommunityInfoRequest{
 				CommunityId: post.CommunityId,
 			})
 			if err != nil {
-				utils.Logger.Error("get community info error", zap.Error(err))
+				utils.Logger.Error("get community info error",
+					zap.Error(err),
+					zap.Int64("communityId", post.CommunityId))
 				return
 			}
 			ppost := &postPb.Post{
@@ -185,17 +208,20 @@ func updatePopularPost() {
 	key := "GetPostByPopularity"
 	posts, err := mysql.GetPostByPopularity(str.DefaultLoadPostNumber, 0)
 	if err != nil {
-		utils.Logger.Error("get post by popularity error", zap.Error(err))
+		utils.Logger.Error("updatePopularPost service error,get post by popularity error",
+			zap.Error(err))
 		return
 	}
 	pposts := convertGetPostToPB(context.Background(), posts)
 	ppostJson, err := json.Marshal(pposts)
 	if err != nil {
-		utils.Logger.Error("json marshal error", zap.Error(err))
+		utils.Logger.Error("updatePopularPost service error,json marshal error",
+			zap.Error(err))
 		return
 	}
 	if err = redis.Client.Set(context.Background(), key, ppostJson, time.Hour).Err(); err != nil {
-		utils.Logger.Error("redis set error", zap.Error(err))
+		utils.Logger.Error("updatePopularPost service error,redis set error",
+			zap.Error(err))
 		return
 	}
 }
@@ -207,7 +233,9 @@ func (p *PostSrv) GetPostByTime(ctx context.Context, req *postPb.GetPostListByTi
 	key := fmt.Sprintf("GetPostByTime:%d", req.CommunityId)
 	var post []*models.Post
 	if err := redis.Client.LRange(ctx, key, offset, offset+limit).ScanSlice(&post); err != nil {
-		utils.Logger.Error("get redis list post error", zap.Error(err), zap.Int64("communityId", req.CommunityId))
+		utils.Logger.Error("get redis list post error",
+			zap.Error(err),
+			zap.Int64("communityId", req.CommunityId))
 		return str.ErrPostError
 	}
 	if len(post) != 0 {
@@ -221,7 +249,9 @@ func (p *PostSrv) QueryPosts(ctx context.Context, req *postPb.QueryPostsRequest,
 	var err error
 	resp.Posts, err = query(ctx, req.PostIds, req.ActorId)
 	if err != nil {
-		utils.Logger.Error("query posts error", zap.Error(err), zap.Any("postIds", req.PostIds))
+		utils.Logger.Error("QueryPosts service error,query posts error",
+			zap.Error(err),
+			zap.Any("postIds", req.PostIds))
 		return str.ErrPostError
 	}
 	return nil
@@ -265,7 +295,9 @@ func queryDetailed(ctx context.Context, posts []*models.Post, actorId int64) ([]
 				UserId: userId,
 			})
 			if err != nil {
-				utils.Logger.Error("get user info error", zap.Error(err), zap.Int64("user_id", userId))
+				utils.Logger.Error("get user info error",
+					zap.Error(err),
+					zap.Int64("user_id", userId))
 			}
 			userMap[userId] = userResp.User
 		}(userId)
@@ -282,7 +314,9 @@ func queryDetailed(ctx context.Context, posts []*models.Post, actorId int64) ([]
 				CommunityId: communityId,
 			})
 			if err != nil {
-				utils.Logger.Error("get community info error", zap.Error(err), zap.Int64("community_id", communityId))
+				utils.Logger.Error("get community info error",
+					zap.Error(err),
+					zap.Int64("community_id", communityId))
 			}
 			communityMap[communityId] = communityResp.Community
 		}(communityId)
@@ -298,7 +332,9 @@ func queryDetailed(ctx context.Context, posts []*models.Post, actorId int64) ([]
 				SourceType: 1,
 			})
 			if err != nil {
-				utils.Logger.Error("get like count error", zap.Error(err), zap.Int64("post_id", post.PostId))
+				utils.Logger.Error("get like count error",
+					zap.Error(err),
+					zap.Int64("post_id", post.PostId))
 				return
 			}
 			respPosts[i].LikeCount = likeCountResp.Count
@@ -312,7 +348,10 @@ func queryDetailed(ctx context.Context, posts []*models.Post, actorId int64) ([]
 				PostId:  post.PostId,
 			})
 			if err != nil {
-				utils.Logger.Error("get comment count error", zap.Error(err), zap.Int64("post_id", post.PostId), zap.Int64("actor_id", actorId))
+				utils.Logger.Error("get comment count error",
+					zap.Error(err),
+					zap.Int64("post_id", post.PostId),
+					zap.Int64("actor_id", actorId))
 				return
 			}
 			respPosts[i].CommentCount = commentCountResp.Count
@@ -328,7 +367,10 @@ func queryDetailed(ctx context.Context, posts []*models.Post, actorId int64) ([]
 					SourceType: 1,
 				})
 				if err != nil {
-					utils.Logger.Error("get post isLike error", zap.Error(err), zap.Int64("post_id", post.PostId), zap.Int64("actor_id", actorId))
+					utils.Logger.Error("get post isLike error",
+						zap.Error(err),
+						zap.Int64("post_id", post.PostId),
+						zap.Int64("actor_id", actorId))
 					return
 				}
 				respPosts[i].IsLike = isLikeResp.Result
@@ -343,7 +385,8 @@ func queryDetailed(ctx context.Context, posts []*models.Post, actorId int64) ([]
 func cleanPost() {
 	communityIds, err := mysql.GetAllCommunityId()
 	if err != nil {
-		utils.Logger.Error("get all community id error", zap.Error(err))
+		utils.Logger.Error("cleanPost service error,get all community id error",
+			zap.Error(err))
 		return
 	}
 	pipe := redis.Client.Pipeline()
@@ -353,7 +396,7 @@ func cleanPost() {
 	}
 	cmder, err := pipe.Exec(context.Background())
 	if err != nil {
-		utils.Logger.Error("get all list length error", zap.Error(err))
+		utils.Logger.Error("cleanPost service error,get all list length error", zap.Error(err))
 		return
 	}
 	for i, cmd := range cmder {
@@ -365,7 +408,9 @@ func cleanPost() {
 			continue
 		}
 		if err := redis.Client.LTrim(context.Background(), key, 0, 199).Err(); err != nil {
-			utils.Logger.Error("delete redis post error", zap.Error(err), zap.Int64("communityId", communityId))
+			utils.Logger.Error("cleanPost service error,delete redis post error",
+				zap.Error(err),
+				zap.Int64("communityId", communityId))
 			continue
 		}
 

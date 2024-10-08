@@ -42,8 +42,6 @@ type CommentService interface {
 	DeleteComment(ctx context.Context, in *DeleteCommentRequest, opts ...client.CallOption) (*DeleteCommentResponse, error)
 	// 获取评论服务
 	GetComments(ctx context.Context, in *GetCommentsRequest, opts ...client.CallOption) (*GetCommentsResponse, error)
-	// 点赞评论服务
-	StarComment(ctx context.Context, in *StarCommentRequest, opts ...client.CallOption) (*StarCommentResponse, error)
 	CountComment(ctx context.Context, in *CountCommentRequest, opts ...client.CallOption) (*CountCommentResponse, error)
 	QueryCommentExist(ctx context.Context, in *QueryCommentExistRequest, opts ...client.CallOption) (*QueryCommentExistResponse, error)
 }
@@ -90,16 +88,6 @@ func (c *commentService) GetComments(ctx context.Context, in *GetCommentsRequest
 	return out, nil
 }
 
-func (c *commentService) StarComment(ctx context.Context, in *StarCommentRequest, opts ...client.CallOption) (*StarCommentResponse, error) {
-	req := c.c.NewRequest(c.name, "CommentService.StarComment", in)
-	out := new(StarCommentResponse)
-	err := c.c.Call(ctx, req, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *commentService) CountComment(ctx context.Context, in *CountCommentRequest, opts ...client.CallOption) (*CountCommentResponse, error) {
 	req := c.c.NewRequest(c.name, "CommentService.CountComment", in)
 	out := new(CountCommentResponse)
@@ -129,8 +117,6 @@ type CommentServiceHandler interface {
 	DeleteComment(context.Context, *DeleteCommentRequest, *DeleteCommentResponse) error
 	// 获取评论服务
 	GetComments(context.Context, *GetCommentsRequest, *GetCommentsResponse) error
-	// 点赞评论服务
-	StarComment(context.Context, *StarCommentRequest, *StarCommentResponse) error
 	CountComment(context.Context, *CountCommentRequest, *CountCommentResponse) error
 	QueryCommentExist(context.Context, *QueryCommentExistRequest, *QueryCommentExistResponse) error
 }
@@ -140,7 +126,6 @@ func RegisterCommentServiceHandler(s server.Server, hdlr CommentServiceHandler, 
 		PostComment(ctx context.Context, in *PostCommentRequest, out *PostCommentResponse) error
 		DeleteComment(ctx context.Context, in *DeleteCommentRequest, out *DeleteCommentResponse) error
 		GetComments(ctx context.Context, in *GetCommentsRequest, out *GetCommentsResponse) error
-		StarComment(ctx context.Context, in *StarCommentRequest, out *StarCommentResponse) error
 		CountComment(ctx context.Context, in *CountCommentRequest, out *CountCommentResponse) error
 		QueryCommentExist(ctx context.Context, in *QueryCommentExistRequest, out *QueryCommentExistResponse) error
 	}
@@ -165,10 +150,6 @@ func (h *commentServiceHandler) DeleteComment(ctx context.Context, in *DeleteCom
 
 func (h *commentServiceHandler) GetComments(ctx context.Context, in *GetCommentsRequest, out *GetCommentsResponse) error {
 	return h.CommentServiceHandler.GetComments(ctx, in, out)
-}
-
-func (h *commentServiceHandler) StarComment(ctx context.Context, in *StarCommentRequest, out *StarCommentResponse) error {
-	return h.CommentServiceHandler.StarComment(ctx, in, out)
 }
 
 func (h *commentServiceHandler) CountComment(ctx context.Context, in *CountCommentRequest, out *CountCommentResponse) error {

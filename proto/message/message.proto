@@ -64,6 +64,7 @@ message SendRemindMessageRequest{
    string RemindType=5;
    string Content=6;
    string  Url=7;
+   bool  IsDeleted=8;
 
 }
 message SendRemindMessageResponse{

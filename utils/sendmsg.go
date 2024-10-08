@@ -1,42 +1,25 @@
-package service
+package utils
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	openapi "github.com/alibabacloud-go/darabonba-openapi/client"
+	dysmsapi "github.com/alibabacloud-go/dysmsapi-20170525/v2/client"
+	"github.com/alibabacloud-go/tea/tea"
+	"go.uber.org/zap"
 	"math/rand/v2"
 	"star/app/storage/cached"
 	"star/constant/settings"
 	"star/constant/str"
-	"star/proto/sendSms/sendSmsPb"
 	"strconv"
-	"sync"
 	"time"
-
-	openapi "github.com/alibabacloud-go/darabonba-openapi/client"
-	dysmsapi "github.com/alibabacloud-go/dysmsapi-20170525/v2/client"
-	"github.com/alibabacloud-go/tea/tea"
 )
 
-type SendSmsSrv struct {
-}
-
-var (
-	sendSmsSrvIns *SendSmsSrv
-	once          sync.Once
-)
-
-func GetSendSmsSrv() *SendSmsSrv {
-	once.Do(func() {
-		sendSmsSrvIns = &SendSmsSrv{}
-	})
-	return sendSmsSrvIns
-}
-
-func (s *SendSmsSrv) HandleSendSms(ctx context.Context, req *sendSmsPb.SendRequest, resp *sendSmsPb.EmptySendResponse) error {
-	if err := sendMsg(ctx, req.Phone, req.TemplateCode); err != nil {
-		log.Println("发送短信失败", err)
+func HandleSendSms(ctx context.Context, phone string, templateCode string) error {
+	if err := sendMsg(ctx, phone, templateCode); err != nil {
+		Logger.Error("send message error",
+			zap.Error(err))
 		return str.ErrSendSmsError
 	}
 	return nil

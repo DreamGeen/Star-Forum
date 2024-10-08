@@ -49,15 +49,7 @@ message GetCommentsResponse {
   repeated Comment comments = 1;  // 评论切片
 }
 
-// 定义点赞评论列表的请求
-message StarCommentRequest {
-  int64 commentId = 1;      // 评论id
-}
 
-// 定义点赞评论列表的响应
-message StarCommentResponse {
-  int64 star = 1;            // 点赞数
-}
 
 message CountCommentRequest{
   int64  ActorId=1;
@@ -83,8 +75,6 @@ service CommentService {
   rpc DeleteComment (DeleteCommentRequest) returns (DeleteCommentResponse);
   // 获取评论服务
   rpc GetComments (GetCommentsRequest) returns (GetCommentsResponse);
-  // 点赞评论服务
-  rpc StarComment(StarCommentRequest) returns (StarCommentResponse);
 
   rpc CountComment(CountCommentRequest)returns(CountCommentResponse);
 

@@ -20,3 +20,15 @@ func ShowCommunity(ctx context.Context, req *communityPb.ShowCommunityRequest) (
 func GetCommunityInfo(ctx context.Context, req *communityPb.GetCommunityInfoRequest) (*communityPb.GetCommunityInfoResponse, error) {
 	return communityService.GetCommunityInfo(ctx, req)
 }
+
+func GetFollowCommunityList(ctx context.Context, req *communityPb.GetFollowCommunityListRequest) (*communityPb.GetFollowCommunityListResponse, error) {
+	return communityService.GetFollowCommunityList(ctx, req)
+}
+
+func FollowCommunity(ctx context.Context, req *communityPb.FollowCommunityRequest) (*communityPb.FollowCommunityResponse, error) {
+	return communityService.FollowCommunity(ctx, req)
+}
+
+func UnFollowCommunity(ctx context.Context, req *communityPb.UnFollowCommunityRequest) (*communityPb.UnFollowCommunityResponse, error) {
+	return communityService.UnFollowCommunity(ctx, req)
+}

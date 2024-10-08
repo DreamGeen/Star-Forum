@@ -2,12 +2,14 @@ package httpHandler
 
 import (
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"log"
 	"star/app/gateway/client"
 	"star/constant/str"
 	"star/models"
 	"star/proto/community/communityPb"
 	"star/utils"
+	"strconv"
 )
 
 func CreateCommunityHandler(c *gin.Context) {
@@ -38,6 +40,93 @@ func CreateCommunityHandler(c *gin.Context) {
 		return
 	}
 	str.Response(c, nil, str.Empty, nil)
+}
+func GetFollowCommunityList(c *gin.Context) {
+	userId, err := utils.GetUserId(c)
+	if err != nil {
+		utils.Logger.Warn("user not log in,but want to get follow community",
+			zap.Error(err))
+		str.Response(c, err, str.Empty, nil)
+		return
+	}
+	resp, err := client.GetFollowCommunityList(c, &communityPb.GetFollowCommunityListRequest{
+		UserId: userId,
+	})
+	if err != nil {
+		utils.Logger.Error("get follow community list service error",
+			zap.Error(err),
+			zap.Int64("userId", userId))
+		str.Response(c, err, str.Empty, nil)
+		return
+	}
+	str.Response(c, nil, "communityList", resp.CommunityList)
+}
+func FollowCommunity(c *gin.Context) {
+	communityIdStr := c.Query("communityId")
+	communityId, err := strconv.ParseInt(communityIdStr, 64, 10)
+	if err != nil || communityId == 0 {
+		utils.Logger.Error("follow user error,invalid param",
+			zap.Error(err),
+			zap.String("communityIdStr", communityIdStr))
+		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
+		return
+	}
+	userId, err := utils.GetUserId(c)
+	if err != nil {
+		utils.Logger.Warn("user not log in,but want to follow community",
+			zap.Error(err),
+			zap.Int64("communityId", communityId))
+		str.Response(c, err, str.Empty, nil)
+		return
+	}
+	_, err = client.FollowCommunity(c, &communityPb.FollowCommunityRequest{
+		ActorId:     userId,
+		CommunityId: communityId,
+	})
+	if err != nil {
+		utils.Logger.Error("follow community service error",
+			zap.Error(err),
+			zap.Int64("userId", userId),
+			zap.Int64("communityId", communityId))
+		str.Response(c, err, str.Empty, nil)
+		return
+	}
+	str.Response(c, nil, str.Empty, nil)
+	return
+}
+
+func UnFollowCommunity(c *gin.Context) {
+	communityIdStr := c.Query("beFollowId")
+	communityId, err := strconv.ParseInt(communityIdStr, 64, 10)
+	if err != nil || communityId == 0 {
+		utils.Logger.Error("unfollow community error,invalid param",
+			zap.Error(err),
+			zap.String("communityIdStr", communityIdStr))
+		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
+		return
+	}
+	userId, err := utils.GetUserId(c)
+	if err != nil {
+		utils.Logger.Warn("user not log in,but want to unfollow community",
+			zap.Error(err),
+			zap.Int64("communityId", communityId))
+		str.Response(c, err, str.Empty, nil)
+		return
+	}
+	_, err = client.UnFollowCommunity(c, &communityPb.UnFollowCommunityRequest{
+		ActorId:     userId,
+		CommunityId: communityId,
+	})
+	if err != nil {
+		utils.Logger.Error("unfollow community service error",
+			zap.Error(err),
+			zap.Int64("userId", userId),
+			zap.Int64("communityId", communityId))
+		str.Response(c, err, str.Empty, nil)
+		return
+	}
+	str.Response(c, nil, str.Empty, nil)
+	return
 }
 
 //func GetCommunityListHandler(c *gin.Context) {

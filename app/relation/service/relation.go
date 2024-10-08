@@ -108,7 +108,7 @@ func (r *RelationSrv) UnFollow(ctx context.Context, req *relationPb.UnFollowRequ
 	return nil
 }
 
-func (r *RelationSrv) GetFollowerList(ctx context.Context, req *relationPb.GetFollowRequest, resp *relationPb.GetFollowResponse) error {
+func (r *RelationSrv) GetFollowList(ctx context.Context, req *relationPb.GetFollowRequest, resp *relationPb.GetFollowResponse) error {
 	key := fmt.Sprintf("GetFollowerList:%d", req.UserId)
 	var followIdList []int64
 	followIdStrList, err := redis.Client.SMembers(ctx, key).Result()
@@ -165,7 +165,7 @@ func (r *RelationSrv) GetFollowerList(ctx context.Context, req *relationPb.GetFo
 	return nil
 }
 
-func (r *RelationSrv) GetFansList(ctx context.Context, req *relationPb.GetFansRequest, resp *relationPb.GetFansResponse) error {
+func (r *RelationSrv) GetFansList(ctx context.Context, req *relationPb.GetFansListRequest, resp *relationPb.GetFansListResponse) error {
 	key := fmt.Sprintf("GetFansList:%d", req.UserId)
 	var fansIdList []int64
 	fansIdStrList, err := redis.Client.SMembers(ctx, key).Result()
@@ -222,7 +222,7 @@ func (r *RelationSrv) GetFansList(ctx context.Context, req *relationPb.GetFansRe
 	resp.FansList = fansList
 	return nil
 }
-func (r *RelationSrv) CountFollower(ctx context.Context, req *relationPb.CountFollowRequest, resp *relationPb.CountFollowResponse) error {
+func (r *RelationSrv) CountFollow(ctx context.Context, req *relationPb.CountFollowRequest, resp *relationPb.CountFollowResponse) error {
 	cacheKey := fmt.Sprintf("CountFollower:%d", req.UserId)
 	countStr, ok, err := cached.Get(ctx, cacheKey)
 	if err != nil {

@@ -5,7 +5,7 @@ package str
 const (
 	MessageExchange = "message_exchange"
 	RetryExchange   = "retry_exchange"
-	LikeExchange    = "like_exchange"
+	FavorExchange   = "favor_exchange"
 )
 
 //Queue
@@ -18,6 +18,7 @@ const (
 	MessageSystem     = "message_System"
 	LikePost          = "like_post"
 	LikeComment       = "like_comment"
+	CollectPost       = "collect_post"
 )
 
 //routing_key
@@ -30,4 +31,5 @@ const (
 	RoutSystem      = "message.system"
 	RoutPost        = "like.post"
 	RoutComment     = "like.comment"
+	RoutCollectPost = "collect.post"
 )

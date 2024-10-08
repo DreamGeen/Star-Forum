@@ -2,10 +2,11 @@ package httpHandler
 
 import (
 	"github.com/gin-gonic/gin"
-	"log"
+	"go.uber.org/zap"
 	"star/app/gateway/models"
 	"star/constant/str"
 	"star/proto/user/userPb"
+	"star/utils"
 	"unicode"
 
 	"star/app/gateway/client"
@@ -16,7 +17,8 @@ func LoginHandler(c *gin.Context) {
 	//参数校验
 	u := new(models.LoginPassword)
 	if err := c.ShouldBindJSON(u); err != nil {
-		log.Println("参数效验失败", err)
+		utils.Logger.Error("login error invalid param",
+			zap.Error(err))
 		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
 		return
 	}
@@ -27,7 +29,10 @@ func LoginHandler(c *gin.Context) {
 	}
 	resp, err := client.LoginPassword(c, req)
 	if err != nil {
-		log.Println("登录失败", err)
+		utils.Logger.Error("login error",
+			zap.Error(err),
+			zap.String("user", req.User),
+			zap.String("password", req.Password))
 		str.Response(c, err, str.Empty, nil)
 		return
 	}
@@ -40,7 +45,8 @@ func LoginWithCaptcha(c *gin.Context) {
 	//参数校验
 	u := new(models.LoginCaptcha)
 	if err := c.ShouldBindJSON(u); err != nil {
-		log.Println("参数错误", err)
+		utils.Logger.Error("login error invalid param",
+			zap.Error(err))
 		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
 		return
 	}
@@ -51,7 +57,10 @@ func LoginWithCaptcha(c *gin.Context) {
 	}
 	resp, err := client.LoginCaptcha(c, req)
 	if err != nil {
-		log.Println("登录失败", err)
+		utils.Logger.Error("login error",
+			zap.Error(err),
+			zap.String("phone", req.Phone),
+			zap.String("captcha", req.Captcha))
 		str.Response(c, err, str.Empty, nil)
 		return
 	}
@@ -63,7 +72,8 @@ func SignupHandler(c *gin.Context) {
 	//参数校验
 	u := new(models.SignupUser)
 	if err := c.ShouldBindJSON(u); err != nil {
-		log.Println("invalid param", err)
+		utils.Logger.Error("sign up error invalid param",
+			zap.Error(err))
 		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
 		return
 	}
@@ -80,7 +90,8 @@ func SignupHandler(c *gin.Context) {
 		Captcha:  u.Captcha,
 	}
 	if _, err := client.Signup(c, req); err != nil {
-		log.Println("注册失败", err)
+		utils.Logger.Error("sign up error",
+			zap.String("phone", req.Phone))
 		str.Response(c, err, str.Empty, nil)
 		return
 	}

@@ -31,8 +31,6 @@ var conn *amqp091.Connection
 var channel *amqp091.Channel
 var manager = NewManager()
 
-//var MessageTypes = []string{"mention", "like", "reply", "system", "privateMsg"}
-
 func failOnError(err error, msg string) {
 	if err != nil {
 		utils.Logger.Error(msg, zap.Error(err))
@@ -41,11 +39,13 @@ func failOnError(err error, msg string) {
 
 func CloseMQ() {
 	if err := conn.Close(); err != nil {
-		utils.Logger.Error("close rabbitmq conn error", zap.Error(err))
+		utils.Logger.Error("message service close rabbitmq conn error",
+			zap.Error(err))
 		panic(err)
 	}
 	if err := channel.Close(); err != nil {
-		utils.Logger.Error("close rabbitmq channel error", zap.Error(err))
+		utils.Logger.Error("message service close rabbitmq channel error",
+			zap.Error(err))
 		panic(err)
 	}
 }
@@ -54,58 +54,58 @@ func (m *MessageSrv) New() {
 	//连接消息队列
 	var err error
 	conn, err = amqp091.Dial(mq.ReturnRabbitmqUrl())
-	failOnError(err, "Failed to connect to RabbitMQ")
+	failOnError(err, "message service failed to connect to RabbitMQ")
 
 	channel, err = conn.Channel()
-	failOnError(err, "Failed to open a channel")
+	failOnError(err, "message service failed to open a channel")
 
 	err = channel.ExchangeDeclare(str.MessageExchange,
 		"topic",
 		false, false, false, false,
 		nil)
-	failOnError(err, "Failed to declare an exchange")
+	failOnError(err, "message service failed to declare an exchange")
 	//声明队列
 	_, err = channel.QueueDeclare(str.MessageLike,
 		false, false, false, false,
 		nil)
-	failOnError(err, "Failed to declare a like queue")
+	failOnError(err, "message service failed to declare a like queue")
 	_, err = channel.QueueDeclare(str.MessageReply,
 		false, false, false, false,
 		nil)
-	failOnError(err, "Failed to declare a reply queue")
+	failOnError(err, "message service failed to declare a reply queue")
 	_, err = channel.QueueDeclare(str.MessageSystem,
 		false, false, false, false,
 		nil)
-	failOnError(err, "Failed to declare a system queue")
+	failOnError(err, "message service failed to declare a system queue")
 	_, err = channel.QueueDeclare(str.MessagePrivateMsg,
 		false, false, false, false,
 		nil)
-	failOnError(err, "Failed to declare a private_msg queue")
+	failOnError(err, "message service failed to declare a private_msg queue")
 	_, err = channel.QueueDeclare(str.MessageMention,
 		false, false, false, false,
 		nil)
-	failOnError(err, "Failed to declare a mention queue")
+	failOnError(err, "message service failed to declare a mention queue")
 
 	//绑定队列
 	// 绑定点赞消息
 	err = channel.QueueBind(str.MessageLike, str.RoutMessageLike, str.MessageExchange, false, nil)
-	failOnError(err, "Failed to bind like queue")
+	failOnError(err, "message service failed to bind like queue")
 
 	// 绑定@提及消息
 	err = channel.QueueBind(str.MessageMention, str.RoutMention, str.MessageExchange, false, nil)
-	failOnError(err, "Failed to bind mention queue")
+	failOnError(err, "message service failed to bind mention queue")
 
 	// 绑定回复消息
 	err = channel.QueueBind(str.MessageReply, str.RoutMention, str.MessageExchange, false, nil)
-	failOnError(err, "Failed to bind reply queue")
+	failOnError(err, "message service failed to bind reply queue")
 
 	// 绑定系统通知
 	err = channel.QueueBind(str.MessageSystem, str.RoutSystem, str.MessageExchange, false, nil)
-	failOnError(err, "Failed to bind system queue")
+	failOnError(err, "message service failed to bind system queue")
 
 	// 绑定私信消息
 	err = channel.QueueBind(str.MessagePrivateMsg, str.RoutPrivateMsg, str.MessageExchange, false, nil)
-	failOnError(err, "Failed to bind private message queue")
+	failOnError(err, "message service failed to bind private message queue")
 
 	//创建一个用户微服务客户端
 	userMicroService := micro.NewService(micro.Name(str.UserServiceClient))
@@ -127,24 +127,33 @@ func (m *MessageSrv) ListMessageCount(ctx context.Context, req *messagePb.ListMe
 	countsStr, err := cached.GetWithFunc(ctx, key, func(key string) (string, error) {
 		counts, err := mysql.ListMessageCount(req.UserId)
 		if err != nil {
-			return "", err
+			utils.Logger.Error("ListMessageCount service error",
+				zap.Error(err))
+			return "", str.ErrMessageError
 		}
 		countsJson, err := json.Marshal(counts)
 		if err != nil {
-			utils.Logger.Error("json marshal counts error:", zap.Error(err))
-			return "", str.ErrMessageError
+			utils.Logger.Error("ListMessageCount service error,json marshal counts error:",
+				zap.Error(err),
+				zap.Any("counts", counts))
+			return "", err
 		}
 		return string(countsJson), nil
 
 	})
 	if err != nil {
+		utils.Logger.Error("ListMessageCount service error",
+			zap.Error(err),
+			zap.Int64("userId", req.UserId))
 		return err
 	}
 	//解析countsStr
 	counts := new(models.Counts)
 	err = json.Unmarshal([]byte(countsStr), counts)
 	if err != nil {
-		utils.Logger.Error("json unmarshal counts error:", zap.Error(err))
+		utils.Logger.Error("ListMessageCount service error ,json unmarshal counts error",
+			zap.Error(err),
+			zap.Int64("userId", req.UserId))
 		return str.ErrMessageError
 	}
 	resp.Count = &messagePb.Counts{
@@ -171,7 +180,9 @@ func (m *MessageSrv) SendSystemMessage(ctx context.Context, req *messagePb.SendS
 	}
 	body, err := json.Marshal(message)
 	if err != nil {
-		utils.Logger.Error("json marshal system message error", zap.Error(err), zap.Any("message", message))
+		utils.Logger.Error("SendSystemMessage service error,json marshal system message error",
+			zap.Error(err),
+			zap.Any("message", message))
 		return str.ErrMessageError
 	}
 	header := utils.InjectAMQPHeaders(ctx)
@@ -184,7 +195,9 @@ func (m *MessageSrv) SendSystemMessage(ctx context.Context, req *messagePb.SendS
 			Headers:      header,
 		})
 	if err != nil {
-		utils.Logger.Error("send system message error", zap.Error(err), zap.Any("message", message))
+		utils.Logger.Error("SendSystemMessage service error,send system message error",
+			zap.Error(err),
+			zap.Any("message", message))
 		return str.ErrMessageError
 	}
 	return nil
@@ -201,12 +214,16 @@ func (m *MessageSrv) SendPrivateMessage(ctx context.Context, req *messagePb.Send
 		PrivateChatId: req.PrivateChatId,
 	}
 	if err := redis.SaveMessage(message); err != nil {
-		utils.Logger.Error(" redis save private message error", zap.Error(err), zap.Any("message", message))
+		utils.Logger.Error("SendPrivateMessage service error,redis save private message error",
+			zap.Error(err),
+			zap.Any("message", message))
 		return str.ErrMessageError
 	}
 	body, err := json.Marshal(message)
 	if err != nil {
-		utils.Logger.Error("json marshal message error", zap.Error(err), zap.Any("message", message))
+		utils.Logger.Error("SendPrivateMessage service error,json marshal message error",
+			zap.Error(err),
+			zap.Any("message", message))
 		return err
 	}
 	header := utils.InjectAMQPHeaders(ctx)
@@ -220,7 +237,9 @@ func (m *MessageSrv) SendPrivateMessage(ctx context.Context, req *messagePb.Send
 		},
 	)
 	if err != nil {
-		utils.Logger.Error("publish message error", zap.Error(err), zap.Any("message", message))
+		utils.Logger.Error("SendPrivateMessage service error,publish message error",
+			zap.Error(err),
+			zap.Any("message", message))
 		return err
 	}
 	client, ok := manager.GetClient(req.RecipientId)
@@ -234,17 +253,38 @@ func (m *MessageSrv) SendRemindMessage(ctx context.Context, req *messagePb.SendR
 	switch req.RemindType {
 	case "like":
 		if err := addRemindMessage(ctx, req, str.RoutMessageLike); err != nil {
-			utils.Logger.Error("add like message error", zap.Error(err), zap.Any("message", req))
+			utils.Logger.Error("SendRemindMessage service error,add like message error",
+				zap.Error(err),
+				zap.Int64("senderId", req.SenderId),
+				zap.Int64("recipientId", req.RecipientId),
+				zap.String("content", req.Content),
+				zap.String("url", req.Url),
+				zap.String("sourceType", req.SourceType),
+				zap.Int64("sourceId", req.SourceId))
 			return str.ErrMessageError
 		}
 	case "reply":
 		if err := addRemindMessage(ctx, req, str.RoutReply); err != nil {
-			utils.Logger.Error("add reply message error", zap.Error(err), zap.Any("message", req))
+			utils.Logger.Error("SendRemindMessage service error,add reply message error",
+				zap.Error(err),
+				zap.Int64("senderId", req.SenderId),
+				zap.Int64("recipientId", req.RecipientId),
+				zap.String("content", req.Content),
+				zap.String("url", req.Url),
+				zap.String("sourceType", req.SourceType),
+				zap.Int64("sourceId", req.SourceId))
 			return str.ErrMessageError
 		}
 	case "mention":
 		if err := addRemindMessage(ctx, req, str.RoutMention); err != nil {
-			utils.Logger.Error("add mention message error", zap.Error(err), zap.Any("message", req))
+			utils.Logger.Error("SendRemindMessage service error,add mention message error",
+				zap.Error(err),
+				zap.Int64("senderId", req.SenderId),
+				zap.Int64("recipientId", req.RecipientId),
+				zap.String("content", req.Content),
+				zap.String("url", req.Url),
+				zap.String("sourceType", req.SourceType),
+				zap.Int64("sourceId", req.SourceId))
 			return str.ErrMessageError
 		}
 	}
@@ -265,7 +305,9 @@ func addRemindMessage(ctx context.Context, req *messagePb.SendRemindMessageReque
 	}
 	body, err := json.Marshal(message)
 	if err != nil {
-		utils.Logger.Error("json marshal message error", zap.Error(err), zap.Any("message", message))
+		utils.Logger.Error("addRemindMessage service error,json marshal message error",
+			zap.Error(err),
+			zap.Any("message", message))
 		return err
 	}
 	header := utils.InjectAMQPHeaders(ctx)
@@ -277,7 +319,9 @@ func addRemindMessage(ctx context.Context, req *messagePb.SendRemindMessageReque
 			Headers:      header,
 		})
 	if err != nil {
-		utils.Logger.Error("publish message error", zap.Error(err), zap.Any("message", message))
+		utils.Logger.Error("addRemindMessage service error,publish message error",
+			zap.Error(err),
+			zap.Any("message", message))
 		return err
 	}
 	return nil
@@ -288,13 +332,18 @@ func (m *MessageSrv) GetChatList(ctx context.Context, req *messagePb.GetChatList
 	val, err := redis.Client.Get(ctx, key).Result()
 	if err != nil {
 		if !errors.Is(err, redis2.Nil) {
-			utils.Logger.Error("redis get chatList error", zap.Error(err), zap.Any("key", key), zap.Int64("UserId", req.UserId))
+			utils.Logger.Error("GetChatList service error,redis get chatList error",
+				zap.Error(err),
+				zap.String("key", key),
+				zap.Int64("UserId", req.UserId))
 			return str.ErrMessageError
 		}
 		//为空则去mysql里查询
 		list, err := mysql.GetChatList(req.UserId)
 		if err != nil {
-			utils.Logger.Error("mysql get chatList error", zap.Error(err), zap.Int64("UserId", req.UserId))
+			utils.Logger.Error("GetChatList service error,mysql get chatList error",
+				zap.Error(err),
+				zap.Int64("UserId", req.UserId))
 			return str.ErrMessageError
 		}
 		if len(list) == 0 {
@@ -302,13 +351,17 @@ func (m *MessageSrv) GetChatList(ctx context.Context, req *messagePb.GetChatList
 		}
 		privateChatList, err := convertChatListToPB(ctx, req.UserId, list)
 		if err != nil {
-			utils.Logger.Error("convertChatListToPB error", zap.Error(err), zap.Int64("UserId", req.UserId))
+			utils.Logger.Error("GetChatList service error,convertChatListToPB error",
+				zap.Error(err),
+				zap.Int64("UserId", req.UserId))
 			return str.ErrMessageError
 		}
 		resp.PrivateChatList = privateChatList
 		privateListJosn, err := json.Marshal(privateChatList)
 		if err != nil {
-			utils.Logger.Error("json marshal chatList error", zap.Error(err), zap.Any("list", list))
+			utils.Logger.Error("GetChatList service error,json marshal chatList error",
+				zap.Error(err),
+				zap.Any("list", list))
 			return str.ErrMessageError
 		}
 		redis.Client.Set(ctx, key, string(privateListJosn), 24*time.Hour)
@@ -316,7 +369,9 @@ func (m *MessageSrv) GetChatList(ctx context.Context, req *messagePb.GetChatList
 	}
 	var list []*messagePb.PrivateChat
 	if err := json.Unmarshal([]byte(val), &list); err != nil {
-		utils.Logger.Error("json unmarshal message error", zap.Error(err), zap.Any("value", val))
+		utils.Logger.Error("GetChatList service error,json unmarshal message error",
+			zap.Error(err),
+			zap.Any("value", val))
 		return str.ErrMessageError
 	}
 	resp.PrivateChatList = list
@@ -345,7 +400,9 @@ func convertChatListToPB(ctx context.Context, recipientId int64, list []*models.
 				UserId: getSenderId(chat, recipientId),
 			})
 			if err != nil {
-				utils.Logger.Error("get sender user info error", zap.Error(err))
+				utils.Logger.Error("get sender user info error",
+					zap.Error(err),
+					zap.Int64("userId", recipientId))
 				return
 			}
 			sender := senderResp.User
@@ -375,20 +432,27 @@ func convertChatListToPB(ctx context.Context, recipientId int64, list []*models.
 func (m *MessageSrv) LoadMessage(ctx context.Context, req *messagePb.LoadMessageRequest, resp *messagePb.LoadMessageResponse) error {
 	lastMsgTime, err := time.Parse(str.ParseTimeFormat, req.LastMsgTime)
 	if err != nil {
-		utils.Logger.Error("load last message time error", zap.Error(err), zap.Any("message", req))
+		utils.Logger.Error("LoadMessage service error,load last message time error",
+			zap.Error(err),
+			zap.Int64("userId", req.RecipientId))
 		return str.ErrMessageError
 	}
 	senderReq, err := userService.GetUserInfo(ctx, &userPb.GetUserInfoRequest{
 		UserId: req.SenderId,
 	})
 	if err != nil {
-		utils.Logger.Error("get sender user info error", zap.Error(err), zap.Any("message", req))
+		utils.Logger.Error("LoadMessage service error,get sender user info error",
+			zap.Error(err),
+			zap.Int64("senderId", req.SenderId))
 		return str.ErrMessageError
 	}
 	sender := senderReq.User
 	messages, err := redis.LoadMessage(req.SenderId, req.RecipientId, lastMsgTime, str.DefaultLoadMessageNumber)
 	if err != nil {
-		utils.Logger.Error("load last message error", zap.Error(err), zap.Any("message", req))
+		utils.Logger.Error("LoadMessage service error,load last message error",
+			zap.Error(err),
+			zap.Int64("senderId", req.SenderId),
+			zap.Int64("recipientId", req.RecipientId))
 		return str.ErrMessageError
 	}
 	if len(messages) > 0 {
@@ -399,7 +463,9 @@ func (m *MessageSrv) LoadMessage(ctx context.Context, req *messagePb.LoadMessage
 	//redis没有找到
 	messages, err = mysql.LoadMessage(req.PrivateChatId, lastMsgTime, 2*str.DefaultLoadMessageNumber)
 	if err != nil {
-		utils.Logger.Error("load last message error", zap.Error(err), zap.Int64("privateChatId", req.PrivateChatId))
+		utils.Logger.Error("LoadMessage service error,load last message error",
+			zap.Error(err),
+			zap.Int64("privateChatId", req.PrivateChatId))
 		return str.ErrMessageError
 	}
 	resp.PrivateMessages = convertMessagesToPB(messages, sender)
@@ -428,7 +494,9 @@ func convertMessagesToPB(messages []*models.PrivateMessage, sender *userPb.User)
 func savePrivateMsgToRedisAsync(messages []*models.PrivateMessage) {
 	go func() {
 		if err := redis.BitchSaveMessage(messages); err != nil {
-			utils.Logger.Error("async redis save private message error", zap.Error(err), zap.Any("message", messages))
+			utils.Logger.Error("async redis save private message error",
+				zap.Error(err),
+				zap.Any("message", messages))
 		}
 	}()
 }
@@ -437,6 +505,8 @@ func removeMessage() {
 	goroutineLimiter := make(chan struct{}, 15)
 	chats, err := mysql.GetAllPrivateChat()
 	if err != nil {
+		utils.Logger.Error("removeMessage service error,mysql get all private chat error",
+			zap.Error(err))
 		return
 	}
 	var wg sync.WaitGroup
@@ -452,7 +522,11 @@ func removeMessage() {
 			if length > 200 {
 				err := redis.RemoveMessage(chat.User1Id, chat.User2Id, 0, 100)
 				if err != nil {
-					utils.Logger.Error("remove message error", zap.Error(err), zap.Int64("chatId", chat.Id), zap.Int64("user1Id", chat.User1Id), zap.Int64("user2Id", chat.User2Id))
+					utils.Logger.Error("remove message error",
+						zap.Error(err),
+						zap.Int64("chatId", chat.Id),
+						zap.Int64("user1Id", chat.User1Id),
+						zap.Int64("user2Id", chat.User2Id))
 				}
 			}
 

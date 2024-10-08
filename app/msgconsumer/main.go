@@ -204,28 +204,36 @@ func handleMessage(delivery <-chan amqp091.Delivery, updateFunc func(interface{}
 				zap.ByteString("message body", msg.Body), zap.Error(err))
 			//序列化失败，拒绝消息且不重新入队
 			if nackErr := msg.Nack(false, false); nackErr != nil {
-				utils.Logger.Error("nack message error", zap.ByteString("message body", msg.Body), zap.Error(nackErr))
+				utils.Logger.Error("nack message error",
+					zap.ByteString("message body", msg.Body),
+					zap.Error(nackErr))
 			}
 			continue
 		}
 
 		// 更新消息到数据库
 		if err := updateFunc(message); err != nil {
-			utils.Logger.Error(fmt.Sprintf("insert %s message error", msgType), zap.Error(err))
+			utils.Logger.Error(fmt.Sprintf("insert %s message error", msgType),
+				zap.Error(err),
+				zap.Any("message", message))
 			if retryCount >= maxRetries {
 				// 达到最大重试次数，拒绝消息且不重新入队
 				if nackErr := msg.Nack(false, false); nackErr != nil {
-					utils.Logger.Error("nack message error", zap.ByteString("message body", msg.Body), zap.Error(nackErr))
+					utils.Logger.Error("nack message error",
+						zap.ByteString("message body", msg.Body),
+						zap.Error(nackErr))
 				}
-				utils.Logger.Warn("message discarded after max retries", zap.Int32("retry count", retryCount))
+				utils.Logger.Warn("message discarded after max retries",
+					zap.Int32("retry count", retryCount))
 			} else {
 				// 未达到最大重试次数，重试并重新入队
 				sendRetryMessage(msg, 100)
 				if nackErr := msg.Nack(false, false); nackErr != nil {
-					utils.Logger.Error("nack message error", zap.ByteString("message body", msg.Body), zap.Error(nackErr))
+					utils.Logger.Error("nack message error",
+						zap.ByteString("message body", msg.Body),
+						zap.Error(nackErr))
 				}
 			}
-
 			continue
 		}
 

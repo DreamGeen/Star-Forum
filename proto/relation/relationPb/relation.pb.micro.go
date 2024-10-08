@@ -37,9 +37,9 @@ func NewRelationServiceEndpoints() []*api.Endpoint {
 // Client API for RelationService service
 
 type RelationService interface {
-	GetFollowerList(ctx context.Context, in *GetFollowRequest, opts ...client.CallOption) (*GetFollowResponse, error)
-	GetFansList(ctx context.Context, in *GetFansRequest, opts ...client.CallOption) (*GetFansResponse, error)
-	CountFollower(ctx context.Context, in *CountFollowRequest, opts ...client.CallOption) (*CountFollowResponse, error)
+	GetFollowList(ctx context.Context, in *GetFollowRequest, opts ...client.CallOption) (*GetFollowResponse, error)
+	GetFansList(ctx context.Context, in *GetFansListRequest, opts ...client.CallOption) (*GetFansListResponse, error)
+	CountFollow(ctx context.Context, in *CountFollowRequest, opts ...client.CallOption) (*CountFollowResponse, error)
 	CountFans(ctx context.Context, in *CountFansRequest, opts ...client.CallOption) (*CountFansResponse, error)
 	Follow(ctx context.Context, in *FollowRequest, opts ...client.CallOption) (*FollowResponse, error)
 	UnFollow(ctx context.Context, in *UnFollowRequest, opts ...client.CallOption) (*UnFollowResponse, error)
@@ -58,8 +58,8 @@ func NewRelationService(name string, c client.Client) RelationService {
 	}
 }
 
-func (c *relationService) GetFollowerList(ctx context.Context, in *GetFollowRequest, opts ...client.CallOption) (*GetFollowResponse, error) {
-	req := c.c.NewRequest(c.name, "RelationService.GetFollowerList", in)
+func (c *relationService) GetFollowList(ctx context.Context, in *GetFollowRequest, opts ...client.CallOption) (*GetFollowResponse, error) {
+	req := c.c.NewRequest(c.name, "RelationService.GetFollowList", in)
 	out := new(GetFollowResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
@@ -68,9 +68,9 @@ func (c *relationService) GetFollowerList(ctx context.Context, in *GetFollowRequ
 	return out, nil
 }
 
-func (c *relationService) GetFansList(ctx context.Context, in *GetFansRequest, opts ...client.CallOption) (*GetFansResponse, error) {
+func (c *relationService) GetFansList(ctx context.Context, in *GetFansListRequest, opts ...client.CallOption) (*GetFansListResponse, error) {
 	req := c.c.NewRequest(c.name, "RelationService.GetFansList", in)
-	out := new(GetFansResponse)
+	out := new(GetFansListResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -78,8 +78,8 @@ func (c *relationService) GetFansList(ctx context.Context, in *GetFansRequest, o
 	return out, nil
 }
 
-func (c *relationService) CountFollower(ctx context.Context, in *CountFollowRequest, opts ...client.CallOption) (*CountFollowResponse, error) {
-	req := c.c.NewRequest(c.name, "RelationService.CountFollower", in)
+func (c *relationService) CountFollow(ctx context.Context, in *CountFollowRequest, opts ...client.CallOption) (*CountFollowResponse, error) {
+	req := c.c.NewRequest(c.name, "RelationService.CountFollow", in)
 	out := new(CountFollowResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
@@ -131,9 +131,9 @@ func (c *relationService) IsFollow(ctx context.Context, in *IsFollowRequest, opt
 // Server API for RelationService service
 
 type RelationServiceHandler interface {
-	GetFollowerList(context.Context, *GetFollowRequest, *GetFollowResponse) error
-	GetFansList(context.Context, *GetFansRequest, *GetFansResponse) error
-	CountFollower(context.Context, *CountFollowRequest, *CountFollowResponse) error
+	GetFollowList(context.Context, *GetFollowRequest, *GetFollowResponse) error
+	GetFansList(context.Context, *GetFansListRequest, *GetFansListResponse) error
+	CountFollow(context.Context, *CountFollowRequest, *CountFollowResponse) error
 	CountFans(context.Context, *CountFansRequest, *CountFansResponse) error
 	Follow(context.Context, *FollowRequest, *FollowResponse) error
 	UnFollow(context.Context, *UnFollowRequest, *UnFollowResponse) error
@@ -142,9 +142,9 @@ type RelationServiceHandler interface {
 
 func RegisterRelationServiceHandler(s server.Server, hdlr RelationServiceHandler, opts ...server.HandlerOption) error {
 	type relationService interface {
-		GetFollowerList(ctx context.Context, in *GetFollowRequest, out *GetFollowResponse) error
-		GetFansList(ctx context.Context, in *GetFansRequest, out *GetFansResponse) error
-		CountFollower(ctx context.Context, in *CountFollowRequest, out *CountFollowResponse) error
+		GetFollowList(ctx context.Context, in *GetFollowRequest, out *GetFollowResponse) error
+		GetFansList(ctx context.Context, in *GetFansListRequest, out *GetFansListResponse) error
+		CountFollow(ctx context.Context, in *CountFollowRequest, out *CountFollowResponse) error
 		CountFans(ctx context.Context, in *CountFansRequest, out *CountFansResponse) error
 		Follow(ctx context.Context, in *FollowRequest, out *FollowResponse) error
 		UnFollow(ctx context.Context, in *UnFollowRequest, out *UnFollowResponse) error
@@ -161,16 +161,16 @@ type relationServiceHandler struct {
 	RelationServiceHandler
 }
 
-func (h *relationServiceHandler) GetFollowerList(ctx context.Context, in *GetFollowRequest, out *GetFollowResponse) error {
-	return h.RelationServiceHandler.GetFollowerList(ctx, in, out)
+func (h *relationServiceHandler) GetFollowList(ctx context.Context, in *GetFollowRequest, out *GetFollowResponse) error {
+	return h.RelationServiceHandler.GetFollowList(ctx, in, out)
 }
 
-func (h *relationServiceHandler) GetFansList(ctx context.Context, in *GetFansRequest, out *GetFansResponse) error {
+func (h *relationServiceHandler) GetFansList(ctx context.Context, in *GetFansListRequest, out *GetFansListResponse) error {
 	return h.RelationServiceHandler.GetFansList(ctx, in, out)
 }
 
-func (h *relationServiceHandler) CountFollower(ctx context.Context, in *CountFollowRequest, out *CountFollowResponse) error {
-	return h.RelationServiceHandler.CountFollower(ctx, in, out)
+func (h *relationServiceHandler) CountFollow(ctx context.Context, in *CountFollowRequest, out *CountFollowResponse) error {
+	return h.RelationServiceHandler.CountFollow(ctx, in, out)
 }
 
 func (h *relationServiceHandler) CountFans(ctx context.Context, in *CountFansRequest, out *CountFansResponse) error {

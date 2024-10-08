@@ -3,7 +3,6 @@ package mysql
 import (
 	"database/sql"
 	"errors"
-	"log"
 	"star/constant/str"
 	"star/models"
 )
@@ -35,7 +34,6 @@ func QueryUserByEmail(u *models.User) error {
 func queryUser(u *models.User, sqlStr string, args ...interface{}) error {
 	err := Client.Get(u, sqlStr, args...)
 	if err != nil {
-		log.Println("查询用户信息失败", err)
 		if errors.Is(err, sql.ErrNoRows) {
 			return str.ErrUserNotExists
 		}
@@ -50,34 +48,28 @@ func queryUser(u *models.User, sqlStr string, args ...interface{}) error {
 // InsertUser 将用户信息插入mysql
 func InsertUser(u *models.User) error {
 	//将用户信息插入mysql
-	transaction, err := Client.Beginx()
+	tx, err := Client.Beginx()
 	if err != nil {
-		log.Println("开启事务失败", err)
-		return str.ErrSignupError
+		return str.ErrMessageError
 	}
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			err = str.ErrMessageError
+		} else if err != nil {
+			tx.Rollback()
+		}
+	}()
 	_, err = Client.Exec(insertUserLoginSQL, u.UserId, u.Username, u.Password, u.Phone)
 	if err != nil {
-		if err := transaction.Rollback(); err != nil {
-			log.Println("回滚事务失败", err)
-		}
-		log.Println("插入数据失败", err)
-		return str.ErrSignupError
+		return err
 	}
 	_, err = Client.Exec(insertUserSQL, u.UserId, u.Username, u.Img, u.Signature)
 	if err != nil {
-		if err := transaction.Rollback(); err != nil {
-			log.Println("回滚事务失败", err)
-		}
-		log.Println("插入数据失败", err)
-		return str.ErrSignupError
+		return err
 	}
-	if err := transaction.Commit(); err != nil {
-		if err := transaction.Rollback(); err != nil {
-			log.Println("回滚事务失败", err)
-			return str.ErrSignupError
-		}
-		log.Println("插入数据失败", err)
-		return str.ErrSignupError
+	if err := tx.Commit(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -87,7 +79,7 @@ func QueryUserInfo(user *models.User, userId int64) error {
 		if errors.Is(err, sql.ErrNoRows) {
 			return str.ErrUserNotExists
 		}
-		return str.ErrUserError
+		return err
 	}
 	return nil
 }

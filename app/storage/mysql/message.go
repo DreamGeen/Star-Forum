@@ -53,14 +53,13 @@ const (
 `
 	getAllPrivateChat     = "select user1_id,user2_id from private_chat"
 	insertBatchSystemUser = "insert into user_system_notice(user_notice_id,system_notice_id, recipient_id,status) values(:user_notice_id,:system_notice_id,:recipient_id,:status)"
-	deleteLikeMessageSQL  = "update like_remind set deletedAt=? where  "
+	deleteLikeMessageSQL  = "update like_remind set deletedAt=? where source_id=? and source_type=? and sender_id=? and recipient_id=?"
 )
 
 func ListMessageCount(userId int64) (*models.Counts, error) {
 	counts := new(models.Counts)
 	if err := Client.Get(counts, listMessageCountSQL, userId, userId, userId, userId, userId); err != nil {
-		utils.Logger.Error("get msg count error:", zap.Error(err))
-		return nil, str.ErrMessageError
+		return nil, err
 	}
 	counts.TotalCount = counts.MentionCount + counts.LikeCount + counts.SystemCount + counts.ReplyCount + counts.PrivateMsgCount
 	return counts, nil
@@ -70,18 +69,14 @@ func InsertPrivateMsg(message *models.PrivateMessage) (err error) {
 	var tx *sqlx.Tx
 	tx, err = Client.Beginx()
 	if err != nil {
-		utils.Logger.Error("begin tx error:", zap.Error(err))
 		return str.ErrMessageError
 	}
 	// 使用 defer 确保在发生错误时回滚事务
 	defer func() {
 		if p := recover(); p != nil {
 			tx.Rollback()
-			zap.L().Error("Recovered from panic, transaction rolled back:", zap.Any("panic", p))
-			err = str.ErrMessageError
 		} else if err != nil {
 			tx.Rollback()
-			zap.L().Error("Transaction rolled back due to error:", zap.Error(err))
 		}
 	}()
 	privateChat := models.GetPrivateChat(message)
@@ -89,7 +84,8 @@ func InsertPrivateMsg(message *models.PrivateMessage) (err error) {
 	var privateChatId int64
 	if err = tx.Get(&privateChatId, checkPrivateChatExistSQL, privateChat.User1Id, privateChat.User2Id); err != nil {
 		//查询出错
-		utils.Logger.Error("select private_chat error:", zap.Error(err))
+		utils.Logger.Error("select private_chat error:",
+			zap.Error(err))
 		return err
 	}
 	if privateChatId == 0 {
@@ -99,24 +95,28 @@ func InsertPrivateMsg(message *models.PrivateMessage) (err error) {
 		privateChat.Id = privateChatId
 		message.PrivateChatId = privateChatId
 		if _, err = tx.Exec(insertPrivateChatSQL, privateChat.User1Id, privateChat.User2Id, privateChat.LastMsgContent, privateChat.LastSendTime); err != nil {
-			utils.Logger.Error("insert private_chat error:", zap.Error(err))
+			utils.Logger.Error("insert private_chat error:",
+				zap.Error(err))
 			return err
 		}
 	} else {
 		message.PrivateChatId = privateChatId
 		//存在则更新数据
 		if _, err = tx.Exec(updatePrivateChatSQL, privateChat.LastMsgContent, privateChat.User1Id, privateChat.User2Id); err != nil {
-			utils.Logger.Error("update private_chat err:", zap.Error(err))
+			utils.Logger.Error("update private_chat err:",
+				zap.Error(err))
 			return err
 		}
 	}
 	//插入私信
 	if _, err = tx.Exec(insertPrivateMsgSQL, message.PrivateChatId, message.Id, message.SenderId, message.RecipientId, message.Status, message.SendTime); err != nil {
-		utils.Logger.Error("insert private_msg error:", zap.Error(err))
+		utils.Logger.Error("insert private_msg error:",
+			zap.Error(err))
 		return err
 	}
 	if err = tx.Commit(); err != nil {
-		utils.Logger.Error("commit tx error:", zap.Error(err))
+		utils.Logger.Error("commit tx error:",
+			zap.Error(err))
 		return err
 	}
 	return nil
@@ -126,37 +126,43 @@ func InsertSystemMsg(message *models.SystemMessage) (err error) {
 	var tx *sqlx.Tx
 	tx, err = Client.Beginx()
 	if err != nil {
-		utils.Logger.Error("begin tx error:", zap.Error(err))
+		utils.Logger.Error("begin tx error:",
+			zap.Error(err))
 		return str.ErrMessageError
 	}
 
 	defer func() {
 		if p := recover(); p != nil {
-			utils.Logger.Error("recovered from panic, transaction rolled back:", zap.Any("panic", p))
+			utils.Logger.Error("recovered from panic, transaction rolled back:",
+				zap.Any("panic", p))
 			tx.Rollback()
 			err = str.ErrMessageError
 		} else if err != nil {
-			utils.Logger.Error("Transaction rolled back due to error:", zap.Error(err))
+			utils.Logger.Error("Transaction rolled back due to error:",
+				zap.Error(err))
 			tx.Rollback()
 		}
 	}()
 
 	if _, err = tx.Exec(insertSystemMsgSQL, message.Id, message.Title, message.Content, message.Type, message.Status, message.RecipientId, message.ManagerId, message.PublishTime); err != nil {
-		utils.Logger.Error("insert system_msg error:", zap.Error(err))
+		utils.Logger.Error("insert system_msg error:",
+			zap.Error(err))
 		return err
 	}
 
 	if message.Type == "single" {
 		// 单个用户
 		if _, err = tx.Exec(insertSystemMsgUserSQL, utils.GetID(), message.Id, message.RecipientId, false); err != nil {
-			utils.Logger.Error("insert user_system_msg error", zap.Error(err))
+			utils.Logger.Error("insert user_system_msg error",
+				zap.Error(err))
 			return err
 		}
 	} else {
 		// 全体用户
 		var userIds []int64
 		if err = tx.Select(&userIds, queryAllUserIdSQL); err != nil {
-			utils.Logger.Error("query all users id error", zap.Error(err))
+			utils.Logger.Error("query all users id error",
+				zap.Error(err))
 			return err
 		}
 		systemMessageUsers := make([]interface{}, 0, len(userIds))
@@ -170,12 +176,14 @@ func InsertSystemMsg(message *models.SystemMessage) (err error) {
 			systemMessageUsers = append(systemMessageUsers, systemMessageUser)
 		}
 		if _, err = tx.NamedExec(insertBatchSystemUser, systemMessageUsers); err != nil {
-			utils.Logger.Error("insert system_msg error:", zap.Error(err))
+			utils.Logger.Error("insert system_msg error:",
+				zap.Error(err))
 			return err
 		}
 	}
 	if err = tx.Commit(); err != nil {
-		utils.Logger.Error("commit tx error:", zap.Error(err))
+		utils.Logger.Error("commit tx error:",
+			zap.Error(err))
 		return err
 	}
 	return nil
@@ -183,7 +191,7 @@ func InsertSystemMsg(message *models.SystemMessage) (err error) {
 
 func UpdateLikeMessage(message *models.RemindMessage) error {
 	if message.IsDeleted {
-		return
+		return deleteRemindMessage(deleteLikeMessageSQL, message)
 	}
 	return insertRemindMessage(insertLikeMessageSQL, message)
 }
@@ -205,8 +213,7 @@ func insertRemindMessage(query string, message *models.RemindMessage) error {
 	return nil
 }
 func deleteRemindMessage(query string, message *models.RemindMessage) error {
-	if _, err := Client.Exec(query, time.Now().UTC()); err != nil {
-		utils.Logger.Error("delete remind message error:", zap.Error(err), zap.Any("message", message))
+	if _, err := Client.Exec(query, time.Now().UTC(), message.SourceId, message.SourceType, message.SenderId, message.RecipientId); err != nil {
 		return err
 	}
 	return nil
@@ -215,7 +222,6 @@ func deleteRemindMessage(query string, message *models.RemindMessage) error {
 func LoadMessage(privateChatId int64, lastMsgTime time.Time, limit int) ([]*models.PrivateMessage, error) {
 	var privateMessages []*models.PrivateMessage
 	if err := Client.Select(&privateMessages, loadMessageSQL, privateChatId, lastMsgTime, limit); err != nil {
-		utils.Logger.Error("load private_message error:", zap.Error(err), zap.Int64("privateChatId", privateChatId))
 		return nil, err
 	}
 	return privateMessages, nil
@@ -224,7 +230,6 @@ func LoadMessage(privateChatId int64, lastMsgTime time.Time, limit int) ([]*mode
 func GetChatList(userId int64) ([]*models.PrivateChat, error) {
 	var list []*models.PrivateChat
 	if err := Client.Select(&list, getChatListSQL, userId, userId); err != nil {
-		utils.Logger.Error("getChatList error:", zap.Error(err))
 		return nil, err
 	}
 	return list, nil
@@ -233,7 +238,6 @@ func GetChatList(userId int64) ([]*models.PrivateChat, error) {
 func GetAllPrivateChat() ([]*models.PrivateChat, error) {
 	var chats []*models.PrivateChat
 	if err := Client.Select(&chats, getChatListSQL); err != nil {
-		utils.Logger.Error("GetAllPrivateChat error:", zap.Error(err))
 		return nil, err
 	}
 	return chats, nil
