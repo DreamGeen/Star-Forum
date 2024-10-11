@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"star/app/constant/str"
 	"star/app/storage/redis"
-	"star/constant/str"
-	"star/utils"
+	"star/app/utils/snowflake"
 	"strconv"
 	"testing"
 	"time"
@@ -26,14 +26,14 @@ type message struct {
 }
 
 func Test_SaveSlice(t *testing.T) {
-	if err := utils.Init(1); err != nil {
+	if err := snowflake.Init(1); err != nil {
 		t.Error(err)
 		return
 	}
 	messages := make([]*message, 50)
 	for i := 0; i < 50; i++ {
 		msg := &message{
-			Id:      utils.GetID(),
+			Id:      snowflake.GetID(),
 			Content: strconv.Itoa(i),
 		}
 		messages[i] = msg

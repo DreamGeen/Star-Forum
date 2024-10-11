@@ -3,10 +3,11 @@ package mysql
 import (
 	"database/sql"
 	"errors"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
-	"star/constant/str"
-	"star/models"
-	"star/utils"
+	str2 "star/app/constant/str"
+	"star/app/models"
+	"star/app/utils/logging"
 )
 
 const (
@@ -22,32 +23,35 @@ func QueryPostExist(postId int64) (string, error) {
 	post := new(models.Post)
 	if err := Client.Get(post, queryPostExistSQL, postId); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return str.False, str.ErrPostNotExists
+			return str2.False, str2.ErrPostNotExists
 		}
-		return str.False, str.ErrPostError
+		return str2.False, str2.ErrPostError
 	}
-	return str.True, nil
+	return str2.True, nil
 }
 
 func InsertPost(post *models.Post) error {
-	if _, err := Client.Exec(insertPostSQL, post.PostId, post.UserId, post.Collection, post.Star, post.Content, post.Title, post.IsScan, post.CommunityId); err != nil {
-		utils.Logger.Error("insert post error", zap.Error(err), zap.Any("post", post), zap.Int64("userId", post.UserId))
+	if _, err := Client.Exec(insertPostSQL, post.PostId, post.UserId, post.Collection, post.Star, post.Content, post.IsScan, post.CommunityId); err != nil {
 		return err
 	}
 	return nil
 }
 
-func GetPostByPopularity(limit int, communityId int64) ([]*models.Post, error) {
+func GetPostByPopularity(limit int, communityId int64, span trace.Span, logger *zap.Logger) ([]*models.Post, error) {
 	var posts []*models.Post
 	if communityId == 0 {
 		if err := Client.Select(&posts, getPostByPopularitySQL, limit); err != nil {
-			utils.Logger.Error("GetPostByPopularity error", zap.Error(err))
+			logger.Error("GetPostByPopularity error",
+				zap.Error(err))
+			logging.SetSpanError(span, err)
 			return nil, err
 		}
 		return posts, nil
 	}
 	if err := Client.Get(&posts, getCommunityPostByPopularitySQL, communityId, limit); err != nil {
-		utils.Logger.Error("GetPostByPopularity error", zap.Error(err))
+		logging.Logger.Error("GetPostByPopularity error",
+			zap.Error(err))
+		logging.SetSpanError(span, err)
 		return nil, err
 	}
 	return posts, nil
@@ -56,7 +60,6 @@ func GetPostByPopularity(limit int, communityId int64) ([]*models.Post, error) {
 func GetPostByTime(limit int) ([]*models.Post, error) {
 	var posts []*models.Post
 	if err := Client.Select(&posts, getPostByTimeSQL, limit); err != nil {
-		utils.Logger.Error("GetPostByTime error", zap.Error(err))
 		return nil, err
 	}
 	return posts, nil
@@ -65,7 +68,6 @@ func GetPostByTime(limit int) ([]*models.Post, error) {
 func QueryPosts(postIds []int64) ([]*models.Post, error) {
 	var posts []*models.Post
 	if err := Client.Select(&posts, queryPostsSQL, postIds); err != nil {
-		utils.Logger.Error("mysql QueryPosts error", zap.Error(err), zap.Any("postIds", postIds))
 		return nil, err
 	}
 	return posts, nil

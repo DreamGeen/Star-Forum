@@ -2,7 +2,7 @@ package client
 
 import (
 	"go-micro.dev/v4"
-	"star/constant/str"
+	"star/app/constant/str"
 	"star/proto/collect/collectPb"
 	"star/proto/comment/commentPb"
 	"star/proto/community/communityPb"

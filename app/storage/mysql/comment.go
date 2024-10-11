@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jmoiron/sqlx"
-	"star/constant/str"
-	"star/models"
-	"star/utils"
+	"star/app/constant/str"
+	"star/app/models"
+	"star/app/utils/snowflake"
 	"strconv"
 )
 
@@ -140,7 +140,7 @@ func CreateComment(comment *models.Comment) error {
 	}
 
 	// 雪花算法生成评论id
-	commentId := utils.GetID()
+	commentId := snowflake.GetID()
 	_, err = Client.Exec(insertComment, commentId, comment.PostId, comment.UserId, comment.Content, comment.BeCommentId)
 	if err != nil {
 		return err

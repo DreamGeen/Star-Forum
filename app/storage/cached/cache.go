@@ -8,11 +8,12 @@ import (
 	"go.uber.org/zap"
 	"math/rand/v2"
 	"reflect"
+	"star/app/constant/str"
+	"star/app/extra/tracing"
+	"star/app/models"
 	"star/app/storage/mysql"
 	"star/app/storage/redis"
-	"star/constant/str"
-	"star/models"
-	"star/utils"
+	"star/app/utils/logging"
 	"sync"
 	"time"
 )
@@ -43,6 +44,10 @@ func getOrCreateCache(name string) *cache.Cache {
 
 // ScanGetUser  从缓存中读取数据，如果没有逐步往redis,mysql获取，传入user中
 func ScanGetUser(ctx context.Context, key string, obj *models.User) (bool, error) {
+	ctx, span := tracing.Tracer.Start(ctx, "CachedScanGetUser")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger := logging.LogServiceWithTrace(span, "CachedScanGetUser")
 
 	//先在缓存里找
 	c := getOrCreateCache(key)
@@ -55,8 +60,9 @@ func ScanGetUser(ctx context.Context, key string, obj *models.User) (bool, error
 	//再在redis里找
 	if err := redis.Client.HGetAll(ctx, key).Scan(obj); err != nil {
 		if !errors.Is(err, redis2.Nil) {
-			utils.Logger.Error("redis hGetAll obj error:",
+			logger.Error("redis hGetAll obj error:",
 				zap.Error(err))
+			logging.SetSpanError(span, err)
 			return false, str.ErrServiceBusy
 		}
 	}
@@ -69,13 +75,17 @@ func ScanGetUser(ctx context.Context, key string, obj *models.User) (bool, error
 	//再往mysql里找
 	err := mysql.QueryUserInfo(obj, obj.GetID())
 	if err != nil {
+		logger.Error("mysql query user info error",
+			zap.Error(err))
+		logging.SetSpanError(span, err)
 		return false, err
 	}
 
 	//将查询的值储存到redis和缓存里
 	if err := redis.Client.HSet(ctx, key, obj).Err(); err != nil {
-		utils.Logger.Error("set obj error",
+		logger.Error("set obj error",
 			zap.Error(err))
+		logging.SetSpanError(span, err)
 		return true, str.ErrServiceBusy
 	}
 	c.Set(key, obj, cache.DefaultExpiration)
@@ -94,6 +104,11 @@ func ScanDeleteUser(ctx context.Context, key string) {
 
 // Get 查询字符串，从缓存中读取数据，读取成功返回true,失败返回false,不存在也返回false
 func Get(ctx context.Context, key string) (string, bool, error) {
+	ctx, span := tracing.Tracer.Start(ctx, "CachedGet")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger := logging.LogServiceWithTrace(span, "CachedGet")
+
 	c := getOrCreateCache("strings")
 	//先从cache里查询
 	if obj, found := c.Get(key); found {
@@ -102,8 +117,9 @@ func Get(ctx context.Context, key string) (string, bool, error) {
 	//如果没查到往redis查
 	result := redis.Client.Get(ctx, key)
 	if result.Err() != nil && !errors.Is(result.Err(), redis2.Nil) {
-		utils.Logger.Error("get cache error:",
+		logger.Error("get cache error:",
 			zap.Error(result.Err()))
+		logging.SetSpanError(span, result.Err())
 		return "", false, str.ErrServiceBusy
 	}
 	value, err := result.Result()

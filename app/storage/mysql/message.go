@@ -3,9 +3,10 @@ package mysql
 import (
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
-	"star/constant/str"
-	"star/models"
-	"star/utils"
+	"star/app/constant/str"
+	"star/app/models"
+	"star/app/utils/logging"
+	utils2 "star/app/utils/snowflake"
 	"time"
 )
 
@@ -84,18 +85,18 @@ func InsertPrivateMsg(message *models.PrivateMessage) (err error) {
 	var privateChatId int64
 	if err = tx.Get(&privateChatId, checkPrivateChatExistSQL, privateChat.User1Id, privateChat.User2Id); err != nil {
 		//查询出错
-		utils.Logger.Error("select private_chat error:",
+		logging.Logger.Error("select private_chat error:",
 			zap.Error(err))
 		return err
 	}
 	if privateChatId == 0 {
 		//不存在则插入会话
 		//生成会话id
-		privateChatId = utils.GetID()
+		privateChatId = utils2.GetID()
 		privateChat.Id = privateChatId
 		message.PrivateChatId = privateChatId
 		if _, err = tx.Exec(insertPrivateChatSQL, privateChat.User1Id, privateChat.User2Id, privateChat.LastMsgContent, privateChat.LastSendTime); err != nil {
-			utils.Logger.Error("insert private_chat error:",
+			logging.Logger.Error("insert private_chat error:",
 				zap.Error(err))
 			return err
 		}
@@ -103,19 +104,19 @@ func InsertPrivateMsg(message *models.PrivateMessage) (err error) {
 		message.PrivateChatId = privateChatId
 		//存在则更新数据
 		if _, err = tx.Exec(updatePrivateChatSQL, privateChat.LastMsgContent, privateChat.User1Id, privateChat.User2Id); err != nil {
-			utils.Logger.Error("update private_chat err:",
+			logging.Logger.Error("update private_chat err:",
 				zap.Error(err))
 			return err
 		}
 	}
 	//插入私信
 	if _, err = tx.Exec(insertPrivateMsgSQL, message.PrivateChatId, message.Id, message.SenderId, message.RecipientId, message.Status, message.SendTime); err != nil {
-		utils.Logger.Error("insert private_msg error:",
+		logging.Logger.Error("insert private_msg error:",
 			zap.Error(err))
 		return err
 	}
 	if err = tx.Commit(); err != nil {
-		utils.Logger.Error("commit tx error:",
+		logging.Logger.Error("commit tx error:",
 			zap.Error(err))
 		return err
 	}
@@ -126,34 +127,34 @@ func InsertSystemMsg(message *models.SystemMessage) (err error) {
 	var tx *sqlx.Tx
 	tx, err = Client.Beginx()
 	if err != nil {
-		utils.Logger.Error("begin tx error:",
+		logging.Logger.Error("begin tx error:",
 			zap.Error(err))
 		return str.ErrMessageError
 	}
 
 	defer func() {
 		if p := recover(); p != nil {
-			utils.Logger.Error("recovered from panic, transaction rolled back:",
+			logging.Logger.Error("recovered from panic, transaction rolled back:",
 				zap.Any("panic", p))
 			tx.Rollback()
 			err = str.ErrMessageError
 		} else if err != nil {
-			utils.Logger.Error("Transaction rolled back due to error:",
+			logging.Logger.Error("Transaction rolled back due to error:",
 				zap.Error(err))
 			tx.Rollback()
 		}
 	}()
 
 	if _, err = tx.Exec(insertSystemMsgSQL, message.Id, message.Title, message.Content, message.Type, message.Status, message.RecipientId, message.ManagerId, message.PublishTime); err != nil {
-		utils.Logger.Error("insert system_msg error:",
+		logging.Logger.Error("insert system_msg error:",
 			zap.Error(err))
 		return err
 	}
 
 	if message.Type == "single" {
 		// 单个用户
-		if _, err = tx.Exec(insertSystemMsgUserSQL, utils.GetID(), message.Id, message.RecipientId, false); err != nil {
-			utils.Logger.Error("insert user_system_msg error",
+		if _, err = tx.Exec(insertSystemMsgUserSQL, utils2.GetID(), message.Id, message.RecipientId, false); err != nil {
+			logging.Logger.Error("insert user_system_msg error",
 				zap.Error(err))
 			return err
 		}
@@ -161,14 +162,14 @@ func InsertSystemMsg(message *models.SystemMessage) (err error) {
 		// 全体用户
 		var userIds []int64
 		if err = tx.Select(&userIds, queryAllUserIdSQL); err != nil {
-			utils.Logger.Error("query all users id error",
+			logging.Logger.Error("query all users id error",
 				zap.Error(err))
 			return err
 		}
 		systemMessageUsers := make([]interface{}, 0, len(userIds))
 		for _, userId := range userIds {
 			systemMessageUser := &models.SystemMessageUser{
-				Id:              utils.GetID(),
+				Id:              utils2.GetID(),
 				SystemMessageId: message.Id,
 				RecipientId:     userId,
 				Status:          message.Status,
@@ -176,13 +177,13 @@ func InsertSystemMsg(message *models.SystemMessage) (err error) {
 			systemMessageUsers = append(systemMessageUsers, systemMessageUser)
 		}
 		if _, err = tx.NamedExec(insertBatchSystemUser, systemMessageUsers); err != nil {
-			utils.Logger.Error("insert system_msg error:",
+			logging.Logger.Error("insert system_msg error:",
 				zap.Error(err))
 			return err
 		}
 	}
 	if err = tx.Commit(); err != nil {
-		utils.Logger.Error("commit tx error:",
+		logging.Logger.Error("commit tx error:",
 			zap.Error(err))
 		return err
 	}
@@ -207,7 +208,7 @@ func InsertReplyMessage(message *models.RemindMessage) error {
 func insertRemindMessage(query string, message *models.RemindMessage) error {
 	if _, err := Client.Exec(query, message.Id, message.SourceId, message.SourceType, message.Content,
 		message.Url, message.Status, message.SenderId, message.RecipientId, message.RemindTime); err != nil {
-		utils.Logger.Error("insert remind message error:", zap.Error(err), zap.Any("message", message))
+		logging.Logger.Error("insert remind message error:", zap.Error(err), zap.Any("message", message))
 		return err
 	}
 	return nil

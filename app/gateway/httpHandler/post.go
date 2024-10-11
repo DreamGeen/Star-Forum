@@ -3,27 +3,28 @@ package httpHandler
 import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	str2 "star/app/constant/str"
 	"star/app/gateway/client"
 	"star/app/gateway/models"
-	"star/constant/str"
+	"star/app/utils/logging"
+	utils2 "star/app/utils/request"
 	"star/proto/post/postPb"
-	"star/utils"
 )
 
 func CreatePostHandler(c *gin.Context) {
-	userId, err := utils.GetUserId(c)
+	userId, err := utils2.GetUserId(c)
 	if err != nil {
-		utils.Logger.Warn("user not log in,but want to create post")
-		str.Response(c, err, str.Empty, nil)
+		logging.Logger.Warn("user not log in,but want to create post")
+		str2.Response(c, err, str2.Empty, nil)
 		return
 	}
 	p := new(models.CreatePost)
 	err = c.ShouldBindJSON(p)
 	if err != nil {
-		utils.Logger.Error("create post error,invalid param",
+		logging.Logger.Error("create post error,invalid param",
 			zap.Error(err),
 			zap.Int64("userId", userId))
-		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
+		str2.Response(c, str2.ErrInvalidParam, str2.Empty, nil)
 		return
 	}
 	_, err = client.CreatePost(c, &postPb.CreatePostRequest{
@@ -33,16 +34,16 @@ func CreatePostHandler(c *gin.Context) {
 		CommunityId: p.CommunityId,
 	})
 	if err != nil {
-		utils.Logger.Error("create post  service error",
+		logging.Logger.Error("create post  service error",
 			zap.Error(err),
 			zap.Int64("userId", userId),
 			zap.Int64("communityId", p.CommunityId),
 			zap.String("content", p.Content),
 			zap.Bool("isScan", p.IsScan))
-		str.Response(c, err, str.Empty, nil)
+		str2.Response(c, err, str2.Empty, nil)
 		return
 	}
-	str.Response(c, nil, str.Empty, nil)
+	str2.Response(c, nil, str2.Empty, nil)
 	return
 }
 
@@ -50,10 +51,10 @@ func GetPostByPopularityHandler(c *gin.Context) {
 	p := new(models.GetCommunityPost)
 	err := c.ShouldBindJSON(p)
 	if err != nil {
-		utils.Logger.Error("get post by popularity error,invalid param",
+		logging.Logger.Error("get post by popularity error,invalid param",
 			zap.Error(err),
 		)
-		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
+		str2.Response(c, str2.ErrInvalidParam, str2.Empty, nil)
 		return
 	}
 	resp, err := client.GetPostByPopularity(c, &postPb.GetPostListByPopularityRequest{
@@ -62,15 +63,15 @@ func GetPostByPopularityHandler(c *gin.Context) {
 		CommunityId: p.CommunityId,
 	})
 	if err != nil {
-		utils.Logger.Error("get post by popularity service error",
+		logging.Logger.Error("get post by popularity service error",
 			zap.Error(err),
 			zap.Int64("limit", p.Limit),
 			zap.Int64("page", p.Page),
 			zap.Int64("communityId", p.CommunityId))
-		str.Response(c, err, str.Empty, nil)
+		str2.Response(c, err, str2.Empty, nil)
 		return
 	}
-	str.Response(c, nil, "posts", resp.Posts)
+	str2.Response(c, nil, "posts", resp.Posts)
 	return
 }
 
@@ -78,10 +79,10 @@ func GetPostByTimeHandler(c *gin.Context) {
 	p := new(models.GetCommunityPost)
 	err := c.ShouldBindJSON(p)
 	if err != nil {
-		utils.Logger.Error("get post by time error,invalid param",
+		logging.Logger.Error("get post by time error,invalid param",
 			zap.Error(err),
 		)
-		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
+		str2.Response(c, str2.ErrInvalidParam, str2.Empty, nil)
 		return
 	}
 	resp, err := client.GetPostByTime(c, &postPb.GetPostListByTimeRequest{
@@ -90,14 +91,14 @@ func GetPostByTimeHandler(c *gin.Context) {
 		CommunityId: p.CommunityId,
 	})
 	if err != nil {
-		utils.Logger.Error("get post by time service error",
+		logging.Logger.Error("get post by time service error",
 			zap.Error(err),
 			zap.Int64("limit", p.Limit),
 			zap.Int64("page", p.Page),
 			zap.Int64("communityId", p.CommunityId))
-		str.Response(c, err, str.Empty, nil)
+		str2.Response(c, err, str2.Empty, nil)
 		return
 	}
-	str.Response(c, nil, "posts", resp.Posts)
+	str2.Response(c, nil, "posts", resp.Posts)
 	return
 }

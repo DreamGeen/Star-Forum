@@ -2,9 +2,9 @@ package httpHandler
 
 import (
 	"github.com/gin-gonic/gin"
-	"star/constant/settings"
-	"star/constant/str"
-	"star/utils"
+	"star/app/constant/settings"
+	str2 "star/app/constant/str"
+	"star/app/utils/sendSms"
 )
 
 // SendSetupHandler 发送注册短信
@@ -21,12 +21,12 @@ func SendLoginHandler(c *gin.Context) {
 func sendHandler(c *gin.Context, templateCode string) {
 	phone := c.Query("phone")
 	if phone == "" {
-		str.Response(c, str.ErrPhoneEmpty, str.Empty, nil)
+		str2.Response(c, str2.ErrPhoneEmpty, str2.Empty, nil)
 		return
 	}
-	if err := utils.HandleSendSms(c, phone, templateCode); err != nil {
-		str.Response(c, err, str.Empty, nil)
+	if err := sendSms.HandleSendSms(c, phone, templateCode); err != nil {
+		str2.Response(c, err, str2.Empty, nil)
 		return
 	}
-	str.Response(c, nil, str.Empty, nil)
+	str2.Response(c, nil, str2.Empty, nil)
 }

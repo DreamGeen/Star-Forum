@@ -3,8 +3,8 @@ package mysql
 import (
 	"database/sql"
 	"errors"
-	"star/constant/str"
-	"star/models"
+	"star/app/constant/str"
+	"star/app/models"
 )
 
 const (

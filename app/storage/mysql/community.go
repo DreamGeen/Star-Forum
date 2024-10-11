@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"errors"
 	"go.uber.org/zap"
-	"star/constant/str"
-	"star/models"
-	"star/utils"
+	"star/app/constant/str"
+	"star/app/models"
+	"star/app/utils/logging"
 	"strconv"
 	"time"
 )
@@ -32,7 +32,7 @@ func CheckCommunity(communityName string) error {
 		if errors.Is(err, sql.ErrNoRows) {
 			return str.ErrCommunityNameExists
 		}
-		return str.ErrCommunityError
+		return err
 	}
 	return nil
 }
@@ -40,7 +40,7 @@ func CheckCommunity(communityName string) error {
 func QueryCommunityList() error {
 	var communityList []*models.Community
 	if err := Client.Select(&communityList, queryCommunityListSQL); err != nil {
-		return str.ErrCommunityError
+		return err
 	}
 	return nil
 }
@@ -54,7 +54,7 @@ func InsertCommunity(community *models.Community) error {
 		community.LeaderId,
 		community.Img,
 	); err != nil {
-		return str.ErrCommentError
+		return err
 	}
 	return nil
 }
@@ -62,7 +62,6 @@ func InsertCommunity(community *models.Community) error {
 func GetCommunityInfo(communityId int64) (*models.Community, error) {
 	community := new(models.Community)
 	if err := Client.Get(community, getCommunityInfoSQL, communityId); err != nil {
-		utils.Logger.Error("mysql query community info error", zap.Error(err), zap.Int64("communityId", communityId))
 		return nil, err
 	}
 	return community, nil
@@ -71,7 +70,6 @@ func GetCommunityInfo(communityId int64) (*models.Community, error) {
 func GetAllCommunityId() ([]int64, error) {
 	var commnutyIds []int64
 	if err := Client.Select(&commnutyIds, getAllCommunityIdSQL); err != nil {
-		utils.Logger.Error("mysql get all community id error", zap.Error(err))
 		return nil, err
 	}
 	return commnutyIds, nil
@@ -80,7 +78,6 @@ func GetAllCommunityId() ([]int64, error) {
 func CountCommunityFollow(userId int64) (int64, error) {
 	var count int64
 	if err := Client.Get(&count, countCommunityFollowSQL, userId); err != nil {
-		utils.Logger.Error("mysql count user community follow error", zap.Error(err))
 		return 0, err
 	}
 	return count, nil
@@ -92,7 +89,6 @@ func IsFollowCommunity(userId, communityId int64) (string, error) {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return "0", nil
 		}
-		utils.Logger.Error("mysql check user is follow community error", zap.Error(err), zap.Int64("userId", userId), zap.Int64("communityId", communityId))
 		return "0", err
 	}
 	countStr := strconv.FormatInt(count, 10)
@@ -102,7 +98,6 @@ func IsFollowCommunity(userId, communityId int64) (string, error) {
 func GetCommunityFollowId(userId int64) ([]int64, error) {
 	var communityIds []int64
 	if err := Client.Select(&communityIds, getCommunityFollowIdSQL, userId); err != nil {
-		utils.Logger.Error("mysql get all community follow id error", zap.Error(err))
 		return nil, err
 	}
 	return communityIds, nil
@@ -111,42 +106,42 @@ func GetCommunityFollowId(userId int64) ([]int64, error) {
 func FollowCommunity(userId, communityId int64) error {
 	tx, err := Client.Beginx()
 	if err != nil {
-		utils.Logger.Error("start community follow transaction error", zap.Error(err))
+		logging.Logger.Error("start community follow transaction error", zap.Error(err))
 		return str.ErrRelationError
 	}
 	defer func() {
 		if p := recover(); p != nil {
-			utils.Logger.Error(" community follow recovered from panic, transaction rolled back:", zap.Any("panic", p))
+			logging.Logger.Error(" community follow recovered from panic, transaction rolled back:", zap.Any("panic", p))
 			tx.Rollback()
 			err = str.ErrRelationError
 		} else if err != nil {
-			utils.Logger.Error(" community transaction rolled back due to error:", zap.Error(err))
+			logging.Logger.Error(" community transaction rolled back due to error:", zap.Error(err))
 			tx.Rollback()
 		}
 	}()
 	//检查follow记录是否存在
 	var count int
 	if err := tx.Get(&count, checkCommunityFollowExistSQL, userId, communityId); err != nil {
-		utils.Logger.Error("check user community follow exist error", zap.Error(err), zap.Int64("userId", userId), zap.Int64("beFollowerId", beFollowerId))
+		logging.Logger.Error("check user community follow exist error", zap.Error(err), zap.Int64("userId", userId), zap.Int64("beFollowerId", beFollowerId))
 		return err
 	}
 	if count > 0 {
 		if _, err = tx.Exec(followCommunityExistSQL, userId, communityId); err != nil {
-			utils.Logger.Error("update  community_follows deleteTime to null error",
+			logging.Logger.Error("update  community_follows deleteTime to null error",
 				zap.Error(err), zap.Int64("userId", userId),
 				zap.Int64("community", communityId))
 			return err
 		}
 	} else {
 		if _, err = tx.Exec(followCommunityUnExistSQL, userId, communityId); err != nil {
-			utils.Logger.Error("insert community_follows error", zap.Error(err),
+			logging.Logger.Error("insert community_follows error", zap.Error(err),
 				zap.Int64("userId", userId),
 				zap.Int64("communityId", communityId))
 			return err
 		}
 	}
 	if err = tx.Commit(); err != nil {
-		utils.Logger.Error("commit follow transaction error", zap.Error(err))
+		logging.Logger.Error("commit follow transaction error", zap.Error(err))
 		return err
 	}
 	return nil
@@ -154,7 +149,7 @@ func FollowCommunity(userId, communityId int64) error {
 
 func UnFollowCommunity(userId, communityId int64) error {
 	if _, err := Client.Exec(unFollowCommunitySQL, time.Now().UTC(), userId, communityId); err != nil {
-		utils.Logger.Error("update  community_follows deleteTime to null error",
+		logging.Logger.Error("update  community_follows deleteTime to null error",
 			zap.Error(err), zap.Int64("userId", userId),
 			zap.Int64("community", communityId))
 		return err

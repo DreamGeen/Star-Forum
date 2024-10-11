@@ -6,9 +6,9 @@ import (
 	"github.com/qiniu/go-sdk/v7/storage"
 	"go.uber.org/zap"
 	"mime/multipart"
-	"star/constant/settings"
-	"star/constant/str"
-	"star/utils"
+	"star/app/constant/settings"
+	"star/app/constant/str"
+	"star/app/utils/logging"
 )
 
 // UploadToQiNiu 封装上传图片或文件到七牛云然后返回状态和url
@@ -32,7 +32,7 @@ func UploadToQiNiu(ctx context.Context, file multipart.File, fileSize int64) (st
 	ret := storage.PutRet{}
 	err := formUploader.PutWithoutKey(ctx, &ret, upToken, file, fileSize, &putExtra)
 	if err != nil {
-		utils.Logger.Error("upload image error:",
+		logging.Logger.Error("upload image error:",
 			zap.Error(err))
 		return "", str.ErrUpload
 	}

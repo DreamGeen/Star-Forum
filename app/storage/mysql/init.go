@@ -2,11 +2,10 @@ package mysql
 
 import (
 	"fmt"
+	"star/app/constant/settings"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
-
-	"star/constant/settings"
 )
 
 var Client *sqlx.DB

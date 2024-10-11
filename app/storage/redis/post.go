@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	"math/rand/v2"
+	"star/app/models"
 	"star/app/storage/mysql"
-	"star/models"
 	"time"
 )
 

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
-	"star/constant/str"
-	"star/models"
+	"star/app/constant/str"
+	"star/app/models"
 	"strconv"
 	"time"
 )

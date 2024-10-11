@@ -3,7 +3,7 @@ package test
 import (
 	"context"
 	"go-micro.dev/v4"
-	"star/constant/str"
+	"star/app/constant/str"
 	"star/proto/message/messagePb"
 	"testing"
 )
