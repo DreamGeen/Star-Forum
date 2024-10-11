@@ -394,7 +394,7 @@ func queryDetailed(ctx context.Context, posts []*models.Post, actorId int64, log
 				PostId:  post.PostId,
 			})
 			if err != nil {
-				logging.Logger.Error("get comment count error",
+				logger.Error("get comment count error",
 					zap.Error(err),
 					zap.Int64("post_id", post.PostId),
 					zap.Int64("actor_id", actorId))
@@ -413,7 +413,7 @@ func queryDetailed(ctx context.Context, posts []*models.Post, actorId int64, log
 					SourceType: 1,
 				})
 				if err != nil {
-					logging.Logger.Error("get post isLike error",
+					logger.Error("get post isLike error",
 						zap.Error(err),
 						zap.Int64("post_id", post.PostId),
 						zap.Int64("actor_id", actorId))
@@ -448,7 +448,7 @@ func cleanPost() {
 	}
 	cmder, err := pipe.Exec(ctx)
 	if err != nil {
-		logging.Logger.Error("get all list length error",
+		logger.Error("get all list length error",
 			zap.Error(err))
 		logging.SetSpanError(span, err)
 		return

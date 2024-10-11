@@ -9,8 +9,10 @@ import (
 	redis2 "github.com/redis/go-redis/v9"
 	"github.com/robfig/cron/v3"
 	"go-micro.dev/v4"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"star/app/constant/str"
+	"star/app/extra/tracing"
 	"star/app/models"
 	"star/app/storage/cached"
 	"star/app/storage/mysql"
@@ -121,40 +123,49 @@ func (m *MessageSrv) New() {
 
 }
 
+// ListMessageCount 获取未读消息数量
 func (m *MessageSrv) ListMessageCount(ctx context.Context, req *messagePb.ListMessageCountRequest, resp *messagePb.ListMessageCountResponse) error {
+	ctx, span := tracing.Tracer.Start(ctx, "ListMessageCountService")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger := logging.LogServiceWithTrace(span, "MessageService.ListMessageCount")
 
 	//获取countsStr
 	key := fmt.Sprintf("ListMessageCount:+%d", req.UserId)
 	countsStr, err := cached.GetWithFunc(ctx, key, func(key string) (string, error) {
 		counts, err := mysql.ListMessageCount(req.UserId)
 		if err != nil {
-			logging.Logger.Error("ListMessageCount service error",
+			logger.Error("ListMessageCount service error",
 				zap.Error(err))
+			logging.SetSpanError(span, err)
 			return "", str.ErrMessageError
 		}
 		countsJson, err := json.Marshal(counts)
 		if err != nil {
-			logging.Logger.Error("ListMessageCount service error,json marshal counts error:",
+			logger.Error("json marshal counts error:",
 				zap.Error(err),
 				zap.Any("counts", counts))
+			logging.SetSpanError(span, err)
 			return "", err
 		}
 		return string(countsJson), nil
 
 	})
 	if err != nil {
-		logging.Logger.Error("ListMessageCount service error",
+		logger.Error("ListMessageCount service error",
 			zap.Error(err),
 			zap.Int64("userId", req.UserId))
+		logging.SetSpanError(span, err)
 		return err
 	}
 	//解析countsStr
 	counts := new(models.Counts)
 	err = json.Unmarshal([]byte(countsStr), counts)
 	if err != nil {
-		logging.Logger.Error("ListMessageCount service error ,json unmarshal counts error",
+		logger.Error("json unmarshal counts error",
 			zap.Error(err),
 			zap.Int64("userId", req.UserId))
+		logging.SetSpanError(span, err)
 		return str.ErrMessageError
 	}
 	resp.Count = &messagePb.Counts{
@@ -168,7 +179,13 @@ func (m *MessageSrv) ListMessageCount(ctx context.Context, req *messagePb.ListMe
 	return nil
 }
 
+// SendSystemMessage 发送系统消息
 func (m *MessageSrv) SendSystemMessage(ctx context.Context, req *messagePb.SendSystemMessageRequest, resp *messagePb.SendSystemMessageResponse) error {
+	ctx, span := tracing.Tracer.Start(ctx, "SendSystemMessageService")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger := logging.LogServiceWithTrace(span, "MessageService.SendSystemMessage")
+
 	message := &models.SystemMessage{
 		Id:          snowflake.GetID(),
 		RecipientId: req.RecipientId,
@@ -181,14 +198,19 @@ func (m *MessageSrv) SendSystemMessage(ctx context.Context, req *messagePb.SendS
 	}
 	body, err := json.Marshal(message)
 	if err != nil {
-		logging.Logger.Error("SendSystemMessage service error,json marshal system message error",
+		logger.Error("json marshal system message error",
 			zap.Error(err),
 			zap.Any("message", message))
+		logging.SetSpanError(span, err)
 		return str.ErrMessageError
 	}
 	header := rabbitmq.InjectAMQPHeaders(ctx)
-	err = channel.Publish(str.MessageExchange, str.RoutSystem,
-		false, false,
+	err = channel.PublishWithContext(
+		ctx,
+		str.MessageExchange,
+		str.RoutSystem,
+		false,
+		false,
 		amqp091.Publishing{
 			DeliveryMode: amqp091.Persistent,
 			ContentType:  "text/plain",
@@ -196,15 +218,22 @@ func (m *MessageSrv) SendSystemMessage(ctx context.Context, req *messagePb.SendS
 			Headers:      header,
 		})
 	if err != nil {
-		logging.Logger.Error("SendSystemMessage service error,send system message error",
+		logger.Error("send system message error",
 			zap.Error(err),
 			zap.Any("message", message))
+		logging.SetSpanError(span, err)
 		return str.ErrMessageError
 	}
 	return nil
 }
 
+// SendPrivateMessage 私信
 func (m *MessageSrv) SendPrivateMessage(ctx context.Context, req *messagePb.SendPrivateMessageRequest, resp *messagePb.SendPrivateMessageResponse) error {
+	ctx, span := tracing.Tracer.Start(ctx, "SendPrivateMessageService")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger := logging.LogServiceWithTrace(span, "MessageService.SendPrivateMessage")
+
 	message := &models.PrivateMessage{
 		Id:            snowflake.GetID(),
 		SenderId:      req.SenderId,
@@ -214,22 +243,28 @@ func (m *MessageSrv) SendPrivateMessage(ctx context.Context, req *messagePb.Send
 		SendTime:      time.Now().UTC(),
 		PrivateChatId: req.PrivateChatId,
 	}
-	if err := redis.SaveMessage(message); err != nil {
-		logging.Logger.Error("SendPrivateMessage service error,redis save private message error",
+	if err := redis.SaveMessage(ctx, message); err != nil {
+		logger.Error("redis save private message error",
 			zap.Error(err),
 			zap.Any("message", message))
+		logging.SetSpanError(span, err)
 		return str.ErrMessageError
 	}
 	body, err := json.Marshal(message)
 	if err != nil {
-		logging.Logger.Error("SendPrivateMessage service error,json marshal message error",
+		logger.Error("json marshal message error",
 			zap.Error(err),
 			zap.Any("message", message))
+		logging.SetSpanError(span, err)
 		return err
 	}
 	header := rabbitmq.InjectAMQPHeaders(ctx)
-	err = channel.Publish(str.MessageExchange, str.RoutPrivateMsg,
-		false, false,
+	err = channel.PublishWithContext(
+		ctx,
+		str.MessageExchange,
+		str.RoutPrivateMsg,
+		false,
+		false,
 		amqp091.Publishing{
 			DeliveryMode: amqp091.Persistent,
 			ContentType:  "text/plain",
@@ -238,9 +273,10 @@ func (m *MessageSrv) SendPrivateMessage(ctx context.Context, req *messagePb.Send
 		},
 	)
 	if err != nil {
-		logging.Logger.Error("SendPrivateMessage service error,publish message error",
+		logger.Error("publish message error",
 			zap.Error(err),
 			zap.Any("message", message))
+		logging.SetSpanError(span, err)
 		return err
 	}
 	client, ok := manager.GetClient(req.RecipientId)
@@ -250,49 +286,38 @@ func (m *MessageSrv) SendPrivateMessage(ctx context.Context, req *messagePb.Send
 	return nil
 }
 
+// SendRemindMessage 发送提醒消息
 func (m *MessageSrv) SendRemindMessage(ctx context.Context, req *messagePb.SendRemindMessageRequest, resp *messagePb.SendRemindMessageResponse) error {
+	ctx, span := tracing.Tracer.Start(ctx, "SendRemindMessageService")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger := logging.LogServiceWithTrace(span, "MessageService.SendRemindMessage")
+
+	var err error
 	switch req.RemindType {
 	case "like":
-		if err := addRemindMessage(ctx, req, str.RoutMessageLike); err != nil {
-			logging.Logger.Error("SendRemindMessage service error,add like message error",
-				zap.Error(err),
-				zap.Int64("senderId", req.SenderId),
-				zap.Int64("recipientId", req.RecipientId),
-				zap.String("content", req.Content),
-				zap.String("url", req.Url),
-				zap.String("sourceType", req.SourceType),
-				zap.Int64("sourceId", req.SourceId))
-			return str.ErrMessageError
-		}
+		err = addRemindMessage(ctx, req, str.RoutMessageLike, span, logger)
 	case "reply":
-		if err := addRemindMessage(ctx, req, str.RoutReply); err != nil {
-			logging.Logger.Error("SendRemindMessage service error,add reply message error",
-				zap.Error(err),
-				zap.Int64("senderId", req.SenderId),
-				zap.Int64("recipientId", req.RecipientId),
-				zap.String("content", req.Content),
-				zap.String("url", req.Url),
-				zap.String("sourceType", req.SourceType),
-				zap.Int64("sourceId", req.SourceId))
-			return str.ErrMessageError
-		}
+		err = addRemindMessage(ctx, req, str.RoutReply, span, logger)
 	case "mention":
-		if err := addRemindMessage(ctx, req, str.RoutMention); err != nil {
-			logging.Logger.Error("SendRemindMessage service error,add mention message error",
-				zap.Error(err),
-				zap.Int64("senderId", req.SenderId),
-				zap.Int64("recipientId", req.RecipientId),
-				zap.String("content", req.Content),
-				zap.String("url", req.Url),
-				zap.String("sourceType", req.SourceType),
-				zap.Int64("sourceId", req.SourceId))
-			return str.ErrMessageError
-		}
+		err = addRemindMessage(ctx, req, str.RoutMention, span, logger)
+	}
+	if err != nil {
+		logger.Error("add message error",
+			zap.Error(err),
+			zap.Int64("senderId", req.SenderId),
+			zap.Int64("recipientId", req.RecipientId),
+			zap.String("content", req.Content),
+			zap.String("url", req.Url),
+			zap.String("sourceType", req.SourceType),
+			zap.Int64("sourceId", req.SourceId))
+		logging.SetSpanError(span, err)
+		return str.ErrMessageError
 	}
 	return nil
 }
 
-func addRemindMessage(ctx context.Context, req *messagePb.SendRemindMessageRequest, routingKey string) error {
+func addRemindMessage(ctx context.Context, req *messagePb.SendRemindMessageRequest, routingKey string, span trace.Span, logger *zap.Logger) error {
 	message := &models.RemindMessage{
 		Id:          snowflake.GetID(),
 		SourceId:    req.SourceId,
@@ -306,13 +331,19 @@ func addRemindMessage(ctx context.Context, req *messagePb.SendRemindMessageReque
 	}
 	body, err := json.Marshal(message)
 	if err != nil {
-		logging.Logger.Error("addRemindMessage service error,json marshal message error",
+		logger.Error("json marshal message error",
 			zap.Error(err),
 			zap.Any("message", message))
+		logging.SetSpanError(span, err)
 		return err
 	}
 	header := rabbitmq.InjectAMQPHeaders(ctx)
-	err = channel.Publish(str.MessageExchange, routingKey, false, false,
+	err = channel.PublishWithContext(
+		ctx,
+		str.MessageExchange,
+		routingKey,
+		false,
+		false,
 		amqp091.Publishing{
 			DeliveryMode: amqp091.Persistent,
 			ContentType:  "text/plain",
@@ -320,49 +351,60 @@ func addRemindMessage(ctx context.Context, req *messagePb.SendRemindMessageReque
 			Headers:      header,
 		})
 	if err != nil {
-		logging.Logger.Error("addRemindMessage service error,publish message error",
+		logger.Error("publish message error",
 			zap.Error(err),
 			zap.Any("message", message))
+		logging.SetSpanError(span, err)
 		return err
 	}
 	return nil
 }
 
+// GetChatList 获取会话列表
 func (m *MessageSrv) GetChatList(ctx context.Context, req *messagePb.GetChatListRequest, resp *messagePb.GetChatListResponse) error {
+	ctx, span := tracing.Tracer.Start(ctx, "GetChatListService")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger := logging.LogServiceWithTrace(span, "MessageService.GetChatList")
+
 	key := fmt.Sprintf("chatList:%d", req.UserId)
 	val, err := redis.Client.Get(ctx, key).Result()
 	if err != nil {
 		if !errors.Is(err, redis2.Nil) {
-			logging.Logger.Error("GetChatList service error,redis get chatList error",
+			logger.Error("redis get chatList error",
 				zap.Error(err),
 				zap.String("key", key),
 				zap.Int64("UserId", req.UserId))
+			logging.SetSpanError(span, err)
 			return str.ErrMessageError
 		}
 		//为空则去mysql里查询
 		list, err := mysql.GetChatList(req.UserId)
 		if err != nil {
-			logging.Logger.Error("GetChatList service error,mysql get chatList error",
+			logger.Error("mysql get chatList error",
 				zap.Error(err),
 				zap.Int64("UserId", req.UserId))
+			logging.SetSpanError(span, err)
 			return str.ErrMessageError
 		}
 		if len(list) == 0 {
 			return nil
 		}
-		privateChatList, err := convertChatListToPB(ctx, req.UserId, list)
+		privateChatList, err := convertChatListToPB(ctx, req.UserId, list, logger)
 		if err != nil {
-			logging.Logger.Error("GetChatList service error,convertChatListToPB error",
+			logger.Error("convertChatListToPB error",
 				zap.Error(err),
 				zap.Int64("UserId", req.UserId))
+			logging.SetSpanError(span, err)
 			return str.ErrMessageError
 		}
 		resp.PrivateChatList = privateChatList
 		privateListJosn, err := json.Marshal(privateChatList)
 		if err != nil {
-			logging.Logger.Error("GetChatList service error,json marshal chatList error",
+			logger.Error("json marshal chatList error",
 				zap.Error(err),
 				zap.Any("list", list))
+			logging.SetSpanError(span, err)
 			return str.ErrMessageError
 		}
 		redis.Client.Set(ctx, key, string(privateListJosn), 24*time.Hour)
@@ -370,9 +412,10 @@ func (m *MessageSrv) GetChatList(ctx context.Context, req *messagePb.GetChatList
 	}
 	var list []*messagePb.PrivateChat
 	if err := json.Unmarshal([]byte(val), &list); err != nil {
-		logging.Logger.Error("GetChatList service error,json unmarshal message error",
+		logger.Error("json unmarshal message error",
 			zap.Error(err),
 			zap.Any("value", val))
+		logging.SetSpanError(span, err)
 		return str.ErrMessageError
 	}
 	resp.PrivateChatList = list
@@ -386,7 +429,7 @@ func getSenderId(chat *models.PrivateChat, recipientId int64) int64 {
 	return chat.User2Id
 }
 
-func convertChatListToPB(ctx context.Context, recipientId int64, list []*models.PrivateChat) ([]*messagePb.PrivateChat, error) {
+func convertChatListToPB(ctx context.Context, recipientId int64, list []*models.PrivateChat, logger *zap.Logger) ([]*messagePb.PrivateChat, error) {
 	plist := make([]*messagePb.PrivateChat, len(list))
 	var wg sync.WaitGroup
 	var chatChan = make(chan struct {
@@ -401,7 +444,7 @@ func convertChatListToPB(ctx context.Context, recipientId int64, list []*models.
 				UserId: getSenderId(chat, recipientId),
 			})
 			if err != nil {
-				logging.Logger.Error("get sender user info error",
+				logger.Error("get sender user info error",
 					zap.Error(err),
 					zap.Int64("userId", recipientId))
 				return
@@ -430,30 +473,39 @@ func convertChatListToPB(ctx context.Context, recipientId int64, list []*models.
 	return plist, nil
 }
 
+// LoadMessage 加载消息
 func (m *MessageSrv) LoadMessage(ctx context.Context, req *messagePb.LoadMessageRequest, resp *messagePb.LoadMessageResponse) error {
+	ctx, span := tracing.Tracer.Start(ctx, "LoadMessageService")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger := logging.LogServiceWithTrace(span, "MessageService.LoadMessage")
+
 	lastMsgTime, err := time.Parse(str.ParseTimeFormat, req.LastMsgTime)
 	if err != nil {
-		logging.Logger.Error("LoadMessage service error,load last message time error",
+		logger.Error("load last message time error",
 			zap.Error(err),
 			zap.Int64("userId", req.RecipientId))
+		logging.SetSpanError(span, err)
 		return str.ErrMessageError
 	}
 	senderReq, err := userService.GetUserInfo(ctx, &userPb.GetUserInfoRequest{
 		UserId: req.SenderId,
 	})
 	if err != nil {
-		logging.Logger.Error("LoadMessage service error,get sender user info error",
+		logger.Error("get sender user info error",
 			zap.Error(err),
 			zap.Int64("senderId", req.SenderId))
+		logging.SetSpanError(span, err)
 		return str.ErrMessageError
 	}
 	sender := senderReq.User
-	messages, err := redis.LoadMessage(req.SenderId, req.RecipientId, lastMsgTime, str.DefaultLoadMessageNumber)
+	messages, err := redis.LoadMessage(ctx, req.SenderId, req.RecipientId, lastMsgTime, str.DefaultLoadMessageNumber)
 	if err != nil {
-		logging.Logger.Error("LoadMessage service error,load last message error",
+		logger.Error("load last message error",
 			zap.Error(err),
 			zap.Int64("senderId", req.SenderId),
 			zap.Int64("recipientId", req.RecipientId))
+		logging.SetSpanError(span, err)
 		return str.ErrMessageError
 	}
 	if len(messages) > 0 {
@@ -464,14 +516,21 @@ func (m *MessageSrv) LoadMessage(ctx context.Context, req *messagePb.LoadMessage
 	//redis没有找到
 	messages, err = mysql.LoadMessage(req.PrivateChatId, lastMsgTime, 2*str.DefaultLoadMessageNumber)
 	if err != nil {
-		logging.Logger.Error("LoadMessage service error,load last message error",
+		logger.Error("load last message error",
 			zap.Error(err),
 			zap.Int64("privateChatId", req.PrivateChatId))
+		logging.SetSpanError(span, err)
 		return str.ErrMessageError
 	}
 	resp.PrivateMessages = convertMessagesToPB(messages, sender)
 	//将message异步存入redis
-	savePrivateMsgToRedisAsync(messages)
+	go func() {
+		if err := redis.BitchSaveMessage(ctx, messages); err != nil {
+			logger.Error("async redis save private message error",
+				zap.Error(err),
+				zap.Any("message", messages))
+		}
+	}()
 	return nil
 }
 
@@ -492,22 +551,18 @@ func convertMessagesToPB(messages []*models.PrivateMessage, sender *userPb.User)
 	return pmessages
 }
 
-func savePrivateMsgToRedisAsync(messages []*models.PrivateMessage) {
-	go func() {
-		if err := redis.BitchSaveMessage(messages); err != nil {
-			logging.Logger.Error("async redis save private message error",
-				zap.Error(err),
-				zap.Any("message", messages))
-		}
-	}()
-}
-
 func removeMessage() {
+	ctx, span := tracing.Tracer.Start(context.Background(), "removeMessageService")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger := logging.LogServiceWithTrace(span, "MessageService.removeMessage")
+
 	goroutineLimiter := make(chan struct{}, 15)
 	chats, err := mysql.GetAllPrivateChat()
 	if err != nil {
-		logging.Logger.Error("removeMessage service error,mysql get all private chat error",
+		logger.Error("mysql get all private chat error",
 			zap.Error(err))
+		logging.SetSpanError(span, err)
 		return
 	}
 	var wg sync.WaitGroup
@@ -519,11 +574,11 @@ func removeMessage() {
 				wg.Done()
 				<-goroutineLimiter
 			}()
-			length := redis.GetMessageLength(chat.User1Id, chat.User2Id)
+			length := redis.GetMessageLength(ctx, chat.User1Id, chat.User2Id)
 			if length > 200 {
-				err := redis.RemoveMessage(chat.User1Id, chat.User2Id, 0, 100)
+				err := redis.RemoveMessage(ctx, chat.User1Id, chat.User2Id, 0, 100)
 				if err != nil {
-					logging.Logger.Error("remove message error",
+					logger.Error("remove message error",
 						zap.Error(err),
 						zap.Int64("chatId", chat.Id),
 						zap.Int64("user1Id", chat.User1Id),

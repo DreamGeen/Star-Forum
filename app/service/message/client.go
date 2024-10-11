@@ -5,7 +5,6 @@ import (
 	"go.uber.org/zap"
 	"star/app/constant/str"
 	"star/app/models"
-	"star/app/service/message/service"
 	"star/app/utils/logging"
 	"time"
 )
@@ -40,7 +39,7 @@ func (c *Client) read() {
 		messageType, _, err := c.conn.ReadMessage()
 		if err != nil {
 			if messageType == -1 && websocket.IsCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure, websocket.CloseNoStatusReceived) {
-				service.manager.Disconnect <- c
+				manager.Disconnect <- c
 				return
 			} else if messageType != websocket.PingMessage {
 				return

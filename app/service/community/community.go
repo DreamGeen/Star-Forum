@@ -183,7 +183,7 @@ func (c *CommunitySrv) FollowCommunity(ctx context.Context, req *communityPb.Fol
 			zap.Int64("communityId", req.CommunityId))
 		return nil
 	}
-	err = mysql.FollowCommunity(req.CommunityId, req.CommunityId)
+	err = mysql.FollowCommunity(req.CommunityId, req.CommunityId, span, logger)
 	if err != nil {
 		logger.Error("follow community error",
 			zap.Error(err),

@@ -11,17 +11,17 @@ import (
 )
 
 type ClientManager struct {
-	ClientMap  map[int64]*main.Client
+	ClientMap  map[int64]*Client
 	Lock       sync.RWMutex
-	Connect    chan *main.Client
-	Disconnect chan *main.Client
+	Connect    chan *Client
+	Disconnect chan *Client
 }
 
 func NewManager() *ClientManager {
 	return &ClientManager{
-		ClientMap:  make(map[int64]*main.Client),
-		Connect:    make(chan *main.Client, 10000),
-		Disconnect: make(chan *main.Client, 10000),
+		ClientMap:  make(map[int64]*Client),
+		Connect:    make(chan *Client, 10000),
+		Disconnect: make(chan *Client, 10000),
 	}
 }
 
@@ -49,14 +49,14 @@ func SaveServiceId(userId int64, instanceId string) error {
 	return nil
 }
 
-func (m *ClientManager) EventConnect(client *main.Client) {
+func (m *ClientManager) EventConnect(client *Client) {
 	m.Lock.Lock()
 	defer m.Lock.Unlock()
 
 	m.ClientMap[client.userId] = client
 }
 
-func (m *ClientManager) EventDisConnect(client *main.Client) {
+func (m *ClientManager) EventDisConnect(client *Client) {
 	m.Lock.Lock()
 	defer m.Lock.Unlock()
 
@@ -65,7 +65,7 @@ func (m *ClientManager) EventDisConnect(client *main.Client) {
 	delete(m.ClientMap, client.userId)
 }
 
-func (m *ClientManager) GetClient(userId int64) (*main.Client, bool) {
+func (m *ClientManager) GetClient(userId int64) (*Client, bool) {
 	m.Lock.RLock()
 	defer m.Lock.RUnlock()
 

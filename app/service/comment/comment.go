@@ -7,6 +7,7 @@ import (
 	"go-micro.dev/v4"
 	"go.uber.org/zap"
 	"star/app/constant/str"
+	"star/app/extra/tracing"
 	"star/app/models"
 	"star/app/storage/cached"
 	"star/app/storage/mysql"
@@ -33,6 +34,11 @@ func (s *CommentService) New() {
 
 // PostComment 发布评论
 func (s *CommentService) PostComment(ctx context.Context, req *commentPb.PostCommentRequest, rsp *commentPb.PostCommentResponse) error {
+	ctx, span := tracing.Tracer.Start(ctx, "PostCommentService")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger := logging.LogServiceWithTrace(span, "CommentService.PostComment")
+
 	comment := &models.Comment{
 		PostId:      req.PostId,
 		UserId:      req.UserId,
@@ -41,11 +47,12 @@ func (s *CommentService) PostComment(ctx context.Context, req *commentPb.PostCom
 	}
 	// 存储评论
 	if err := mysql.CreateComment(comment); err != nil {
-		logging.Logger.Error("post service error",
+		logger.Error("post service error",
 			zap.Error(err),
 			zap.Int64("userId", req.UserId),
 			zap.String("content", req.Content),
 			zap.Int64("BeCommentId", req.BeCommentId))
+		logging.SetSpanError(span, err)
 		return err
 	}
 	key := fmt.Sprintf("CountComment:%d", req.PostId)
@@ -58,32 +65,44 @@ func (s *CommentService) PostComment(ctx context.Context, req *commentPb.PostCom
 // GetComments 获取一个帖子的评论
 // 根据页面获取，第几页，每一页多少个评论
 func (s *CommentService) GetComments(ctx context.Context, req *commentPb.GetCommentsRequest, rsp *commentPb.GetCommentsResponse) error {
+	ctx, span := tracing.Tracer.Start(ctx, "GetCommentsService")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger := logging.LogServiceWithTrace(span, "CommentService.GetComments")
+
 	// 检查帖子是否存在
-	postExistResp, err := postService.QueryPostExist(ctx, &postPb.QueryPostExistRequest{PostId: req.PostId})
+	postExistResp, err := postService.QueryPostExist(ctx,
+		&postPb.QueryPostExistRequest{
+			PostId: req.PostId,
+		})
 	if err != nil {
-		logging.Logger.Error("GetComments service error,query post exist error",
+		logger.Error("query post exist error",
 			zap.Error(err),
 			zap.Int64("post_id", req.PostId))
+		logging.SetSpanError(span, err)
 		return err
 	}
 	if !postExistResp.Exist {
-		logging.Logger.Error("GetComments service error,post not exist",
+		logger.Error("post not exist",
 			zap.Int64("post_id", req.PostId))
+		logging.SetSpanError(span, err)
 		return str.ErrPostNotExists
 	}
 	// 按照点赞数排序，获取所有评论
 	comments, err := mysql.GetCommentsStar(req.PostId)
 	if err != nil {
-		logging.Logger.Error("GetComments service error,mysql get comment star error",
+		logger.Error("mysql get comment star error",
 			zap.Error(err))
+		logging.SetSpanError(span, err)
 		return str.ErrCommentError
 	}
 
 	// 构建评论树
 	commentTree, err := buildCommentTree(comments)
 	if err != nil {
-		logging.Logger.Error("create comment tree error",
+		logger.Error("create comment tree error",
 			zap.Error(err))
+		logging.SetSpanError(span, err)
 		return str.ErrCommentError
 	}
 
@@ -149,47 +168,64 @@ func convertCommentsToPB(comments []*models.Comment) []*commentPb.Comment {
 
 // DeleteComment 删除评论
 func (s *CommentService) DeleteComment(ctx context.Context, req *commentPb.DeleteCommentRequest, rsp *commentPb.DeleteCommentResponse) error {
+	ctx, span := tracing.Tracer.Start(ctx, "DeleteCommentService")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger := logging.LogServiceWithTrace(span, "CommentService.DeleteComment")
+
 	// 检查评论是否存在
 	if err := mysql.CheckComment(req.CommentId); err != nil {
-		return err
+		logger.Error("check comment error",
+			zap.Error(err))
+		logging.SetSpanError(span, err)
+		return str.ErrCommentError
 	}
 
 	// 清除对应评论的Redis缓存
 	if err := redis.Client.Del(ctx, fmt.Sprintf("comment:star:%d", req.CommentId)).Err(); err != nil {
-		logging.Logger.Error("delete redis comment buffer error",
+		logger.Error("delete redis comment buffer error",
 			zap.Error(err),
 			zap.Int64("commentId", req.CommentId))
+		logging.SetSpanError(span, err)
 	}
 
 	//删除评论
 	if err := mysql.DeleteComment(req.CommentId); err != nil {
-		logging.Logger.Error("delete comment error",
+		logger.Error("delete comment error",
 			zap.Error(err),
 			zap.Int64("commentId", req.CommentId))
+		logging.SetSpanError(span, err)
 		return str.ErrCommentError
 	}
 	return nil
 }
 
 func (s *CommentService) CountComment(ctx context.Context, req *commentPb.CountCommentRequest, resp *commentPb.CountCommentResponse) error {
+	ctx, span := tracing.Tracer.Start(ctx, "CountCommentService")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger := logging.LogServiceWithTrace(span, "CommentService.CountComment")
+
 	key := fmt.Sprintf("CountComment:%d", req.PostId)
 	countStr, err := cached.GetWithFunc(ctx, key, func(key string) (string, error) {
 		return mysql.CountComment(req.PostId)
 	})
 	if err != nil {
-		logging.Logger.Error("get count comment error",
+		logger.Error("get count comment error",
 			zap.Error(err),
 			zap.Int64("post_id", req.PostId),
 			zap.Int64("actorId", req.ActorId))
+		logging.SetSpanError(span, err)
 		return str.ErrCommentError
 	}
 	count, err := strconv.ParseInt(countStr, 10, 64)
 	if err != nil {
-		logging.Logger.Error("parse comment count error",
+		logger.Error("parse comment count error",
 			zap.Error(err),
 			zap.Int64("post_id", req.PostId),
 			zap.Int64("actorId", req.ActorId),
 			zap.String("countStr", countStr))
+		logging.SetSpanError(span, err)
 		return str.ErrCommentError
 	}
 	resp.Count = count
@@ -197,12 +233,20 @@ func (s *CommentService) CountComment(ctx context.Context, req *commentPb.CountC
 }
 
 func (s *CommentService) QueryCommentExist(ctx context.Context, req *commentPb.QueryCommentExistRequest, resp *commentPb.QueryCommentExistResponse) error {
+	ctx, span := tracing.Tracer.Start(ctx, "QueryCommentExistService")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger := logging.LogServiceWithTrace(span, "CommentService.QueryCommentExist")
+
 	err := mysql.CheckComment(req.CommentId)
 	if err != nil {
 		if errors.Is(err, str.ErrCommentNotExists) {
 			resp.Result = false
 			return nil
 		}
+		logger.Error("query comment exist error",
+			zap.Error(err))
+		logging.SetSpanError(span, err)
 		return str.ErrCommentError
 	}
 	resp.Result = true

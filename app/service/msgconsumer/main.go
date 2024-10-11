@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
 	"star/app/constant/str"
+	"star/app/extra/tracing"
 	"star/app/models"
 	"star/app/storage/mysql"
 	"star/app/utils/logging"
@@ -16,11 +18,6 @@ import (
 
 var conn *amqp091.Connection
 var channel *amqp091.Channel
-
-const (
-	//最大重试次数
-	maxRetries = 3
-)
 
 func failOnError(err error, msg string) {
 	if err != nil {
@@ -193,54 +190,45 @@ func getFuncNewInstance(msgType string) func() interface{} {
 func handleMessage(delivery <-chan amqp091.Delivery, updateFunc func(interface{}) error, msgType string) {
 	getInstance := getFuncNewInstance(msgType)
 	for msg := range delivery {
+		ctx := rabbitmq.ExtractAMQPHeaders(context.Background(), msg.Headers)
+
+		ctx, span := tracing.Tracer.Start(ctx, "MessageSendService")
+		logger := logging.LogServiceWithTrace(span, "MessageSend")
 		message := getInstance()
-		// 获取重试次数
-		retryCount := int32(0)
-		if count, ok := msg.Headers["x-retry-count"].(int32); ok {
-			retryCount = count
-		}
+
 		// 反序列化消息体
 		if err := json.Unmarshal(msg.Body, message); err != nil {
-			logging.Logger.Error(fmt.Sprintf("unmarshal %s message error", msgType),
-				zap.ByteString("message body", msg.Body), zap.Error(err))
+			logger.Error(fmt.Sprintf("unmarshal %s message error", msgType),
+				zap.ByteString("message body", msg.Body),
+				zap.Error(err))
 			//序列化失败，拒绝消息且不重新入队
 			if nackErr := msg.Nack(false, false); nackErr != nil {
 				logging.Logger.Error("nack message error",
 					zap.ByteString("message body", msg.Body),
 					zap.Error(nackErr))
 			}
+			logging.SetSpanError(span, err)
+			span.End()
 			continue
 		}
 
 		// 更新消息到数据库
 		if err := updateFunc(message); err != nil {
-			logging.Logger.Error(fmt.Sprintf("insert %s message error", msgType),
+			logger.Error(fmt.Sprintf("insert %s message error", msgType),
 				zap.Error(err),
 				zap.Any("message", message))
-			if retryCount >= maxRetries {
-				// 达到最大重试次数，拒绝消息且不重新入队
-				if nackErr := msg.Nack(false, false); nackErr != nil {
-					logging.Logger.Error("nack message error",
-						zap.ByteString("message body", msg.Body),
-						zap.Error(nackErr))
-				}
-				logging.Logger.Warn("message discarded after max retries",
-					zap.Int32("retry count", retryCount))
-			} else {
-				// 未达到最大重试次数，重试并重新入队
-				sendRetryMessage(msg, 100)
-				if nackErr := msg.Nack(false, false); nackErr != nil {
-					logging.Logger.Error("nack message error",
-						zap.ByteString("message body", msg.Body),
-						zap.Error(nackErr))
-				}
-			}
+			sendRetryMessage(msg, 100, span, logger)
+			logging.SetSpanError(span, err)
+			span.End()
 			continue
 		}
 
 		// 成功处理消息，确认 (ack)
 		if err := msg.Ack(false); err != nil {
-			logging.Logger.Error(fmt.Sprintf("ack %s message error", msgType), zap.Error(err))
+			logger.Error(fmt.Sprintf("ack %s message error", msgType),
+				zap.Error(err))
+			logging.SetSpanError(span, err)
 		}
+		span.End()
 	}
 }
