@@ -52,7 +52,7 @@ func LikeActionHandler(c *gin.Context) {
 func LikeListHandler(c *gin.Context) {
 	userId, err := utils2.GetUserId(c)
 	if err != nil {
-		logging.Logger.Warn("user not log in,but want to list like post",
+		logging.Logger.Warn("user not log in,but want to list like feed",
 			zap.Error(err))
 		str2.Response(c, err, str2.Empty, nil)
 		return

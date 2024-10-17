@@ -6,9 +6,9 @@ import (
 	"star/proto/collect/collectPb"
 	"star/proto/comment/commentPb"
 	"star/proto/community/communityPb"
+	"star/proto/feed/feedPb"
 	"star/proto/like/likePb"
 	"star/proto/message/messagePb"
-	"star/proto/post/postPb"
 	"star/proto/relation/relationPb"
 	"star/proto/user/userPb"
 )
@@ -17,7 +17,7 @@ var (
 	userService      userPb.UserService
 	commentService   commentPb.CommentService
 	communityService communityPb.CommunityService
-	postService      postPb.PostService
+	feedService      feedPb.PostService
 	messageService   messagePb.MessageService
 	relationService  relationPb.RelationService
 	likeService      likePb.LikeService
@@ -37,9 +37,9 @@ func Init() {
 	communityMicroService := micro.NewService(micro.Name(str.CommunityServiceClient))
 	communityService = communityPb.NewCommunityService(str.CommunityService, communityMicroService.Client())
 
-	//创建一个帖子服务客户端
-	postMicroService := micro.NewService(micro.Name(str.PostServiceClient))
-	postService = postPb.NewPostService(str.PostService, postMicroService.Client())
+	//创建一个feed服务客户端
+	feedMicroService := micro.NewService(micro.Name(str.FeedServiceClient))
+	feedService = feedPb.NewPostService(str.FeedService, feedMicroService.Client())
 
 	//创建一个消息服务客户端
 	messageMicroService := micro.NewService(micro.Name(str.MessageServiceClient))

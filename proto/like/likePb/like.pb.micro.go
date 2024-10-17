@@ -7,7 +7,7 @@ import (
 	fmt "fmt"
 	proto "google.golang.org/protobuf/proto"
 	math "math"
-	_ "star/proto/post/postPb"
+	_ "star/proto/feed/feedPb"
 )
 
 import (

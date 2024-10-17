@@ -10,8 +10,8 @@ const (
 	CommunityServiceClient = "CommunityService.client"
 	CommunityService       = "CommunityService"
 
-	PostServiceClient = "PostService.client"
-	PostService       = "PostService"
+	FeedServiceClient = "FeedService.client"
+	FeedService       = "FeedService"
 
 	MessageServiceClient = "MessageService.client"
 	MessageService       = "MessageService"
@@ -24,4 +24,7 @@ const (
 
 	CollectServiceClient = "CollectService.client"
 	CollectService       = "CollectService"
+
+	PublishServiceClient = "PublishService.client"
+	PublishService       = "PublishService"
 )

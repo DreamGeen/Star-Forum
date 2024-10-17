@@ -10,7 +10,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
-	postPb "star/proto/post/postPb"
+	postPb "star/proto/feed/feedPb"
 	sync "sync"
 )
 
@@ -605,10 +605,10 @@ var file_collect_proto_goTypes = []interface{}{
 	(*GetCollectCountResponse)(nil),     // 7: collectPb.GetCollectCountResponse
 	(*GetUserCollectCountRequest)(nil),  // 8: collectPb.GetUserCollectCountRequest
 	(*GetUserCollectCountResponse)(nil), // 9: collectPb.GetUserCollectCountResponse
-	(*postPb.Post)(nil),                 // 10: postPb.Post
+	(*postPb.Post)(nil),                 // 10: feedPb.Post
 }
 var file_collect_proto_depIdxs = []int32{
-	10, // 0: collectPb.CollectListResponse.posts:type_name -> postPb.Post
+	10, // 0: collectPb.CollectListResponse.posts:type_name -> feedPb.Post
 	0,  // 1: collectPb.CollectService.IsCollect:input_type -> collectPb.IsCollectRequest
 	2,  // 2: collectPb.CollectService.CollectAction:input_type -> collectPb.CollectActionRequest
 	4,  // 3: collectPb.CollectService.CollectList:input_type -> collectPb.CollectListRequest

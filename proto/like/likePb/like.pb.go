@@ -10,7 +10,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
-	postPb "star/proto/post/postPb"
+	postPb "star/proto/feed/feedPb"
 	sync "sync"
 )
 
@@ -739,10 +739,10 @@ var file_like_proto_goTypes = []interface{}{
 	(*IsLikeResponse)(nil),           // 9: IsLikeResponse
 	(*GetUserLikeCountRequest)(nil),  // 10: GetUserLikeCountRequest
 	(*GetUserLikeCountResponse)(nil), // 11: GetUserLikeCountResponse
-	(*postPb.Post)(nil),              // 12: postPb.Post
+	(*postPb.Post)(nil),              // 12: feedPb.Post
 }
 var file_like_proto_depIdxs = []int32{
-	12, // 0: LikeListResponse.posts:type_name -> postPb.Post
+	12, // 0: LikeListResponse.posts:type_name -> feedPb.Post
 	0,  // 1: LikeService.LikeAction:input_type -> LikeActionRequest
 	2,  // 2: LikeService.GetUserTotalLike:input_type -> GetUserTotalLikeRequest
 	4,  // 3: LikeService.LikeList:input_type -> LikeListRequest

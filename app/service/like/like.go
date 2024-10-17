@@ -19,9 +19,9 @@ import (
 	"star/app/utils/logging"
 	"star/app/utils/rabbitmq"
 	"star/proto/comment/commentPb"
+	"star/proto/feed/feedPb"
 	"star/proto/like/likePb"
 	"star/proto/message/messagePb"
-	"star/proto/post/postPb"
 	"strconv"
 )
 
@@ -33,7 +33,7 @@ const (
 type LikeSrv struct {
 }
 
-var postService postPb.PostService
+var postService feedPb.PostService
 var messageService messagePb.MessageService
 var commentService commentPb.CommentService
 var conn *amqp091.Connection
@@ -59,8 +59,8 @@ func CloseMQ() {
 }
 
 func New() {
-	postMicroService := micro.NewService(micro.Name(str.PostServiceClient))
-	postService = postPb.NewPostService(str.PostService, postMicroService.Client())
+	postMicroService := micro.NewService(micro.Name(str.FeedServiceClient))
+	postService = feedPb.NewPostService(str.FeedService, postMicroService.Client())
 
 	messageMicroService := micro.NewService(micro.Name(str.MessageServiceClient))
 	messageService = messagePb.NewMessageService(str.MessageService, messageMicroService.Client())
@@ -108,7 +108,7 @@ func produceLike(ctx context.Context, req *likePb.LikeActionRequest) {
 		}
 		msg, err = json.Marshal(message)
 		if err != nil {
-			logging.Logger.Error("produce post like error,json marshal error",
+			logging.Logger.Error("produce feed like error,json marshal error",
 				zap.Error(err),
 				zap.Int64("postId", req.SourceId),
 				zap.Int64("actorId", req.UserId))
@@ -185,18 +185,18 @@ func (l *LikeSrv) LikeAction(ctx context.Context, req *likePb.LikeActionRequest,
 }
 
 func likePost(ctx context.Context, req *likePb.LikeActionRequest, span trace.Span, logger *zap.Logger) error {
-	postExistResp, err := postService.QueryPostExist(ctx, &postPb.QueryPostExistRequest{
+	postExistResp, err := postService.QueryPostExist(ctx, &feedPb.QueryPostExistRequest{
 		PostId: req.SourceId,
 	})
 	if err != nil {
-		logger.Error("query post exist error",
+		logger.Error("query feed exist error",
 			zap.Error(err),
 			zap.Int64("post_id", req.SourceId))
 		logging.SetSpanError(span, err)
 		return err
 	}
 	if !postExistResp.Exist {
-		logger.Error("post not exist",
+		logger.Error("feed not exist",
 			zap.Int64("post_id", req.SourceId))
 		return str.ErrPostNotExists
 	}
@@ -204,7 +204,7 @@ func likePost(ctx context.Context, req *likePb.LikeActionRequest, span trace.Spa
 	//贴子信息
 	postInfo, err := redis.GetPostInfo(ctx, req.SourceId)
 	if err != nil {
-		logger.Error("get post info error",
+		logger.Error("get feed info error",
 			zap.Error(err),
 			zap.Int64("post_id", req.SourceId),
 			zap.Int64("user_id", req.UserId))
@@ -235,7 +235,7 @@ func likePost(ctx context.Context, req *likePb.LikeActionRequest, span trace.Spa
 			return nil
 		} else {
 			if err := redis.LikePostAction(ctx, req.UserId, postInfo.PostId, postInfo.UserId); err != nil {
-				logger.Error("redis user like post error",
+				logger.Error("redis user like feed error",
 					zap.Error(err),
 					zap.Int64("post_id", req.SourceId),
 					zap.Int64("userId", req.UserId))
@@ -247,14 +247,14 @@ func likePost(ctx context.Context, req *likePb.LikeActionRequest, span trace.Spa
 					SenderId:    req.UserId,
 					RecipientId: postInfo.UserId,
 					SourceId:    req.SourceId,
-					SourceType:  "post",
+					SourceType:  "feed",
 					RemindType:  "like",
 					Content:     postInfo.Content,
 					Url:         req.Url,
 					IsDeleted:   false,
 				})
 				if err != nil {
-					logger.Error("send like post remind message error",
+					logger.Error("send like feed remind message error",
 						zap.Error(err),
 						zap.Int64("post_id", req.SourceId),
 						zap.Int64("actorId", req.UserId))
@@ -273,7 +273,7 @@ func likePost(ctx context.Context, req *likePb.LikeActionRequest, span trace.Spa
 		} else {
 			//正常取消点赞
 			if err := redis.UnlikePostAction(ctx, req.UserId, postInfo.PostId, postInfo.UserId); err != nil {
-				logger.Error("redis user cancel like post error",
+				logger.Error("redis user cancel like feed error",
 					zap.Error(err),
 					zap.Int64("post_id", req.SourceId),
 					zap.Int64("userId", req.UserId))
@@ -285,14 +285,14 @@ func likePost(ctx context.Context, req *likePb.LikeActionRequest, span trace.Spa
 					SenderId:    req.UserId,
 					RecipientId: postInfo.UserId,
 					SourceId:    req.SourceId,
-					SourceType:  "post",
+					SourceType:  "feed",
 					RemindType:  "like",
 					Content:     postInfo.Content,
 					Url:         req.Url,
 					IsDeleted:   true,
 				})
 				if err != nil {
-					logger.Error("send unlike post  remind message error",
+					logger.Error("send unlike feed  remind message error",
 						zap.Error(err),
 						zap.Int64("post_id", req.SourceId),
 						zap.Int64("actorId", req.UserId))
@@ -335,7 +335,7 @@ func likeComment(ctx context.Context, req *likePb.LikeActionRequest, span trace.
 				SenderId:    req.UserId,
 				RecipientId: commentInfo.UserId,
 				SourceId:    req.SourceId,
-				SourceType:  "post",
+				SourceType:  "feed",
 				RemindType:  "like",
 				Content:     commentInfo.Content,
 				Url:         req.Url,
@@ -352,7 +352,7 @@ func likeComment(ctx context.Context, req *likePb.LikeActionRequest, span trace.
 
 	} else {
 		if err := redis.UnLikeCommentAction(ctx, commentInfo.CommentId, commentInfo.UserId); err != nil {
-			logger.Error("redis user cancel like post error",
+			logger.Error("redis user cancel like feed error",
 				zap.Error(err),
 				zap.Int64("post_id", req.SourceId),
 				zap.Int64("userId", req.UserId))
@@ -363,7 +363,7 @@ func likeComment(ctx context.Context, req *likePb.LikeActionRequest, span trace.
 				SenderId:    req.UserId,
 				RecipientId: commentInfo.UserId,
 				SourceId:    req.SourceId,
-				SourceType:  "post",
+				SourceType:  "feed",
 				RemindType:  "like",
 				Content:     commentInfo.Content,
 				Url:         req.Url,
@@ -437,7 +437,7 @@ func (l *LikeSrv) LikeList(ctx context.Context, req *likePb.LikeListRequest, res
 		postId, _ := strconv.ParseInt(postIdStr, 10, 64)
 		postIds[i] = postId
 	}
-	queryPostsResp, err := postService.QueryPosts(ctx, &postPb.QueryPostsRequest{
+	queryPostsResp, err := postService.QueryPosts(ctx, &feedPb.QueryPostsRequest{
 		ActorId: req.UserId,
 		PostIds: postIds,
 	})
@@ -479,10 +479,10 @@ func (l *LikeSrv) GetLikeCount(ctx context.Context, req *likePb.GetLikeCountRequ
 }
 
 func countPostLike(ctx context.Context, postId int64, span trace.Span, logger *zap.Logger) (count int64, err error) {
-	key := fmt.Sprintf("post:%d:liked_count", postId)
+	key := fmt.Sprintf("feed:%d:liked_count", postId)
 	countStr, err := redis.Client.Get(ctx, key).Result()
 	if err != nil && !errors.Is(err, redis2.Nil) {
-		logger.Error("redis get post like count error",
+		logger.Error("redis get feed like count error",
 			zap.Error(err),
 			zap.Int64("postId", postId))
 		logging.SetSpanError(span, err)
@@ -493,7 +493,7 @@ func countPostLike(ctx context.Context, postId int64, span trace.Span, logger *z
 	}
 	count, err = strconv.ParseInt(countStr, 10, 64)
 	if err != nil {
-		logger.Error("strconv post like count error",
+		logger.Error("strconv feed like count error",
 			zap.Error(err),
 			zap.Int64("postId", postId),
 			zap.String("countStr", countStr))

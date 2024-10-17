@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/go-redis/redis_rate/v10"
 	"go-micro.dev/v4"
 	"go.uber.org/zap"
 	"star/app/constant/str"
@@ -14,7 +15,7 @@ import (
 	"star/app/storage/redis"
 	"star/app/utils/logging"
 	"star/proto/comment/commentPb"
-	"star/proto/post/postPb"
+	"star/proto/feed/feedPb"
 	"strconv"
 )
 
@@ -22,14 +23,20 @@ type CommentService struct {
 	commentPb.CommentService
 }
 
+const redisCommentQPS = 3
+
 var (
 	commentSrvIns *CommentService
-	postService   postPb.PostService
+	postService   feedPb.PostService
 )
 
 func (s *CommentService) New() {
-	postMicroService := micro.NewService(micro.Name(str.PostServiceClient))
-	postService = postPb.NewPostService(str.PostService, postMicroService.Client())
+	postMicroService := micro.NewService(micro.Name(str.FeedServiceClient))
+	postService = feedPb.NewPostService(str.FeedService, postMicroService.Client())
+}
+
+func commentLimitKey(userId int64) string {
+	return fmt.Sprintf("redis_post_limiter:%d", userId)
 }
 
 // PostComment 发布评论
@@ -39,6 +46,24 @@ func (s *CommentService) PostComment(ctx context.Context, req *commentPb.PostCom
 	logging.SetSpanWithHostname(span)
 	logger := logging.LogServiceWithTrace(span, "CommentService.PostComment")
 
+	//redis limit
+	limiter := redis_rate.NewLimiter(redis.Client)
+	limiterKey := commentLimitKey(req.UserId)
+	limitRes, err := limiter.Allow(ctx, limiterKey, redis_rate.PerSecond(redisCommentQPS))
+	if err != nil {
+		logger.Error("comment limiter error",
+			zap.Error(err),
+			zap.Int64("actorId", req.UserId))
+		logging.SetSpanError(span, err)
+		return str.ErrPostError
+	}
+	if limitRes.Allowed == 0 {
+		logger.Error("user feed comment too frequently",
+			zap.Int64("userId", req.UserId))
+		logging.SetSpanError(span, err)
+		return str.ErrRequestTooFrequently
+	}
+
 	comment := &models.Comment{
 		PostId:      req.PostId,
 		UserId:      req.UserId,
@@ -47,7 +72,7 @@ func (s *CommentService) PostComment(ctx context.Context, req *commentPb.PostCom
 	}
 	// 存储评论
 	if err := mysql.CreateComment(comment); err != nil {
-		logger.Error("post service error",
+		logger.Error("feed service error",
 			zap.Error(err),
 			zap.Int64("userId", req.UserId),
 			zap.String("content", req.Content),
@@ -72,18 +97,18 @@ func (s *CommentService) GetComments(ctx context.Context, req *commentPb.GetComm
 
 	// 检查帖子是否存在
 	postExistResp, err := postService.QueryPostExist(ctx,
-		&postPb.QueryPostExistRequest{
+		&feedPb.QueryPostExistRequest{
 			PostId: req.PostId,
 		})
 	if err != nil {
-		logger.Error("query post exist error",
+		logger.Error("query feed exist error",
 			zap.Error(err),
 			zap.Int64("post_id", req.PostId))
 		logging.SetSpanError(span, err)
 		return err
 	}
 	if !postExistResp.Exist {
-		logger.Error("post not exist",
+		logger.Error("feed not exist",
 			zap.Int64("post_id", req.PostId))
 		logging.SetSpanError(span, err)
 		return str.ErrPostNotExists

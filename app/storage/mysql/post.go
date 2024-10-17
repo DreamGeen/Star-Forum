@@ -11,12 +11,13 @@ import (
 )
 
 const (
-	queryPostExistSQL               = "select postId from post where postId=? and deletedAt is null;"
-	insertPostSQL                   = "insert into post(postId, userId,collection,star,content,title,isScan,communityId) values(?,?,?,?,?,?,?,?)"
-	getPostByPopularitySQL          = "select postId, userId,collection,star,content,isScan,communityId from post where isScan=true order by star desc,collection desc limit ?"
-	getCommunityPostByPopularitySQL = "select postId, userId,collection,star,content,isScan,communityId from post where isScan=true and  commnutyId=?  order by star desc,collection desc limit ?"
-	getPostByTimeSQL                = "select postId, userId,collection,star,content,isScan,communityId from post where isScan=true order by createdAt desc limit ?"
-	queryPostsSQL                   = "select postId, userId,collection,star,content,isScan,communityId from post where postId in (?)"
+	queryPostExistSQL               = "select postId from feed where postId=? and deletedAt is null;"
+	insertPostSQL                   = "insert into feed(postId, userId,collection,star,content,title,isScan,communityId) values(?,?,?,?,?,?,?,?)"
+	getPostByPopularitySQL          = "select postId, userId,collection,star,content,isScan,communityId from feed where isScan=true order by star desc,collection desc limit ?"
+	getCommunityPostByPopularitySQL = "select postId, userId,collection,star,content,isScan,communityId from feed where isScan=true and  commnutyId=?  order by star desc,collection desc limit ?"
+	getPostByTimeSQL                = "select postId, userId,collection,star,content,isScan,communityId from feed where isScan=true and postId<? limit ?"
+	queryPostsSQL                   = "select postId, userId,collection,star,content,isScan,communityId from feed where postId in (?)"
+	getCommunityPostByTimeSQL       = "select postId, userId,collection,star,content,isScan,communityId  from feed where isScan=true and communityId=?and postId<? limit ?"
 )
 
 func QueryPostExist(postId int64) (string, error) {
@@ -57,9 +58,9 @@ func GetPostByPopularity(limit int, communityId int64, span trace.Span, logger *
 	return posts, nil
 }
 
-func GetPostByTime(limit int) ([]*models.Post, error) {
+func GetPostByTime(postId int64, limit int64) ([]*models.Post, error) {
 	var posts []*models.Post
-	if err := Client.Select(&posts, getPostByTimeSQL, limit); err != nil {
+	if err := Client.Select(&posts, getPostByTimeSQL, postId, limit); err != nil {
 		return nil, err
 	}
 	return posts, nil
@@ -68,6 +69,14 @@ func GetPostByTime(limit int) ([]*models.Post, error) {
 func QueryPosts(postIds []int64) ([]*models.Post, error) {
 	var posts []*models.Post
 	if err := Client.Select(&posts, queryPostsSQL, postIds); err != nil {
+		return nil, err
+	}
+	return posts, nil
+}
+
+func GetCommunityPostByTime(communityId int64, lastPostId int64, limit int64) ([]*models.Post, error) {
+	var posts []*models.Post
+	if err := Client.Select(&posts, getCommunityPostByTimeSQL, communityId, lastPostId, limit); err != nil {
 		return nil, err
 	}
 	return posts, nil

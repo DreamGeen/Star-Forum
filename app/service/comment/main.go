@@ -47,7 +47,7 @@ func main() {
 	// 停止发布心跳消息
 	defer close(heartbeatStop)
 
-	//post.New()
+	//feed.New()
 	client.Init()
 
 	// 创建服务

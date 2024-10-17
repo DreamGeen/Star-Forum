@@ -1,0 +1,38 @@
+syntax="proto3";
+
+package publishPb;
+
+option go_package="star/proto/publish/publishPb;publishPb";
+
+import "star/proto/feed/feed.proto";
+
+service PublishService{
+  rpc CreatePost(CreatePostRequest)returns(CreatePostResponse);
+  rpc CountPost(CountPostRequest)returns(CountPostResponse);
+  rpc  ListPost(ListPostRequest)returns(ListPostResponse);
+}
+
+message CreatePostRequest{
+  int64  UserId=1;
+  int64  CommunityId=2;
+  string  Content=4;
+  bool    IsScan=5;
+}
+
+
+message CreatePostResponse{
+}
+message CountPostRequest{
+  int64 UserId=1;
+}
+message CountPostResponse{
+  int64 Count=1;
+}
+message ListPostRequest{
+  int64 ActorId=1;
+  int64 UserId=2;
+}
+message ListPostResponse{
+  repeated  feedPb.Post  Posts=1;
+}
+

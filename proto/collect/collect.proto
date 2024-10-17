@@ -4,7 +4,7 @@ package collectPb;
 
 option go_package="star/proto/collect/collectPb;collectPb";
 
-import "star/proto/post/post.proto";
+import "star/proto/feed/feed.proto";
 
 service CollectService{
   rpc IsCollect(IsCollectRequest)returns(IsCollectResponse);

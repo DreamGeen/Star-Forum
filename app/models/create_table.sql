@@ -153,7 +153,7 @@ create table `like_remind`
 (
     like_remind_id bigint,
     like_id        bigint comment '点赞源id',-- 评论id 帖子id
-    like_type      varchar(10) comment '点赞源类型', -- "comment","post"
+    like_type      varchar(10) comment '点赞源类型', -- "comment","feed"
     like_content   varchar(255) comment '点赞源内容',
     url            varchar(255) comment '点赞源链接',
     state          boolean comment '是否已读',
@@ -170,7 +170,7 @@ create table `mention_remind`
 (
     mention_remind_id bigint,
     mention_id        bigint comment '@源id',-- 评论id 帖子id
-    mention_type      varchar(10) comment '@源类型', -- "comment","post"
+    mention_type      varchar(10) comment '@源类型', -- "comment","feed"
     mention_content   varchar(255) comment '@源内容',
     url               varchar(255) comment '@源链接',
     state             boolean comment '是否已读',
@@ -185,7 +185,7 @@ create table `reply_remind`
 (
     reply_remind_id bigint,
     reply_id        bigint comment '回复源id',-- 评论id 帖子id
-    reply_type      varchar(10) comment '回复源类型', -- "comment","post"
+    reply_type      varchar(10) comment '回复源类型', -- "comment","feed"
     reply_content   varchar(255) comment '回复源内容',
     url             varchar(255) comment '回复源链接',
     state           boolean comment '是否已读',

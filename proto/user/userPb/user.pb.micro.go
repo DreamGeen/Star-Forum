@@ -40,6 +40,7 @@ type UserService interface {
 	LoginCaptcha(ctx context.Context, in *LSRequest, opts ...client.CallOption) (*LoginResponse, error)
 	Signup(ctx context.Context, in *LSRequest, opts ...client.CallOption) (*EmptyLSResponse, error)
 	GetUserInfo(ctx context.Context, in *GetUserInfoRequest, opts ...client.CallOption) (*GetUserInfoResponse, error)
+	GetUserExistInformation(ctx context.Context, in *GetUserExistInformationRequest, opts ...client.CallOption) (*GetUserExistInformationResponse, error)
 }
 
 type userService struct {
@@ -94,6 +95,16 @@ func (c *userService) GetUserInfo(ctx context.Context, in *GetUserInfoRequest, o
 	return out, nil
 }
 
+func (c *userService) GetUserExistInformation(ctx context.Context, in *GetUserExistInformationRequest, opts ...client.CallOption) (*GetUserExistInformationResponse, error) {
+	req := c.c.NewRequest(c.name, "UserService.GetUserExistInformation", in)
+	out := new(GetUserExistInformationResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for UserService service
 
 type UserServiceHandler interface {
@@ -101,6 +112,7 @@ type UserServiceHandler interface {
 	LoginCaptcha(context.Context, *LSRequest, *LoginResponse) error
 	Signup(context.Context, *LSRequest, *EmptyLSResponse) error
 	GetUserInfo(context.Context, *GetUserInfoRequest, *GetUserInfoResponse) error
+	GetUserExistInformation(context.Context, *GetUserExistInformationRequest, *GetUserExistInformationResponse) error
 }
 
 func RegisterUserServiceHandler(s server.Server, hdlr UserServiceHandler, opts ...server.HandlerOption) error {
@@ -109,6 +121,7 @@ func RegisterUserServiceHandler(s server.Server, hdlr UserServiceHandler, opts .
 		LoginCaptcha(ctx context.Context, in *LSRequest, out *LoginResponse) error
 		Signup(ctx context.Context, in *LSRequest, out *EmptyLSResponse) error
 		GetUserInfo(ctx context.Context, in *GetUserInfoRequest, out *GetUserInfoResponse) error
+		GetUserExistInformation(ctx context.Context, in *GetUserExistInformationRequest, out *GetUserExistInformationResponse) error
 	}
 	type UserService struct {
 		userService
@@ -135,4 +148,8 @@ func (h *userServiceHandler) Signup(ctx context.Context, in *LSRequest, out *Emp
 
 func (h *userServiceHandler) GetUserInfo(ctx context.Context, in *GetUserInfoRequest, out *GetUserInfoResponse) error {
 	return h.UserServiceHandler.GetUserInfo(ctx, in, out)
+}
+
+func (h *userServiceHandler) GetUserExistInformation(ctx context.Context, in *GetUserExistInformationRequest, out *GetUserExistInformationResponse) error {
+	return h.UserServiceHandler.GetUserExistInformation(ctx, in, out)
 }

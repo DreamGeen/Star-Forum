@@ -13,9 +13,9 @@ import (
 
 const (
 	checkComment       = "SELECT EXISTS(SELECT 1 FROM postComment WHERE commentId = ? AND deletedAt IS NULL)"
-	checkPost          = "SELECT EXISTS(SELECT 1 FROM post WHERE postId = ? AND deletedAt IS NULL)"
+	checkPost          = "SELECT EXISTS(SELECT 1 FROM feed WHERE postId = ? AND deletedAt IS NULL)"
 	checkUser          = "SELECT EXISTS(SELECT 1 FROM user WHERE userId = ? AND deletedAt IS NULL)"
-	updatePostComment  = "UPDATE post SET comment = comment + ? WHERE postId = ? "
+	updatePostComment  = "UPDATE feed SET comment = comment + ? WHERE postId = ? "
 	updateReplyComment = "UPDATE postComment SET reply = reply + ? WHERE commentId = ? "
 	queryPostId        = "SELECT postId FROM postComment WHERE commentId = ? AND deletedAt IS NULL"
 	insertComment      = "INSERT INTO postComment (commentId, postId, userId, content, beCommentId) VALUES (?, ?, ?, ?, ?)"
@@ -26,7 +26,7 @@ const (
 	queryCommentsTime  = "SELECT commentId, postId, userId, content, star, reply, beCommentId, createdAt FROM postComment WHERE postId = ? AND deletedAt IS NULL ORDER BY createdAt DESC, star DESC"
 	starComment        = "UPDATE postComment SET star = star + ? WHERE commentId = ?"
 	queryStar          = "SELECT star FROM postComment WHERE commentId = ? AND deletedAt IS NULL"
-	countCommentSQL    = "SELECT comment_count FROM post WHERE postId = ?"
+	countCommentSQL    = "SELECT comment_count FROM feed WHERE postId = ?"
 	getCommentInfoSQL  = "SELECT  createdAt, commentId, postId, userId, content, star, reply, beCommentId   FROM  postcomment  WHERE commentId=? AND  deletedAt IS NULL;"
 )
 

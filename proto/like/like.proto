@@ -2,7 +2,7 @@ syntax="proto3";
 
 option go_package="star/proto/like/likePb;likePb";
 
-import "star/proto/post/post.proto";
+import "star/proto/feed/feed.proto";
 
 service LikeService{
   rpc LikeAction(LikeActionRequest)returns(LikeActionResponse);

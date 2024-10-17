@@ -42,6 +42,7 @@ message DeleteCommentResponse {
 // 定义获取评论列表的请求
 message GetCommentsRequest {
   int64 postId = 1;      // 帖子id
+  int64 communityId=2;
 }
 
 // 定义获取评论列表的响应

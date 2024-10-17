@@ -10,6 +10,7 @@ service userService{
    rpc LoginCaptcha(LSRequest)returns(LoginResponse){};
    rpc Signup(LSRequest)returns(EmptyLSResponse){};
    rpc GetUserInfo(GetUserInfoRequest)returns(GetUserInfoResponse);
+   rpc  GetUserExistInformation(GetUserExistInformationRequest)returns(GetUserExistInformationResponse);
 }
 
 //LSRequest 登录或注册请求,其中User可以表示用户名或邮箱
@@ -43,11 +44,23 @@ message  GetUserInfoResponse{
 message User{
     int64  UserId=1;
     int64   exp=2;
-    uint32   grade=3;
-    string  UserName=4;
-    string   Img=5;
-    string   Gender=6;
-    string   Birth=7;
-    string   Sign=8;
-    bool   IsFollow=9;
+   optional int64   TotalLiked=3;
+   optional int64  LikeCount =4  ;
+   optional int64  CollectCount=5;
+   optional int64   PostCount=6;
+   optional  int64   FollowCount=7;
+   optional  int64   FansCount=8;
+    uint32   grade=9;
+    string  UserName=10;
+   optional string   Img=11;
+   optional string   Gender=12;
+   optional string   Birth=13;
+   optional string   Sign=14;
+    bool   IsFollow=15;
+}
+message GetUserExistInformationRequest{
+  int64  UserId=1;
+}
+message GetUserExistInformationResponse{
+  bool  Existed=1;
 }

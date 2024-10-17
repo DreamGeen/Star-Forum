@@ -31,6 +31,7 @@ const (
 	PostNotExistsCode
 	PostErrorCode
 	UploadCode
+	RequestTooFrequentlyCode
 )
 
 const (
@@ -45,32 +46,34 @@ const (
 	RelationErrorCode
 	LikeErrorCode
 	CollectErrorCode
+	PublishErrorCode
 )
 
 var (
-	ErrUserNotExists       = errors.New("用户不存在")
-	ErrUsernameExists      = errors.New("用户名已存在")
-	ErrUsernameMustLess    = errors.New("用户名长度必须小于20")
-	ErrUsernameStartWith   = errors.New("用户名不能以数字开头")
-	ErrInvalidPassword     = errors.New("用户名或密码错误")
-	ErrInvalidParam        = errors.New("请求参数错误")
-	ErrInvalidCaptcha      = errors.New("验证码错误")
-	ErrNotLogin            = errors.New("请登录")
-	ErrPhoneEmpty          = errors.New("手机号为空")
-	ErrPhoneRegistered     = errors.New("手机号已注册")
-	ErrPhoneUnregistered   = errors.New("该手机号未注册")
-	ErrCommentNotExists    = errors.New("评论不存在或已被删除")
-	ErrHubExists           = errors.New("聊天频道已存在")
-	ErrHubNotExists        = errors.New("聊天频道不存在")
-	ErrMessageInadequate   = errors.New("消息不足")
-	ErrDescriptionShort    = errors.New("简介字数不能少于2")
-	ErrDescriptionLong     = errors.New("简介字数不能大于50")
-	ErrCommunityNameEmpty  = errors.New("社区名不能为空")
-	ErrCommunityNameLong   = errors.New("社区名不能大于10")
-	ErrCommunityNameExists = errors.New("该社区名已存在")
-	ErrCommunityNotExists  = errors.New("该社区不存在")
-	ErrPostNotExists       = errors.New("该帖子不存在")
-	ErrUpload              = errors.New("上传失败")
+	ErrUserNotExists        = errors.New("用户不存在")
+	ErrUsernameExists       = errors.New("用户名已存在")
+	ErrUsernameMustLess     = errors.New("用户名长度必须小于20")
+	ErrUsernameStartWith    = errors.New("用户名不能以数字开头")
+	ErrInvalidPassword      = errors.New("用户名或密码错误")
+	ErrInvalidParam         = errors.New("请求参数错误")
+	ErrInvalidCaptcha       = errors.New("验证码错误")
+	ErrNotLogin             = errors.New("请登录")
+	ErrPhoneEmpty           = errors.New("手机号为空")
+	ErrPhoneRegistered      = errors.New("手机号已注册")
+	ErrPhoneUnregistered    = errors.New("该手机号未注册")
+	ErrCommentNotExists     = errors.New("评论不存在或已被删除")
+	ErrHubExists            = errors.New("聊天频道已存在")
+	ErrHubNotExists         = errors.New("聊天频道不存在")
+	ErrMessageInadequate    = errors.New("消息不足")
+	ErrDescriptionShort     = errors.New("简介字数不能少于2")
+	ErrDescriptionLong      = errors.New("简介字数不能大于50")
+	ErrCommunityNameEmpty   = errors.New("社区名不能为空")
+	ErrCommunityNameLong    = errors.New("社区名不能大于10")
+	ErrCommunityNameExists  = errors.New("该社区名已存在")
+	ErrCommunityNotExists   = errors.New("该社区不存在")
+	ErrPostNotExists        = errors.New("该帖子不存在")
+	ErrUpload               = errors.New("上传失败")
+	ErrRequestTooFrequently = errors.New("请求频繁")
 )
 
 var (
@@ -86,32 +89,34 @@ var (
 	ErrRelationError  = errors.New("关系服务内部出现问题，请稍后再试！")
 	ErrLikeError      = errors.New("点赞服务内部出现问题，请稍后再试！")
 	ErrCollectError   = errors.New("收藏服务内部出现问题，请稍后再试！")
+	ErrPublishError   = errors.New("发帖服务内部出现问题，请稍后再试！")
 )
 
 var codeMap = map[error]int32{
-	ErrUserNotExists:       UserNotExistsCode,
-	ErrUsernameExists:      UsernameExistsCode,
-	ErrUsernameMustLess:    UsernameMustLess,
-	ErrUsernameStartWith:   UsernameStartWith,
-	ErrInvalidPassword:     InvalidPasswordCode,
-	ErrInvalidParam:        InvalidParamCode,
-	ErrInvalidCaptcha:      InvalidCaptchaCode,
-	ErrNotLogin:            NotLoginCode,
-	ErrPhoneEmpty:          PhoneEmptyCode,
-	ErrPhoneRegistered:     PhoneRegisteredCode,
-	ErrPhoneUnregistered:   PhoneUnregisteredCode,
-	ErrCommentNotExists:    CommentNotExistsCode,
-	ErrHubExists:           HubExistsCode,
-	ErrHubNotExists:        HubNotExistCode,
-	ErrMessageInadequate:   MessageInadequateCode,
-	ErrDescriptionShort:    DescriptionShortCode,
-	ErrDescriptionLong:     DescriptionLongCode,
-	ErrCommunityNameEmpty:  CommunityNameEmptyCode,
-	ErrCommunityNameLong:   CommunityNameLongCode,
-	ErrCommunityNameExists: CommunityNameExistsCode,
-	ErrCommunityNotExists:  CommunityNotExitsCode,
-	ErrPostNotExists:       PostNotExistsCode,
-	ErrUpload:              UploadCode,
+	ErrUserNotExists:        UserNotExistsCode,
+	ErrUsernameExists:       UsernameExistsCode,
+	ErrUsernameMustLess:     UsernameMustLess,
+	ErrUsernameStartWith:    UsernameStartWith,
+	ErrInvalidPassword:      InvalidPasswordCode,
+	ErrInvalidParam:         InvalidParamCode,
+	ErrInvalidCaptcha:       InvalidCaptchaCode,
+	ErrNotLogin:             NotLoginCode,
+	ErrPhoneEmpty:           PhoneEmptyCode,
+	ErrPhoneRegistered:      PhoneRegisteredCode,
+	ErrPhoneUnregistered:    PhoneUnregisteredCode,
+	ErrCommentNotExists:     CommentNotExistsCode,
+	ErrHubExists:            HubExistsCode,
+	ErrHubNotExists:         HubNotExistCode,
+	ErrMessageInadequate:    MessageInadequateCode,
+	ErrDescriptionShort:     DescriptionShortCode,
+	ErrDescriptionLong:      DescriptionLongCode,
+	ErrCommunityNameEmpty:   CommunityNameEmptyCode,
+	ErrCommunityNameLong:    CommunityNameLongCode,
+	ErrCommunityNameExists:  CommunityNameExistsCode,
+	ErrCommunityNotExists:   CommunityNotExitsCode,
+	ErrPostNotExists:        PostNotExistsCode,
+	ErrUpload:               UploadCode,
+	ErrRequestTooFrequently: RequestTooFrequentlyCode,
 
 	ErrServiceBusy:    ServiceBusyCode,
 	ErrUserError:      UserErrorCode,
@@ -125,6 +130,7 @@ var codeMap = map[error]int32{
 	ErrRelationError:  RelationErrorCode,
 	ErrLikeError:      LikeErrorCode,
 	ErrCollectError:   CollectErrorCode,
+	ErrPublishError:   PublishErrorCode,
 }
 
 func getCode(err error) int32 {

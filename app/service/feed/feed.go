@@ -1,4 +1,4 @@
-package post
+package feed
 
 import (
 	"context"
@@ -9,6 +9,8 @@ import (
 	"github.com/robfig/cron/v3"
 	"go-micro.dev/v4"
 	"go.uber.org/zap"
+	"math"
+	"slices"
 	"star/app/constant/str"
 	"star/app/extra/tracing"
 	"star/app/models"
@@ -16,25 +18,31 @@ import (
 	"star/app/storage/mysql"
 	"star/app/storage/redis"
 	"star/app/utils/logging"
-	"star/app/utils/snowflake"
+	"star/proto/collect/collectPb"
 	"star/proto/comment/commentPb"
 	"star/proto/community/communityPb"
+	"star/proto/feed/feedPb"
 	"star/proto/like/likePb"
-	"star/proto/post/postPb"
 	"star/proto/user/userPb"
 	"sync"
 	"time"
 )
 
-type PostSrv struct {
+// 每页帖子数
+const (
+	maxNewestPostLength = 400 //GetPostByTime List 的最大长度
+)
+
+type FeedSrv struct {
 }
 
 var userService userPb.UserService
 var communityService communityPb.CommunityService
 var likeService likePb.LikeService
 var commentService commentPb.CommentService
+var collectService collectPb.CollectService
 
-func (p *PostSrv) New() {
+func (p *FeedSrv) New() {
 
 	userMicroService := micro.NewService(micro.Name(str.UserServiceClient))
 	userService = userPb.NewUserService(str.UserService, userMicroService.Client())
@@ -48,19 +56,22 @@ func (p *PostSrv) New() {
 	commentMicroService := micro.NewService(micro.Name(str.CommentServiceClient))
 	commentService = commentPb.NewCommentService(str.CommentService, commentMicroService.Client())
 
+	collectMicroService := micro.NewService(micro.Name(str.CollectServiceClient))
+	collectService = collectPb.NewCollectService(str.CollectService, collectMicroService.Client())
+
 	cronRunner := cron.New()
 	cronRunner.AddFunc("@every 10m", updatePopularPost)
-	cronRunner.AddFunc("@hourly", cleanPost)
+	cronRunner.AddFunc("@hourly", cleanGetPostByTime)
 	cronRunner.Start()
 
 }
 
 // QueryPostExist 查询帖子是否存在
-func (p *PostSrv) QueryPostExist(ctx context.Context, req *postPb.QueryPostExistRequest, resp *postPb.QueryPostExistResponse) error {
+func (p *FeedSrv) QueryPostExist(ctx context.Context, req *feedPb.QueryPostExistRequest, resp *feedPb.QueryPostExistResponse) error {
 	ctx, span := tracing.Tracer.Start(ctx, "QueryPostExistService")
 	defer span.End()
 	logging.SetSpanWithHostname(span)
-	logger := logging.LogServiceWithTrace(span, "PostService.QueryPostExist")
+	logger := logging.LogServiceWithTrace(span, "FeedService.QueryPostExist")
 
 	key := fmt.Sprintf("QueryPostExist:%d", req.PostId)
 	_, err := cached.GetWithFunc(ctx, key, func(key string) (string, error) {
@@ -71,7 +82,7 @@ func (p *PostSrv) QueryPostExist(ctx context.Context, req *postPb.QueryPostExist
 			resp.Exist = false
 			return nil
 		}
-		logger.Error("query post exist err:",
+		logger.Error("query feed exist err:",
 			zap.Error(err))
 		logging.SetSpanError(span, err)
 		return str.ErrPostError
@@ -80,67 +91,30 @@ func (p *PostSrv) QueryPostExist(ctx context.Context, req *postPb.QueryPostExist
 	return nil
 }
 
-// CreatePost 创建帖子
-func (p *PostSrv) CreatePost(ctx context.Context, req *postPb.CreatePostRequest, resp *postPb.CreatePostResponse) error {
-	ctx, span := tracing.Tracer.Start(ctx, "CreatePostService")
-	defer span.End()
-	logging.SetSpanWithHostname(span)
-	logger := logging.LogServiceWithTrace(span, "PostService.CreatePost")
-
-	post := &models.Post{
-		PostId:      snowflake.GetID(),
-		UserId:      req.UserId,
-		Star:        0,
-		Collection:  0,
-		Content:     req.Content,
-		IsScan:      req.IsScan,
-		CommunityId: req.CommunityId,
-	}
-	key := fmt.Sprintf("GetPostByTime:%d", req.CommunityId)
-	if err := redis.Client.LPush(ctx, key, post).Err(); err != nil {
-		logger.Error("redis create post error",
-			zap.Int64("user_id", req.UserId),
-			zap.Error(err))
-		logging.SetSpanError(span, err)
-		return str.ErrPostError
-	}
-	if err := mysql.InsertPost(post); err != nil {
-		logger.Error("mysql insert post error",
-			zap.Int64("user_id", req.UserId),
-			zap.Error(err),
-			zap.Any("post", post))
-		logging.SetSpanError(span, err)
-		return str.ErrPostError
-	}
-	return nil
-}
-
-// GetPostByPopularity 获取社区热门帖子
-func (p *PostSrv) GetPostByPopularity(ctx context.Context, req *postPb.GetPostListByPopularityRequest, resp *postPb.GetPostListByPopularityResponse) error {
+// GetCommunityPostByPopularity 获取社区热门帖子
+func (p *FeedSrv) GetCommunityPostByPopularity(ctx context.Context, req *feedPb.GetCommunityPostByPopularityRequest, resp *feedPb.GetCommunityPostByPopularityResponse) error {
 	ctx, span := tracing.Tracer.Start(ctx, "GetPostByPopularityService")
 	defer span.End()
 	logging.SetSpanWithHostname(span)
-	logger := logging.LogServiceWithTrace(span, "PostService.GetPostByPopularity")
+	logger := logging.LogServiceWithTrace(span, "FeedService.GetPostByPopularity")
 
 	key := fmt.Sprintf("GetPostByPopularity:%d", req.CommunityId)
 	val, err := redis.Client.Get(ctx, key).Result()
 	if err != nil && !errors.Is(err, redis2.Nil) {
-		logger.Error("redis get post by popularity error",
+		logger.Error("redis get feed by popularity error",
 			zap.Error(err),
-			zap.Int64("communityId", req.CommunityId),
-			zap.Int64("page", req.Page),
-			zap.Int64("limit", req.Limit))
+			zap.Int64("communityId", req.CommunityId))
 		logging.SetSpanError(span, err)
 		return str.ErrPostError
 	}
 	if errors.Is(err, redis2.Nil) {
 		posts, err := mysql.GetPostByPopularity(str.DefaultLoadPostNumber, req.CommunityId, span, logger)
 		if err != nil {
-			logger.Error("get post by popularity error",
+			logger.Error("get feed by popularity error",
 				zap.Error(err),
-				zap.Int64("communityId", req.CommunityId),
-				zap.Int64("page", req.Page),
-				zap.Int64("limit", req.Limit))
+				zap.Int64("communityId", req.CommunityId))
+			//zap.Int64("page", req.Page),
+			//zap.Int64("limit", req.Limit))
 			logging.SetSpanError(span, err)
 			return str.ErrPostError
 		}
@@ -164,7 +138,7 @@ func (p *PostSrv) GetPostByPopularity(ctx context.Context, req *postPb.GetPostLi
 		}
 		return nil
 	}
-	var posts []*postPb.Post
+	var posts []*feedPb.Post
 	if err = json.Unmarshal([]byte(val), &posts); err != nil {
 		logging.Logger.Error("GetPostByPopularity service error,json unmarshal error",
 			zap.Error(err))
@@ -175,14 +149,14 @@ func (p *PostSrv) GetPostByPopularity(ctx context.Context, req *postPb.GetPostLi
 	return nil
 }
 
-func convertGetPostToPB(ctx context.Context, posts []*models.Post, logger *zap.Logger) []*postPb.Post {
-	pposts := make([]*postPb.Post, len(posts))
+func convertGetPostToPB(ctx context.Context, posts []*models.Post, logger *zap.Logger) []*feedPb.Post {
+	pposts := make([]*feedPb.Post, len(posts))
 	var wg sync.WaitGroup
 	postRusultChan := make(chan struct {
 		index  int
-		pposts *postPb.Post
+		pposts *feedPb.Post
 	}, len(posts))
-	goroutineLimiter := make(chan struct{}, 15)
+	goroutineLimiter := make(chan struct{}, min(15, len(posts)))
 	for i, post := range posts {
 		wg.Add(1)
 		goroutineLimiter <- struct{}{}
@@ -209,7 +183,7 @@ func convertGetPostToPB(ctx context.Context, posts []*models.Post, logger *zap.L
 					zap.Int64("communityId", post.CommunityId))
 				return
 			}
-			ppost := &postPb.Post{
+			ppost := &feedPb.Post{
 				PostId:    post.PostId,
 				Author:    userResp.User,
 				Community: communityResp.Community,
@@ -217,7 +191,7 @@ func convertGetPostToPB(ctx context.Context, posts []*models.Post, logger *zap.L
 			}
 			postRusultChan <- struct {
 				index  int
-				pposts *postPb.Post
+				pposts *feedPb.Post
 			}{index: i, pposts: ppost}
 		}(i, post)
 	}
@@ -236,12 +210,12 @@ func updatePopularPost() {
 	ctx, span := tracing.Tracer.Start(context.Background(), "updatePopularPostService")
 	defer span.End()
 	logging.SetSpanWithHostname(span)
-	logger := logging.LogServiceWithTrace(span, "PostService.updatePopularPost")
+	logger := logging.LogServiceWithTrace(span, "FeedService.updatePopularPost")
 
 	key := "GetPostByPopularity"
 	posts, err := mysql.GetPostByPopularity(str.DefaultLoadPostNumber, 0, span, logger)
 	if err != nil {
-		logger.Error("get post by popularity error",
+		logger.Error("get feed by popularity error",
 			zap.Error(err))
 		return
 	}
@@ -253,43 +227,178 @@ func updatePopularPost() {
 		return
 	}
 	if err = redis.Client.Set(ctx, key, ppostJson, time.Hour).Err(); err != nil {
-		logger.Error("redis set popular post error",
+		logger.Error("redis set popular feed error",
 			zap.Error(err))
 		return
 	}
 }
-func (p *PostSrv) GetPostByTime(ctx context.Context, req *postPb.GetPostListByTimeRequest, resp *postPb.GetPostListByTimeResponse) error {
-	ctx, span := tracing.Tracer.Start(ctx, "GetPostByTimeService")
+
+// GetCommunityPostByTime 获取社区最新帖子
+func (p *FeedSrv) GetCommunityPostByTime(ctx context.Context, req *feedPb.GetCommunityPostByTimeRequest, resp *feedPb.GetCommunityPostByTimeResponse) error {
+	ctx, span := tracing.Tracer.Start(ctx, "GetCommunityPostByTimeService")
 	defer span.End()
 	logging.SetSpanWithHostname(span)
-	logger := logging.LogServiceWithTrace(span, "PostService.GetPostByTime")
+	logger := logging.LogServiceWithTrace(span, "CommunityService.GetCommunityPostByTime")
 
-	limit := req.Limit
-	page := req.Page
-	offset := limit * (page - 1)
+	var posts []*models.Post
+	key := fmt.Sprintf("GetCommunityPostByTime:%d", req.CommunityId)
+	length, err := redis.Client.LLen(ctx, key).Result()
+	if err != nil {
+		logger.Error("GetCommunityPostByTime redis error",
+			zap.Error(err))
+		logging.SetSpanError(span, err)
+		return str.ErrPostError
+	}
+	offset := req.Page
 
-	key := fmt.Sprintf("GetPostByTime:%d", req.CommunityId)
-	var post []*models.Post
-	if err := redis.Client.LRange(ctx, key, offset, offset+limit).ScanSlice(&post); err != nil {
-		logger.Error("get redis list post error",
+	if length == 0 {
+
+		posts, err = mysql.GetCommunityPostByTime(req.CommunityId, math.MaxInt64, 120)
+		if err != nil {
+			logger.Error("mysql GetCommunityPostByTime server error",
+				zap.Error(err),
+				zap.Int64("actorId", req.ActorId),
+				zap.Int64("communityId", req.CommunityId))
+			logging.SetSpanError(span, err)
+			return str.ErrPostError
+		}
+		go func() {
+			x := len(posts)/20 + 1
+			_, err = redis.Client.TxPipelined(ctx, func(pipe redis2.Pipeliner) error {
+				start, end := 0, 20
+				for i := 0; i < x; i++ {
+					segPost, err := json.Marshal(posts[start:end])
+					if err != nil {
+						logger.Error("marshal feed error",
+							zap.Error(err))
+						continue
+					}
+					pipe.LPush(ctx, key, segPost)
+				}
+				start += 20
+				end += 20
+				pipe.Expire(ctx, key, 1*time.Hour)
+				return nil
+			})
+			if err != nil {
+				logger.Error("redis save CommunityPostByTime error",
+					zap.Error(err))
+			}
+		}()
+	} else if req.Page < length {
+
+		postsJson, err := redis.Client.LIndex(ctx, key, req.Page-1).Result()
+		if err != nil {
+			logger.Error("GetCommunityPostByTime redis error",
+				zap.Error(err),
+				zap.Int64("communityId", req.CommunityId))
+			logging.SetSpanError(span, err)
+			return str.ErrPostError
+		}
+		redis.Client.Expire(ctx, key, 1*time.Hour)
+		err = json.Unmarshal([]byte(postsJson), &posts)
+		if err != nil {
+			logger.Error("unmarshal feed error",
+				zap.Error(err))
+			logging.SetSpanError(span, err)
+			return str.ErrPostError
+		}
+
+	} else {
+		posts, err = mysql.GetCommunityPostByTime(req.CommunityId, req.LastPostId, 20)
+		if err != nil {
+			logger.Error("mysql GetCommunityPostByTime server error",
+				zap.Error(err),
+				zap.Int64("actorId", req.ActorId),
+				zap.Int64("communityId", req.CommunityId))
+			logging.SetSpanError(span, err)
+			return str.ErrPostError
+		}
+	}
+	resp.Posts, err = queryDetailed(ctx, posts, req.ActorId, logger)
+	if err != nil {
+		logger.Error("get feed detail error",
 			zap.Error(err),
+			zap.Int64("actorId", req.ActorId),
 			zap.Int64("communityId", req.CommunityId))
 		logging.SetSpanError(span, err)
 		return str.ErrPostError
 	}
-	if len(post) != 0 {
-		resp.Posts = convertGetPostToPB(ctx, post, logger)
+	resp.NewPostId = resp.Posts[len(resp.Posts)-1].PostId
+	return nil
+}
+
+// GetPostByTime 获取最新帖子
+func (p *FeedSrv) GetPostByTime(ctx context.Context, req *feedPb.GetPostByTimeRequest, resp *feedPb.GetPostByTimeResponse) error {
+	ctx, span := tracing.Tracer.Start(ctx, "GetPostByTimeService")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger := logging.LogServiceWithTrace(span, "FeedService.GetPostByTime")
+
+	key := "GetPostByTime"
+	var posts []*models.Post
+	length, err := redis.Client.LLen(ctx, key).Result()
+	if err != nil {
+		logger.Error("get redis feed list length error",
+			zap.Error(err))
+		logging.SetSpanError(span, err)
+		return str.ErrPostError
+	}
+	if length == 0 {
+		resp.Posts = nil
 		return nil
 	}
+	offset := (req.Page - 1) * limit
+	end := offset + limit
+	if offset < length {
+		if err := redis.Client.LRange(ctx, key, offset, end-1).ScanSlice(&posts); err != nil {
+			logger.Error("get redis list feed error",
+				zap.Error(err),
+				zap.Int64("communityId", 1))
+			logging.SetSpanError(span, err)
+			return str.ErrPostError
+		}
+		if end <= length {
+			resp.Posts = convertGetPostToPB(ctx, posts, logger)
+			return nil
+		} else {
+			lastPostId := posts[len(posts)-1].PostId
+			xpost, err := mysql.GetPostByTime(lastPostId, end-length)
+			if err != nil {
+				logger.Error("mysql get feed by time error",
+					zap.Error(err))
+				logging.SetSpanError(span, err)
+				return str.ErrPostError
+			}
+			posts = slices.Concat(posts, xpost)
+			resp.Posts = convertGetPostToPB(ctx, posts, logger)
+			return nil
+		}
+	}
+	if err := redis.Client.LRange(ctx, key, length-1, length-1).ScanSlice(&posts); err != nil {
+		logger.Error("redis get last feed error",
+			zap.Error(err))
+		logging.SetSpanError(span, err)
+		return str.ErrPostError
+	}
+	xposts, err := mysql.GetPostByTime(posts[0].PostId, limit)
+	if err != nil {
+		logger.Error("mysql get feed by time error",
+			zap.Error(err),
+			zap.Int64("page", req.Page))
+		logging.SetSpanError(span, err)
+		return str.ErrPostError
+	}
+	resp.Posts = convertGetPostToPB(ctx, xposts, logger)
 	return nil
 }
 
 // QueryPosts 查询帖子的大致信息
-func (p *PostSrv) QueryPosts(ctx context.Context, req *postPb.QueryPostsRequest, resp *postPb.QueryPostsResponse) error {
+func (p *FeedSrv) QueryPosts(ctx context.Context, req *feedPb.QueryPostsRequest, resp *feedPb.QueryPostsResponse) error {
 	ctx, span := tracing.Tracer.Start(ctx, "QueryPostsService")
 	defer span.End()
 	logging.SetSpanWithHostname(span)
-	logger := logging.LogServiceWithTrace(span, "PostService.QueryPosts")
+	logger := logging.LogServiceWithTrace(span, "FeedService.QueryPosts")
 
 	var err error
 	resp.Posts, err = query(ctx, req.PostIds, req.ActorId, logger)
@@ -303,7 +412,7 @@ func (p *PostSrv) QueryPosts(ctx context.Context, req *postPb.QueryPostsRequest,
 	return nil
 }
 
-func query(ctx context.Context, postIds []int64, actorId int64, logger *zap.Logger) ([]*postPb.Post, error) {
+func query(ctx context.Context, postIds []int64, actorId int64, logger *zap.Logger) ([]*feedPb.Post, error) {
 	posts, err := mysql.QueryPosts(postIds)
 	if err != nil {
 		return nil, err
@@ -311,12 +420,12 @@ func query(ctx context.Context, postIds []int64, actorId int64, logger *zap.Logg
 	return queryDetailed(ctx, posts, actorId, logger)
 }
 
-func queryDetailed(ctx context.Context, posts []*models.Post, actorId int64, logger *zap.Logger) ([]*postPb.Post, error) {
-	respPosts := make([]*postPb.Post, len(posts))
+func queryDetailed(ctx context.Context, posts []*models.Post, actorId int64, logger *zap.Logger) ([]*feedPb.Post, error) {
+	respPosts := make([]*feedPb.Post, len(posts))
 	userMap := make(map[int64]*userPb.User)
 	communityMap := make(map[int64]*communityPb.Community)
 	for i, post := range posts {
-		respPosts[i] = &postPb.Post{
+		respPosts[i] = &feedPb.Post{
 			PostId: post.PostId,
 		}
 		if _, exist := userMap[post.UserId]; !exist {
@@ -326,16 +435,16 @@ func queryDetailed(ctx context.Context, posts []*models.Post, actorId int64, log
 			communityMap[post.CommunityId] = &communityPb.Community{}
 		}
 	}
-	wg := &sync.WaitGroup{}
-	goroutineLimiter := make(chan struct{}, 30)
+	ucwg := sync.WaitGroup{}
+	goroutineLimiter := make(chan struct{}, 45)
 	defer close(goroutineLimiter)
 	for userId := range userMap {
-		wg.Add(1)
+		ucwg.Add(1)
 		goroutineLimiter <- struct{}{}
 		go func(userId int64) {
 			defer func() {
 				<-goroutineLimiter
-				wg.Done()
+				ucwg.Done()
 			}()
 			userResp, err := userService.GetUserInfo(ctx, &userPb.GetUserInfoRequest{
 				UserId: userId,
@@ -350,11 +459,11 @@ func queryDetailed(ctx context.Context, posts []*models.Post, actorId int64, log
 	}
 	for communityId := range communityMap {
 		goroutineLimiter <- struct{}{}
-		wg.Add(1)
+		ucwg.Add(1)
 		go func(communityId int64) {
 			defer func() {
 				<-goroutineLimiter
-				wg.Done()
+				ucwg.Done()
 			}()
 			communityResp, err := communityService.GetCommunityInfo(ctx, &communityPb.GetCommunityInfoRequest{
 				CommunityId: communityId,
@@ -367,12 +476,17 @@ func queryDetailed(ctx context.Context, posts []*models.Post, actorId int64, log
 			communityMap[communityId] = communityResp.Community
 		}(communityId)
 	}
-	wg.Wait()
+	wg := sync.WaitGroup{}
 	for i, post := range posts {
-		wg.Add(2)
+
+		goroutineLimiter <- struct{}{}
+		wg.Add(1)
 		//like count
 		go func(i int, post *models.Post) {
-			defer wg.Done()
+			defer func() {
+				wg.Done()
+				<-goroutineLimiter
+			}()
 			likeCountResp, err := likeService.GetLikeCount(ctx, &likePb.GetLikeCountRequest{
 				SourceId:   post.PostId,
 				SourceType: 1,
@@ -386,9 +500,14 @@ func queryDetailed(ctx context.Context, posts []*models.Post, actorId int64, log
 			respPosts[i].LikeCount = likeCountResp.Count
 		}(i, post)
 
+		goroutineLimiter <- struct{}{}
+		wg.Add(1)
 		//comment count
 		go func(i int, post *models.Post) {
-			defer wg.Done()
+			defer func() {
+				wg.Done()
+				<-goroutineLimiter
+			}()
 			commentCountResp, err := commentService.CountComment(ctx, &commentPb.CountCommentRequest{
 				ActorId: actorId,
 				PostId:  post.PostId,
@@ -404,69 +523,69 @@ func queryDetailed(ctx context.Context, posts []*models.Post, actorId int64, log
 		}(i, post)
 		if actorId != 0 {
 			wg.Add(1)
-			//IsLike
 			go func(i int, post *models.Post) {
 				defer wg.Done()
+				//IsLike
 				isLikeResp, err := likeService.IsLike(ctx, &likePb.IsLikeRequest{
 					ActorId:    actorId,
 					SourceId:   post.PostId,
 					SourceType: 1,
 				})
 				if err != nil {
-					logger.Error("get post isLike error",
+					logger.Error("get feed isLike error",
 						zap.Error(err),
 						zap.Int64("post_id", post.PostId),
 						zap.Int64("actor_id", actorId))
 					return
 				}
 				respPosts[i].IsLike = isLikeResp.Result
+				//IsCollect
+				isCollectResp, err := collectService.IsCollect(ctx, &collectPb.IsCollectRequest{
+					ActorId: actorId,
+					PostId:  post.PostId,
+				})
+				if err != nil {
+					logger.Error("get feed isCollect error",
+						zap.Error(err),
+						zap.Int64("post_id", post.PostId),
+						zap.Int64("actor_id", actorId))
+					return
+				}
+				respPosts[i].IsCollect = isCollectResp.Result
 			}(i, post)
-			//IsCollect
 		}
 	}
+	ucwg.Wait()
 	wg.Wait()
 	return respPosts, nil
 }
 
-func cleanPost() {
-	ctx, span := tracing.Tracer.Start(context.Background(), "cleanPostService")
+func cleanGetPostByTime() {
+	ctx, span := tracing.Tracer.Start(context.Background(), "cleanGetPostByTimeService")
 	defer span.End()
 	logging.SetSpanWithHostname(span)
-	logger := logging.LogServiceWithTrace(span, "PostService.cleanPost")
+	logger := logging.LogServiceWithTrace(span, "FeedService.cleanGetPostByTime")
 
-	communityIds, err := mysql.GetAllCommunityId()
+	key := "GetPostByTime"
+	length, err := redis.Client.LLen(ctx, key).Result()
 	if err != nil {
-		logger.Error("get all community id error",
+		logger.Error("get GetPostByTime redis list length error",
 			zap.Error(err))
 		logging.SetSpanError(span, err)
 		return
 	}
-	pipe := redis.Client.Pipeline()
-	for _, communityId := range communityIds {
-		key := fmt.Sprintf("GetPostByTime:%d", communityId)
-		pipe.LLen(context.Background(), key)
+	if length < maxNewestPostLength {
+		logger.Info("redis GetPostByTime list length is under control",
+			zap.Int64("length", length))
+		return
 	}
-	cmder, err := pipe.Exec(ctx)
+	err = redis.Client.RPopCount(ctx, key, int(length/2)).Err()
 	if err != nil {
-		logger.Error("get all list length error",
+		logger.Error("rpop GetPostByTime redis list error",
 			zap.Error(err))
 		logging.SetSpanError(span, err)
 		return
 	}
-	for i, cmd := range cmder {
-		communityId := communityIds[i]
-		key := fmt.Sprintf("GetPostByTime:%d", communityId)
-
-		length := cmd.(*redis2.IntCmd).Val()
-		if length < 200 {
-			continue
-		}
-		if err := redis.Client.LTrim(ctx, key, 0, 199).Err(); err != nil {
-			logger.Warn("cleanPost service error,delete redis post error",
-				zap.Error(err),
-				zap.Int64("communityId", communityId))
-			continue
-		}
-
-	}
+	logger.Info("clean GetPostByTime list successfully",
+		zap.Int64("removeLength", length/2))
 }

@@ -23,7 +23,7 @@ func PostComment(c *gin.Context) {
 	// 参数校验
 	p := new(models.PostComment)
 	if err := c.ShouldBindJSON(p); err != nil {
-		logging.Logger.Error("post comment error,invalid param",
+		logging.Logger.Error("feed comment error,invalid param",
 			zap.Error(err))
 		str2.Response(c, str2.ErrInvalidParam, str2.Empty, nil)
 		return
@@ -37,7 +37,7 @@ func PostComment(c *gin.Context) {
 	}
 	resp, err := client.PostComment(c, req)
 	if err != nil {
-		logging.Logger.Error("post comment error",
+		logging.Logger.Error("feed comment error",
 			zap.Error(err),
 			zap.Int64("userId", req.UserId),
 			zap.String("content", req.Content),

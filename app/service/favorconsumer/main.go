@@ -133,7 +133,7 @@ func asyncUpdatePostLike() {
 			muLikePost.Lock()
 			for postId, count := range likePostBuffer {
 				if err := mysql.UpdatePostLike(postId, count); err != nil {
-					logging.Logger.Error("async post update like fail", zap.Error(err), zap.Int64("post_id", postId), zap.Int("count", count))
+					logging.Logger.Error("async feed update like fail", zap.Error(err), zap.Int64("post_id", postId), zap.Int("count", count))
 				}
 				delete(likePostBuffer, postId)
 			}
@@ -168,7 +168,7 @@ func asyncUpdatePostCollect() {
 			muCollect.Lock()
 			for postId, userCollect := range collectPostBuffer {
 				if err := mysql.AddCollect(postId, userCollect); err != nil {
-					logging.Logger.Error("async post add collectMsg fail",
+					logging.Logger.Error("async feed add collectMsg fail",
 						zap.Error(err),
 						zap.Int64("post_id", postId),
 						zap.Int("count", userCollect.count))
@@ -177,7 +177,7 @@ func asyncUpdatePostCollect() {
 			}
 			for postId, userIds := range deleteCollect {
 				if err := mysql.DeleteCollect(postId, userIds); err != nil {
-					logging.Logger.Error("async post delete collectMsg fail",
+					logging.Logger.Error("async feed delete collectMsg fail",
 						zap.Error(err),
 						zap.Int64("post_id", postId))
 				}

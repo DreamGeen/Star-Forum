@@ -18,6 +18,8 @@ import (
 	"star/app/utils/logging"
 	"star/app/utils/password"
 	"star/app/utils/snowflake"
+	"star/proto/collect/collectPb"
+	"star/proto/like/likePb"
 	"star/proto/relation/relationPb"
 	"star/proto/user/userPb"
 	"strings"
@@ -28,6 +30,8 @@ type UserSrv struct {
 }
 
 var relationService relationPb.RelationService
+var likeService likePb.LikeService
+var collectService collectPb.CollectService
 var userIns = new(UserSrv)
 
 // 正则表达式用于匹配手机号
@@ -36,6 +40,9 @@ var phoneRegex = regexp.MustCompile(`^1[3-9]\d{9}$`)
 func (u *UserSrv) New() {
 	relationMicroService := micro.NewService(micro.Name(str.RelationServiceClient))
 	relationService = relationPb.NewRelationService(str.RelationService, relationMicroService.Client())
+
+	likeMicroService := micro.NewService(micro.Name(str.LikeServiceClient))
+	likeService = likePb.NewLikeService(str.LikeService, likeMicroService.Client())
 }
 
 // GetUserInfo 获取用户具体信息
@@ -64,16 +71,16 @@ func (u *UserSrv) GetUserInfo(ctx context.Context, req *userPb.GetUserInfoReques
 		UserId:   user.UserId,
 		Exp:      user.Exp,
 		Grade:    user.Grade,
-		Gender:   user.Gender,
+		Gender:   &user.Gender,
 		UserName: user.Username,
-		Img:      user.Img,
-		Sign:     user.Signature,
-		Birth:    user.Birth,
+		Img:      &user.Img,
+		Sign:     &user.Signature,
+		Birth:    &user.Birth,
 		IsFollow: false,
 	}
 	var wg sync.WaitGroup
 	var isErr bool
-	wg.Add(1)
+	wg.Add(6)
 	go func() {
 		defer wg.Done()
 		isFollowResp, err := relationService.IsFollow(ctx, &relationPb.IsFollowRequest{
@@ -85,7 +92,6 @@ func (u *UserSrv) GetUserInfo(ctx context.Context, req *userPb.GetUserInfoReques
 				zap.Error(err),
 				zap.Int64("userId", req.UserId),
 				zap.Any("followId", req.ActorId))
-			logging.SetSpanError(span, err)
 			isErr = true
 			return
 		}
@@ -94,12 +100,105 @@ func (u *UserSrv) GetUserInfo(ctx context.Context, req *userPb.GetUserInfoReques
 
 	go func() {
 		defer wg.Done()
+		countFollowResp, err := relationService.CountFollow(ctx, &relationPb.CountFollowRequest{
+			UserId: req.UserId,
+		})
+		if err != nil {
+			logger.Error("get user follow count error",
+				zap.Error(err),
+				zap.Int64("user", req.UserId))
+			isErr = true
+			return
+		}
+		resp.User.FollowCount = &countFollowResp.Count
+	}()
+	go func() {
+		defer wg.Done()
+		countFansResp, err := relationService.CountFans(ctx, &relationPb.CountFansRequest{
+			UserId: req.UserId,
+		})
+		if err != nil {
+			logger.Error("get user fans count error",
+				zap.Error(err),
+				zap.Int64("user", req.UserId))
+			isErr = true
+			return
+		}
+		resp.User.FansCount = &countFansResp.Count
+	}()
+	go func() {
+		defer wg.Done()
+		getUserLikeCountResp, err := likeService.GetUserLikeCount(ctx, &likePb.GetUserLikeCountRequest{
+			UserId: req.UserId,
+		})
+		if err != nil {
+			logger.Error("get user like count error",
+				zap.Error(err),
+				zap.Int64("user", req.UserId))
+			isErr = true
+			return
+		}
+		resp.User.LikeCount = &getUserLikeCountResp.Count
+	}()
+	go func() {
+		getUserTotalLikeResp, err := likeService.GetUserTotalLike(ctx, &likePb.GetUserTotalLikeRequest{
+			UserId: req.UserId,
+		})
+		if err != nil {
+			logger.Error("get user total liked count error",
+				zap.Error(err),
+				zap.Int64("user", req.UserId))
+			isErr = true
+			return
+		}
+		resp.User.TotalLiked = &getUserTotalLikeResp.Count
+	}()
+	go func() {
+		getUserCollectCount, err := collectService.GetUserCollectCount(ctx, &collectPb.GetUserCollectCountRequest{
+			UserId: req.UserId,
+		})
+		if err != nil {
+			logger.Error("get user  collect count error",
+				zap.Error(err),
+				zap.Int64("user", req.UserId))
+			isErr = true
+			return
+		}
+		resp.User.CollectCount = &getUserCollectCount.Count
 	}()
 	wg.Wait()
 	if isErr {
 		return str.ErrUserError
 	}
 	//返回user信息
+	return nil
+}
+
+// GetUserExistInformation 检查用户是否存在
+func (u *UserSrv) GetUserExistInformation(ctx context.Context, req *userPb.GetUserExistInformationRequest, resp *userPb.GetUserExistInformationResponse) error {
+	ctx, span := tracing.Tracer.Start(ctx, "GetUserExisted")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger := logging.LogServiceWithTrace(span, "UserService.GetUserExisted")
+
+	user := new(models.User)
+	key := fmt.Sprintf("GetUserInfo:%d", req.UserId)
+	found, err := cached.ScanGetUser(ctx, key, user)
+	if err != nil {
+		logger.Error("GetUserInfo failed",
+			zap.Error(err))
+		logging.SetSpanError(span, err)
+		return str.ErrUserError
+	}
+	if !found {
+		logger.Info("GetUserInfo err:user not found",
+			zap.Int64("userId", req.UserId))
+		logging.SetSpanError(span, err)
+
+		resp.Existed = false
+		return nil
+	}
+	resp.Existed = true
 	return nil
 }
 

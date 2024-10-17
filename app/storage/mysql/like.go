@@ -8,7 +8,7 @@ import (
 
 const (
 	isLikeCommentSQL     = "select count(1) from like_remind where source_id=? and source_type='comment'and sender_id=?"
-	updatePostLikeSQL    = "update  post set  star=star+? where postId=? "
+	updatePostLikeSQL    = "update  feed set  star=star+? where postId=? "
 	updateCommentLikeSQL = "update  postComment set  star=star+? where commentId=? "
 )
 

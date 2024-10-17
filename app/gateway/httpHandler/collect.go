@@ -48,7 +48,7 @@ func CollectActionHandler(c *gin.Context) {
 func CollectListHandler(c *gin.Context) {
 	userId, err := utils2.GetUserId(c)
 	if err != nil {
-		logging.Logger.Warn("user not log in,but want to list collect post",
+		logging.Logger.Warn("user not log in,but want to list collect feed",
 			zap.Error(err))
 		str2.Response(c, err, str2.Empty, nil)
 		return

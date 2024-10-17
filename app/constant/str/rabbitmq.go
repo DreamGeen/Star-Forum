@@ -29,7 +29,7 @@ const (
 	RoutPrivateMsg  = "message.private_Msg"
 	RoutReply       = "message.reply"
 	RoutSystem      = "message.system"
-	RoutPost        = "like.post"
+	RoutPost        = "like.feed"
 	RoutComment     = "like.comment"
-	RoutCollectPost = "collect.post"
+	RoutCollectPost = "collect.feed"
 )

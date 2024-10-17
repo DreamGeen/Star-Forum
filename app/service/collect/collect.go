@@ -16,14 +16,14 @@ import (
 	"star/app/utils/logging"
 	"star/app/utils/rabbitmq"
 	"star/proto/collect/collectPb"
-	"star/proto/post/postPb"
+	"star/proto/feed/feedPb"
 	"strconv"
 )
 
 type CollectSrv struct {
 }
 
-var postService postPb.PostService
+var postService feedPb.PostService
 var conn *amqp091.Connection
 var channel *amqp091.Channel
 
@@ -47,8 +47,8 @@ func CloseMQ() {
 }
 
 func New() {
-	postMicroService := micro.NewService(micro.Name(str.PostServiceClient))
-	postService = postPb.NewPostService(str.PostService, postMicroService.Client())
+	postMicroService := micro.NewService(micro.Name(str.FeedServiceClient))
+	postService = feedPb.NewPostService(str.FeedService, postMicroService.Client())
 
 	var err error
 	conn, err = amqp091.Dial(rabbitmq.ReturnRabbitmqUrl())
@@ -161,7 +161,7 @@ func (c *CollectSrv) CollectList(ctx context.Context, req *collectPb.CollectList
 		postId, _ := strconv.ParseInt(postIdStr, 10, 64)
 		postIds[i] = postId
 	}
-	queryPostsResp, err := postService.QueryPosts(ctx, &postPb.QueryPostsRequest{
+	queryPostsResp, err := postService.QueryPosts(ctx, &feedPb.QueryPostsRequest{
 		ActorId: req.ActorId,
 		PostIds: postIds,
 	})
@@ -253,10 +253,10 @@ func (c *CollectSrv) GetCollectCount(ctx context.Context, req *collectPb.GetColl
 	logging.SetSpanWithHostname(span)
 	logger := logging.LogServiceWithTrace(span, "CollectService.GetCollectCount")
 
-	key := fmt.Sprintf("post:%d:collected_count", req.PostId)
+	key := fmt.Sprintf("feed:%d:collected_count", req.PostId)
 	countStr, err := redis.Client.Get(ctx, key).Result()
 	if err != nil && !errors.Is(err, redis2.Nil) {
-		logger.Error("redis get post collect count error",
+		logger.Error("redis get feed collect count error",
 			zap.Error(err),
 			zap.Int64("postId", req.PostId))
 		logging.SetSpanError(span, err)
@@ -268,7 +268,7 @@ func (c *CollectSrv) GetCollectCount(ctx context.Context, req *collectPb.GetColl
 	}
 	count, err := strconv.ParseInt(countStr, 10, 64)
 	if err != nil {
-		logger.Error("strconv post collect count error",
+		logger.Error("strconv feed collect count error",
 			zap.Error(err), zap.Int64("postId", req.PostId),
 			zap.String("countStr", countStr))
 		logging.SetSpanError(span, err)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/go-redis/redis_rate/v10"
 	"github.com/rabbitmq/amqp091-go"
 	redis2 "github.com/redis/go-redis/v9"
 	"github.com/robfig/cron/v3"
@@ -25,6 +26,8 @@ import (
 	"sync"
 	"time"
 )
+
+const sendPrivateMsgMaxQPS = 3
 
 type MessageSrv struct {
 }
@@ -226,6 +229,9 @@ func (m *MessageSrv) SendSystemMessage(ctx context.Context, req *messagePb.SendS
 	}
 	return nil
 }
+func sendPrivateMessageLimitKey(userId int64) string {
+	return fmt.Sprintf("sendPrivateMessage_limiter:%d", userId)
+}
 
 // SendPrivateMessage 私信
 func (m *MessageSrv) SendPrivateMessage(ctx context.Context, req *messagePb.SendPrivateMessageRequest, resp *messagePb.SendPrivateMessageResponse) error {
@@ -233,6 +239,48 @@ func (m *MessageSrv) SendPrivateMessage(ctx context.Context, req *messagePb.Send
 	defer span.End()
 	logging.SetSpanWithHostname(span)
 	logger := logging.LogServiceWithTrace(span, "MessageService.SendPrivateMessage")
+
+	limiter := redis_rate.NewLimiter(redis.Client)
+	limiterKey := sendPrivateMessageLimitKey(req.SenderId)
+	limitRes, err := limiter.Allow(ctx, limiterKey, redis_rate.PerSecond(sendPrivateMsgMaxQPS))
+	if err != nil {
+		logger.Error("sendPrivateMsg limit error",
+			zap.Error(err),
+			zap.Int64("senderId", req.SenderId),
+			zap.Int64("recipientId", req.RecipientId),
+			zap.Int64("privateChatId", req.PrivateChatId),
+			zap.String("content", req.Content))
+		logging.SetSpanError(span, err)
+		return str.ErrMessageError
+	}
+	if limitRes.Allowed == 0 {
+		logger.Error("user send private msg too frequently",
+			zap.Error(err),
+			zap.Int64("senderId", req.SenderId),
+			zap.Int64("recipientId", req.RecipientId),
+			zap.Int64("privateChatId", req.PrivateChatId),
+			zap.String("content", req.Content))
+		logging.SetSpanError(span, err)
+		return str.ErrRequestTooFrequently
+	}
+
+	userResp, err := userService.GetUserExistInformation(ctx, &userPb.GetUserExistInformationRequest{
+		UserId: req.RecipientId,
+	})
+	if err != nil {
+		logger.Error("user service error",
+			zap.Error(err),
+			zap.Int64("userId", req.RecipientId),
+			zap.String("content", req.Content))
+		logging.SetSpanError(span, err)
+		return str.ErrMessageError
+	}
+	if !userResp.Existed {
+		logger.Warn("recipient is not existed",
+			zap.Int64("senderId", req.SenderId),
+			zap.String("content", req.Content))
+		return str.ErrUserNotExists
+	}
 
 	message := &models.PrivateMessage{
 		Id:            snowflake.GetID(),
@@ -249,6 +297,11 @@ func (m *MessageSrv) SendPrivateMessage(ctx context.Context, req *messagePb.Send
 			zap.Any("message", message))
 		logging.SetSpanError(span, err)
 		return str.ErrMessageError
+	}
+	client, ok := manager.GetClient(req.RecipientId)
+	if ok {
+		message.Status = true
+		client.send <- message
 	}
 	body, err := json.Marshal(message)
 	if err != nil {
@@ -278,10 +331,6 @@ func (m *MessageSrv) SendPrivateMessage(ctx context.Context, req *messagePb.Send
 			zap.Any("message", message))
 		logging.SetSpanError(span, err)
 		return err
-	}
-	client, ok := manager.GetClient(req.RecipientId)
-	if ok {
-		client.send <- message
 	}
 	return nil
 }
@@ -366,6 +415,22 @@ func (m *MessageSrv) GetChatList(ctx context.Context, req *messagePb.GetChatList
 	defer span.End()
 	logging.SetSpanWithHostname(span)
 	logger := logging.LogServiceWithTrace(span, "MessageService.GetChatList")
+
+	userResp, err := userService.GetUserExistInformation(ctx, &userPb.GetUserExistInformationRequest{
+		UserId: req.UserId,
+	})
+	if err != nil {
+		logger.Error("user service error",
+			zap.Error(err),
+			zap.Int64("userId", req.UserId))
+		logging.SetSpanError(span, err)
+		return str.ErrMessageError
+	}
+	if !userResp.Existed {
+		logger.Warn("user is not existed",
+			zap.Int64("actorId", req.UserId))
+		return str.ErrUserNotExists
+	}
 
 	key := fmt.Sprintf("chatList:%d", req.UserId)
 	val, err := redis.Client.Get(ctx, key).Result()

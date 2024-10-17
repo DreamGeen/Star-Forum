@@ -1,0 +1,79 @@
+syntax="proto3";
+
+package feedPb;
+
+option go_package="star/proto/feed/feedPb;feedPb";
+
+import "star/proto/user/user.proto";
+import "star/proto/community/community.proto";
+
+
+service PostService{
+    rpc QueryPostExist(QueryPostExistRequest)returns(QueryPostExistResponse);
+    rpc GetCommunityPostByPopularity(GetCommunityPostByPopularityRequest)returns(GetCommunityPostByPopularityResponse);
+    rpc GetCommunityPostByTime(GetCommunityPostByTimeRequest)returns(GetCommunityPostByTimeResponse);
+    rpc GetPostByTime(GetPostByTimeRequest)returns(GetPostByTimeResponse);
+    rpc QueryPosts(QueryPostsRequest)returns(QueryPostsResponse);
+}
+
+
+message QueryPostExistRequest {
+    int64 PostId=1;
+}
+
+message QueryPostExistResponse{
+   bool   Exist=1;
+}
+
+
+message Post{
+  int64  PostId=1;
+  userPb.User  author = 2;
+  communityPb.Community community=3;
+  string  Content=4;
+  string   CreateTime=5;
+  int64    LikeCount=6;
+  int64     CommentCount=7;
+   bool     IsLike=8;
+   bool     IsCollect=9;
+}
+
+
+message GetCommunityPostByPopularityRequest{
+  int64  Page=1;
+  int64 CommunityId=2;
+  int64  ActorId=3;
+}
+
+message GetCommunityPostByPopularityResponse{
+  repeated Post Posts=1;
+}
+
+message GetPostByTimeRequest{
+    int64  page=1;
+    int64  ActorId=2;
+}
+
+message GetPostByTimeResponse{
+    repeated  Post Posts=1;
+}
+
+message QueryPostsRequest{
+  int64 ActorId=1;
+  repeated int64 postIds=2;
+}
+message QueryPostsResponse{
+  repeated Post  posts=1;
+}
+
+message GetCommunityPostByTimeRequest{
+  int64 CommunityId=1;
+  int64 Page=2;
+  int64 ActorId=3;
+  int64 LastPostId=4;
+}
+
+message GetCommunityPostByTimeResponse{
+  repeated  Post Posts=1;
+  int64   NewPostId=2;
+}
