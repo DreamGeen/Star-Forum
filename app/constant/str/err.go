@@ -29,7 +29,6 @@ const (
 	CommunityNameExistsCode
 	CommunityNotExitsCode
 	PostNotExistsCode
-	PostErrorCode
 	UploadCode
 	RequestTooFrequentlyCode
 )
@@ -47,6 +46,7 @@ const (
 	LikeErrorCode
 	CollectErrorCode
 	PublishErrorCode
+	FeedErrorCode
 )
 
 var (
@@ -84,7 +84,7 @@ var (
 	ErrSendSmsError   = errors.New("发送短信失败，请稍后再试！")
 	ErrCommentError   = errors.New("评论服务出现内部错误，请稍后再试！")
 	ErrCommunityError = errors.New("社区服务内部出现错误，请稍后再试！")
-	ErrPostError      = errors.New("帖子服务内部出现问题，请稍后再试！")
+	ErrFeedError      = errors.New("feed流服务内部出现问题，请稍后再试! ")
 	ErrMessageError   = errors.New("消息服务内部出现问题，请稍后再试！")
 	ErrRelationError  = errors.New("关系服务内部出现问题，请稍后再试！")
 	ErrLikeError      = errors.New("点赞服务内部出现问题，请稍后再试！")
@@ -125,7 +125,7 @@ var codeMap = map[error]int32{
 	ErrSendSmsError:   SendSmsErrorCode,
 	ErrCommentError:   CommentErrorCode,
 	ErrCommunityError: CommunityErrorCode,
-	ErrPostError:      PostErrorCode,
+	ErrFeedError:      FeedErrorCode,
 	ErrMessageError:   MessageErrorCode,
 	ErrRelationError:  RelationErrorCode,
 	ErrLikeError:      LikeErrorCode,

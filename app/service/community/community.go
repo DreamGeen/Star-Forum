@@ -1,4 +1,4 @@
-package community
+package main
 
 import (
 	"context"
@@ -27,6 +27,7 @@ type CommunitySrv struct {
 }
 
 var userService userPb.UserService
+var communitySrvIns *CommunitySrv
 
 func (c *CommunitySrv) New() {
 	//创建一个用户微服务客户端
@@ -43,7 +44,13 @@ func (c *CommunitySrv) CreateCommunity(ctx context.Context, req *communityPb.Cre
 	logger := logging.LogServiceWithTrace(span, "CommunityService.CreateCommunity")
 
 	//检查该社区名是否已经存在
-	if err := mysql.CheckCommunity(req.CommunityName); err != nil {
+	err := mysql.CheckCommunity(req.CommunityName)
+	if err == nil {
+		logger.Warn("the community name is existed",
+			zap.Int64("userId", req.LeaderId),
+			zap.String("communityName", req.CommunityName))
+		return str.ErrCommunityNameExists
+	} else if !errors.Is(err, str.ErrCommunityNotExists) {
 		logger.Error("check community exist error",
 			zap.Error(err),
 			zap.String("communityName", req.CommunityName))
@@ -107,7 +114,7 @@ func (c *CommunitySrv) GetCommunityInfo(ctx context.Context, req *communityPb.Ge
 			Description:   community.Description,
 			Member:        community.Member,
 			LeaderName:    userResp.User.UserName,
-			LeaderImg:     userResp.User.Img,
+			LeaderImg:     *userResp.User.Img,
 		}
 		resp.Community = communityInfo
 		communityInfoJSON, err := json.Marshal(communityInfo)
@@ -133,15 +140,6 @@ func (c *CommunitySrv) GetCommunityInfo(ctx context.Context, req *communityPb.Ge
 		return str.ErrCommunityError
 	}
 	resp.Community = communityInfo
-	return nil
-}
-
-func (c *CommunitySrv) GetCommunityList(ctx context.Context, req *communityPb.EmptyCommunityRequest, resp *communityPb.GetCommunityListResponse) error {
-	//查询community列表
-	return nil
-}
-
-func (c *CommunitySrv) ShowCommunity(ctx context.Context, req *communityPb.ShowCommunityRequest, resp *communityPb.ShowCommunityResponse) error {
 	return nil
 }
 
@@ -363,29 +361,29 @@ func (c *CommunitySrv) GetFollowCommunityList(ctx context.Context, req *communit
 			}
 			communityIdList = append(communityIdList, communityId)
 		}
-		if db {
-			communityIdList, err = mysql.GetCommunityFollowId(req.UserId)
-			if err != nil {
-				logger.Error("get communityIdList error",
-					zap.Error(err),
-					zap.Int64("userId", req.UserId))
-				logging.SetSpanError(span, err)
-				return str.ErrRelationError
-			}
-			go func() {
-				//将communityId存入redis中去
-				_, err = redis.Client.Pipelined(ctx, func(pipe redis2.Pipeliner) error {
-					for _, communityId := range communityIdList {
-						pipe.SAdd(ctx, key, communityId)
-					}
-					return nil
-				})
-				if err != nil {
-					logging.Logger.Error("redis add followIdList error", zap.Error(err),
-						zap.Int64("userId", req.UserId))
-				}
-			}()
+	}
+	if db {
+		communityIdList, err = mysql.GetCommunityFollowId(req.UserId)
+		if err != nil {
+			logger.Error("get communityIdList error",
+				zap.Error(err),
+				zap.Int64("userId", req.UserId))
+			logging.SetSpanError(span, err)
+			return str.ErrRelationError
 		}
+		go func() {
+			//将communityId存入redis中去
+			_, err = redis.Client.Pipelined(ctx, func(pipe redis2.Pipeliner) error {
+				for _, communityId := range communityIdList {
+					pipe.SAdd(ctx, key, communityId)
+				}
+				return nil
+			})
+			if err != nil {
+				logging.Logger.Error("redis add followIdList error", zap.Error(err),
+					zap.Int64("userId", req.UserId))
+			}
+		}()
 	}
 	var communityList []*communityPb.Community
 	for _, communityId := range communityIdList {

@@ -1,7 +1,6 @@
 package client
 
 import (
-	"go-micro.dev/v4"
 	"star/app/constant/str"
 	"star/proto/collect/collectPb"
 	"star/proto/comment/commentPb"
@@ -9,19 +8,23 @@ import (
 	"star/proto/feed/feedPb"
 	"star/proto/like/likePb"
 	"star/proto/message/messagePb"
+	"star/proto/publish/publishPb"
 	"star/proto/relation/relationPb"
 	"star/proto/user/userPb"
+
+	"go-micro.dev/v4"
 )
 
 var (
 	userService      userPb.UserService
 	commentService   commentPb.CommentService
 	communityService communityPb.CommunityService
-	feedService      feedPb.PostService
+	feedService      feedPb.FeedService
 	messageService   messagePb.MessageService
 	relationService  relationPb.RelationService
 	likeService      likePb.LikeService
 	collectService   collectPb.CollectService
+	publishService   publishPb.PublishService
 )
 
 func Init() {
@@ -39,7 +42,7 @@ func Init() {
 
 	//创建一个feed服务客户端
 	feedMicroService := micro.NewService(micro.Name(str.FeedServiceClient))
-	feedService = feedPb.NewPostService(str.FeedService, feedMicroService.Client())
+	feedService = feedPb.NewFeedService(str.FeedService, feedMicroService.Client())
 
 	//创建一个消息服务客户端
 	messageMicroService := micro.NewService(micro.Name(str.MessageServiceClient))
@@ -56,5 +59,10 @@ func Init() {
 	//创建一个收藏微服务客户端
 	collectMicroService := micro.NewService(micro.Name(str.CollectServiceClient))
 	collectService = collectPb.NewCollectService(str.CollectService, collectMicroService.Client())
+
+
+	//创建一个发布微服务客户端
+	publishMicroService:=micro.NewService(micro.Name(str.PublishServiceClient))
+	publishService=publishPb.NewPublishService(str.PublishService,publishMicroService.Client())
 
 }

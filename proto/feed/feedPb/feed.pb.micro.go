@@ -29,36 +29,36 @@ var _ context.Context
 var _ client.Option
 var _ server.Option
 
-// Api Endpoints for PostService service
+// Api Endpoints for FeedService service
 
-func NewPostServiceEndpoints() []*api.Endpoint {
+func NewFeedServiceEndpoints() []*api.Endpoint {
 	return []*api.Endpoint{}
 }
 
-// Client API for PostService service
+// Client API for FeedService service
 
-type PostService interface {
+type FeedService interface {
 	QueryPostExist(ctx context.Context, in *QueryPostExistRequest, opts ...client.CallOption) (*QueryPostExistResponse, error)
-	GetCommunityPostByPopularity(ctx context.Context, in *GetCommunityPostByPopularityRequest, opts ...client.CallOption) (*GetCommunityPostByPopularityResponse, error)
+	GetCommunityPostByNewReply(ctx context.Context, in *GetCommunityPostByNewReplyRequest, opts ...client.CallOption) (*GetCommunityPostByNewReplyResponse, error)
 	GetCommunityPostByTime(ctx context.Context, in *GetCommunityPostByTimeRequest, opts ...client.CallOption) (*GetCommunityPostByTimeResponse, error)
-	GetPostByTime(ctx context.Context, in *GetPostByTimeRequest, opts ...client.CallOption) (*GetPostByTimeResponse, error)
+	GetPostByRelation(ctx context.Context, in *GetPostByRelationRequest, opts ...client.CallOption) (*GetPostByRelationResponse, error)
 	QueryPosts(ctx context.Context, in *QueryPostsRequest, opts ...client.CallOption) (*QueryPostsResponse, error)
 }
 
-type postService struct {
+type feedService struct {
 	c    client.Client
 	name string
 }
 
-func NewPostService(name string, c client.Client) PostService {
-	return &postService{
+func NewFeedService(name string, c client.Client) FeedService {
+	return &feedService{
 		c:    c,
 		name: name,
 	}
 }
 
-func (c *postService) QueryPostExist(ctx context.Context, in *QueryPostExistRequest, opts ...client.CallOption) (*QueryPostExistResponse, error) {
-	req := c.c.NewRequest(c.name, "PostService.QueryPostExist", in)
+func (c *feedService) QueryPostExist(ctx context.Context, in *QueryPostExistRequest, opts ...client.CallOption) (*QueryPostExistResponse, error) {
+	req := c.c.NewRequest(c.name, "FeedService.QueryPostExist", in)
 	out := new(QueryPostExistResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
@@ -67,9 +67,9 @@ func (c *postService) QueryPostExist(ctx context.Context, in *QueryPostExistRequ
 	return out, nil
 }
 
-func (c *postService) GetCommunityPostByPopularity(ctx context.Context, in *GetCommunityPostByPopularityRequest, opts ...client.CallOption) (*GetCommunityPostByPopularityResponse, error) {
-	req := c.c.NewRequest(c.name, "PostService.GetCommunityPostByPopularity", in)
-	out := new(GetCommunityPostByPopularityResponse)
+func (c *feedService) GetCommunityPostByNewReply(ctx context.Context, in *GetCommunityPostByNewReplyRequest, opts ...client.CallOption) (*GetCommunityPostByNewReplyResponse, error) {
+	req := c.c.NewRequest(c.name, "FeedService.GetCommunityPostByNewReply", in)
+	out := new(GetCommunityPostByNewReplyResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -77,8 +77,8 @@ func (c *postService) GetCommunityPostByPopularity(ctx context.Context, in *GetC
 	return out, nil
 }
 
-func (c *postService) GetCommunityPostByTime(ctx context.Context, in *GetCommunityPostByTimeRequest, opts ...client.CallOption) (*GetCommunityPostByTimeResponse, error) {
-	req := c.c.NewRequest(c.name, "PostService.GetCommunityPostByTime", in)
+func (c *feedService) GetCommunityPostByTime(ctx context.Context, in *GetCommunityPostByTimeRequest, opts ...client.CallOption) (*GetCommunityPostByTimeResponse, error) {
+	req := c.c.NewRequest(c.name, "FeedService.GetCommunityPostByTime", in)
 	out := new(GetCommunityPostByTimeResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
@@ -87,9 +87,9 @@ func (c *postService) GetCommunityPostByTime(ctx context.Context, in *GetCommuni
 	return out, nil
 }
 
-func (c *postService) GetPostByTime(ctx context.Context, in *GetPostByTimeRequest, opts ...client.CallOption) (*GetPostByTimeResponse, error) {
-	req := c.c.NewRequest(c.name, "PostService.GetPostByTime", in)
-	out := new(GetPostByTimeResponse)
+func (c *feedService) GetPostByRelation(ctx context.Context, in *GetPostByRelationRequest, opts ...client.CallOption) (*GetPostByRelationResponse, error) {
+	req := c.c.NewRequest(c.name, "FeedService.GetPostByRelation", in)
+	out := new(GetPostByRelationResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -97,8 +97,8 @@ func (c *postService) GetPostByTime(ctx context.Context, in *GetPostByTimeReques
 	return out, nil
 }
 
-func (c *postService) QueryPosts(ctx context.Context, in *QueryPostsRequest, opts ...client.CallOption) (*QueryPostsResponse, error) {
-	req := c.c.NewRequest(c.name, "PostService.QueryPosts", in)
+func (c *feedService) QueryPosts(ctx context.Context, in *QueryPostsRequest, opts ...client.CallOption) (*QueryPostsResponse, error) {
+	req := c.c.NewRequest(c.name, "FeedService.QueryPosts", in)
 	out := new(QueryPostsResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
@@ -107,51 +107,51 @@ func (c *postService) QueryPosts(ctx context.Context, in *QueryPostsRequest, opt
 	return out, nil
 }
 
-// Server API for PostService service
+// Server API for FeedService service
 
-type PostServiceHandler interface {
+type FeedServiceHandler interface {
 	QueryPostExist(context.Context, *QueryPostExistRequest, *QueryPostExistResponse) error
-	GetCommunityPostByPopularity(context.Context, *GetCommunityPostByPopularityRequest, *GetCommunityPostByPopularityResponse) error
+	GetCommunityPostByNewReply(context.Context, *GetCommunityPostByNewReplyRequest, *GetCommunityPostByNewReplyResponse) error
 	GetCommunityPostByTime(context.Context, *GetCommunityPostByTimeRequest, *GetCommunityPostByTimeResponse) error
-	GetPostByTime(context.Context, *GetPostByTimeRequest, *GetPostByTimeResponse) error
+	GetPostByRelation(context.Context, *GetPostByRelationRequest, *GetPostByRelationResponse) error
 	QueryPosts(context.Context, *QueryPostsRequest, *QueryPostsResponse) error
 }
 
-func RegisterPostServiceHandler(s server.Server, hdlr PostServiceHandler, opts ...server.HandlerOption) error {
-	type postService interface {
+func RegisterFeedServiceHandler(s server.Server, hdlr FeedServiceHandler, opts ...server.HandlerOption) error {
+	type feedService interface {
 		QueryPostExist(ctx context.Context, in *QueryPostExistRequest, out *QueryPostExistResponse) error
-		GetCommunityPostByPopularity(ctx context.Context, in *GetCommunityPostByPopularityRequest, out *GetCommunityPostByPopularityResponse) error
+		GetCommunityPostByNewReply(ctx context.Context, in *GetCommunityPostByNewReplyRequest, out *GetCommunityPostByNewReplyResponse) error
 		GetCommunityPostByTime(ctx context.Context, in *GetCommunityPostByTimeRequest, out *GetCommunityPostByTimeResponse) error
-		GetPostByTime(ctx context.Context, in *GetPostByTimeRequest, out *GetPostByTimeResponse) error
+		GetPostByRelation(ctx context.Context, in *GetPostByRelationRequest, out *GetPostByRelationResponse) error
 		QueryPosts(ctx context.Context, in *QueryPostsRequest, out *QueryPostsResponse) error
 	}
-	type PostService struct {
-		postService
+	type FeedService struct {
+		feedService
 	}
-	h := &postServiceHandler{hdlr}
-	return s.Handle(s.NewHandler(&PostService{h}, opts...))
+	h := &feedServiceHandler{hdlr}
+	return s.Handle(s.NewHandler(&FeedService{h}, opts...))
 }
 
-type postServiceHandler struct {
-	PostServiceHandler
+type feedServiceHandler struct {
+	FeedServiceHandler
 }
 
-func (h *postServiceHandler) QueryPostExist(ctx context.Context, in *QueryPostExistRequest, out *QueryPostExistResponse) error {
-	return h.PostServiceHandler.QueryPostExist(ctx, in, out)
+func (h *feedServiceHandler) QueryPostExist(ctx context.Context, in *QueryPostExistRequest, out *QueryPostExistResponse) error {
+	return h.FeedServiceHandler.QueryPostExist(ctx, in, out)
 }
 
-func (h *postServiceHandler) GetCommunityPostByPopularity(ctx context.Context, in *GetCommunityPostByPopularityRequest, out *GetCommunityPostByPopularityResponse) error {
-	return h.PostServiceHandler.GetCommunityPostByPopularity(ctx, in, out)
+func (h *feedServiceHandler) GetCommunityPostByNewReply(ctx context.Context, in *GetCommunityPostByNewReplyRequest, out *GetCommunityPostByNewReplyResponse) error {
+	return h.FeedServiceHandler.GetCommunityPostByNewReply(ctx, in, out)
 }
 
-func (h *postServiceHandler) GetCommunityPostByTime(ctx context.Context, in *GetCommunityPostByTimeRequest, out *GetCommunityPostByTimeResponse) error {
-	return h.PostServiceHandler.GetCommunityPostByTime(ctx, in, out)
+func (h *feedServiceHandler) GetCommunityPostByTime(ctx context.Context, in *GetCommunityPostByTimeRequest, out *GetCommunityPostByTimeResponse) error {
+	return h.FeedServiceHandler.GetCommunityPostByTime(ctx, in, out)
 }
 
-func (h *postServiceHandler) GetPostByTime(ctx context.Context, in *GetPostByTimeRequest, out *GetPostByTimeResponse) error {
-	return h.PostServiceHandler.GetPostByTime(ctx, in, out)
+func (h *feedServiceHandler) GetPostByRelation(ctx context.Context, in *GetPostByRelationRequest, out *GetPostByRelationResponse) error {
+	return h.FeedServiceHandler.GetPostByRelation(ctx, in, out)
 }
 
-func (h *postServiceHandler) QueryPosts(ctx context.Context, in *QueryPostsRequest, out *QueryPostsResponse) error {
-	return h.PostServiceHandler.QueryPosts(ctx, in, out)
+func (h *feedServiceHandler) QueryPosts(ctx context.Context, in *QueryPostsRequest, out *QueryPostsResponse) error {
+	return h.FeedServiceHandler.QueryPosts(ctx, in, out)
 }

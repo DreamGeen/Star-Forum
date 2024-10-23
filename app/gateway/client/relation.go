@@ -5,7 +5,7 @@ import (
 	"star/proto/relation/relationPb"
 )
 
-func GetFollowList(ctx context.Context, req *relationPb.GetFollowRequest) (*relationPb.GetFollowResponse, error) {
+func GetFollowList(ctx context.Context, req *relationPb.GetFollowListRequest) (*relationPb.GetFollowListResponse, error) {
 	return relationService.GetFollowList(ctx, req)
 }
 

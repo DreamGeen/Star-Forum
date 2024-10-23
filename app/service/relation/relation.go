@@ -22,8 +22,9 @@ type RelationSrv struct {
 }
 
 var userService userPb.UserService
+var relationSrvIns  *RelationSrv
 
-func New() {
+func (r *RelationSrv)New() {
 	userMicroService := micro.NewService(micro.Name(str.UserServiceClient))
 	userService = userPb.NewUserService(str.UserService, userMicroService.Client())
 }
@@ -147,13 +148,13 @@ func (r *RelationSrv) UnFollow(ctx context.Context, req *relationPb.UnFollowRequ
 }
 
 // GetFollowList 获取关注列表
-func (r *RelationSrv) GetFollowList(ctx context.Context, req *relationPb.GetFollowRequest, resp *relationPb.GetFollowResponse) error {
+func (r *RelationSrv) GetFollowList(ctx context.Context, req *relationPb.GetFollowListRequest, resp *relationPb.GetFollowListResponse) error {
 	ctx, span := tracing.Tracer.Start(ctx, "GetFollowListService")
 	defer span.End()
 	logging.SetSpanWithHostname(span)
 	logger := logging.LogServiceWithTrace(span, "FollowService.GetFollowList")
 
-	key := fmt.Sprintf("GetFollowerList:%d", req.UserId)
+	key := fmt.Sprintf("GetFollowList:%d", req.UserId)
 	var followIdList []int64
 	followIdStrList, err := redis.Client.SMembers(ctx, key).Result()
 	var db bool
@@ -183,30 +184,30 @@ func (r *RelationSrv) GetFollowList(ctx context.Context, req *relationPb.GetFoll
 			}
 			followIdList = append(followIdList, followerId)
 		}
-		if db {
-			followIdList, err = mysql.GetFollowIdList(req.UserId)
+	}
+	if db {
+		followIdList, err = mysql.GetFollowIdList(req.UserId)
+		if err != nil {
+			logger.Error("get followerIdList error",
+				zap.Error(err),
+				zap.Int64("userId", req.UserId))
+			logging.SetSpanError(span, err)
+			return str.ErrRelationError
+		}
+		go func() {
+			//将follow存入redis中去
+			_, err = redis.Client.Pipelined(ctx, func(pipe redis2.Pipeliner) error {
+				for _, followId := range followIdList {
+					pipe.SAdd(ctx, key, followId)
+				}
+				return nil
+			})
 			if err != nil {
-				logger.Error("get followerIdList error",
+				logger.Warn("redis add followIdList error",
 					zap.Error(err),
 					zap.Int64("userId", req.UserId))
-				logging.SetSpanError(span, err)
-				return str.ErrRelationError
 			}
-			go func() {
-				//将follow存入redis中去
-				_, err = redis.Client.Pipelined(ctx, func(pipe redis2.Pipeliner) error {
-					for _, followId := range followIdList {
-						pipe.SAdd(ctx, key, followId)
-					}
-					return nil
-				})
-				if err != nil {
-					logger.Warn("redis add fanIdList error",
-						zap.Error(err),
-						zap.Int64("userId", req.UserId))
-				}
-			}()
-		}
+		}()
 	}
 	var followList []*userPb.User
 	for _, followId := range followIdList {
@@ -264,31 +265,31 @@ func (r *RelationSrv) GetFansList(ctx context.Context, req *relationPb.GetFansLi
 			}
 			fansIdList = append(fansIdList, fansId)
 		}
-		if db {
-			fansIdList, err = mysql.GetFansIdList(req.UserId)
+	}
+	if db {
+		fansIdList, err = mysql.GetFansIdList(req.UserId)
+		if err != nil {
+			logging.Logger.Error("get fansIdList error",
+				zap.Error(err),
+				zap.Int64("userId", req.UserId))
+			logging.SetSpanError(span, err)
+			return str.ErrRelationError
+		}
+		go func() {
+			//将follow存入redis中去
+			_, err = redis.Client.Pipelined(ctx, func(pipe redis2.Pipeliner) error {
+				for _, fansId := range fansIdList {
+					pipe.SAdd(ctx, key, fansId)
+				}
+				return nil
+			})
 			if err != nil {
-				logging.Logger.Error("get fansIdList error",
+				logger.Warn("redis add followIdList error",
 					zap.Error(err),
 					zap.Int64("userId", req.UserId))
-				logging.SetSpanError(span, err)
-				return str.ErrRelationError
 			}
-			go func() {
-				//将follow存入redis中去
-				_, err = redis.Client.Pipelined(ctx, func(pipe redis2.Pipeliner) error {
-					for _, fansId := range fansIdList {
-						pipe.SAdd(ctx, key, fansId)
-					}
-					return nil
-				})
-				if err != nil {
-					logger.Warn("redis add followIdList error",
-						zap.Error(err),
-						zap.Int64("userId", req.UserId))
-				}
-			}()
+		}()
 
-		}
 	}
 	var fansList []*userPb.User
 	for _, fansId := range fansIdList {

@@ -1,34 +1,43 @@
 package httpHandler
 
 import (
-	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
-	"log"
-	str2 "star/app/constant/str"
+	"star/app/constant/str"
+	"star/app/extra/tracing"
 	"star/app/gateway/client"
 	"star/app/models"
 	"star/app/utils/logging"
-	utils2 "star/app/utils/request"
+	"star/app/utils/request"
 	"star/proto/community/communityPb"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 func CreateCommunityHandler(c *gin.Context) {
+	_,span:=tracing.Tracer.Start(c.Request.Context(),"CreateCommunityHandler")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger:=logging.LogServiceWithTrace(span,"GateWay.CreateCommunity")
+	
 	community := new(models.Community)
 	if err := c.ShouldBindJSON(community); err != nil {
-		log.Println(err)
-		str2.Response(c, str2.ErrInvalidParam, str2.Empty, nil)
+		logger.Error("invalid param",
+	        zap.Error(err))
+		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
 		return
 	}
 	if err := validateDescriptionAndName(community); err != nil {
-		log.Println(err)
-		str2.Response(c, err, str2.Empty, nil)
+		logger.Error("invalid description",
+	        zap.Error(err))
+		str.Response(c, err, str.Empty, nil)
 		return
 	}
-	userId, err := utils2.GetUserId(c)
+	userId, err :=request.GetUserId(c)
 	if err != nil {
-		log.Println(err)
-		str2.Response(c, err, str2.Empty, nil)
+		logger.Error("user not log in",
+	        zap.Error(err))
+		str.Response(c, err, str.Empty, nil)
 		return
 	}
 	req := &communityPb.CreateCommunityRequest{
@@ -36,85 +45,101 @@ func CreateCommunityHandler(c *gin.Context) {
 		Description:   community.Description,
 		LeaderId:      userId,
 	}
-	if _, err := client.CreateCommunity(c, req); err != nil {
-		str2.Response(c, err, str2.Empty, nil)
+	if _, err := client.CreateCommunity(c.Request.Context(), req); err != nil {
+		str.Response(c, err, str.Empty, nil)
 		return
 	}
-	str2.Response(c, nil, str2.Empty, nil)
+	str.Response(c, nil, str.Empty, nil)
 }
-func GetFollowCommunityList(c *gin.Context) {
-	userId, err := utils2.GetUserId(c)
+
+func GetFollowCommunityListHandler(c *gin.Context) {
+	_,span:=tracing.Tracer.Start(c.Request.Context(),"GetFollowCommunityListHandler")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger:=logging.LogServiceWithTrace(span,"GateWay.GetFollowCommunityList")
+
+	userId, err := request.GetUserId(c)
 	if err != nil {
-		logging.Logger.Warn("user not log in,but want to get follow community",
+		logger.Warn("user not log in,but want to get follow community",
 			zap.Error(err))
-		str2.Response(c, err, str2.Empty, nil)
+		str.Response(c, err, str.Empty, nil)
 		return
 	}
-	resp, err := client.GetFollowCommunityList(c, &communityPb.GetFollowCommunityListRequest{
+	resp, err := client.GetFollowCommunityList(c.Request.Context(), &communityPb.GetFollowCommunityListRequest{
 		UserId: userId,
 	})
 	if err != nil {
-		logging.Logger.Error("get follow community list service error",
+		logger.Error("get follow community list service error",
 			zap.Error(err),
 			zap.Int64("userId", userId))
-		str2.Response(c, err, str2.Empty, nil)
+		str.Response(c, err, str.Empty, nil)
 		return
 	}
-	str2.Response(c, nil, "communityList", resp.CommunityList)
+	str.Response(c, nil, "communityList", resp.CommunityList)
 }
-func FollowCommunity(c *gin.Context) {
-	communityIdStr := c.Query("communityId")
+func FollowCommunityHandler(c *gin.Context) {
+	_,span:=tracing.Tracer.Start(c.Request.Context(),"FollowCommunityHandler")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger:=logging.LogServiceWithTrace(span,"GateWay.FollowCommunityList")
+
+	communityIdStr := c.Param("id")
 	communityId, err := strconv.ParseInt(communityIdStr, 64, 10)
 	if err != nil || communityId == 0 {
-		logging.Logger.Error("follow user error,invalid param",
+		logger.Error("follow user error,invalid param",
 			zap.Error(err),
 			zap.String("communityIdStr", communityIdStr))
-		str2.Response(c, str2.ErrInvalidParam, str2.Empty, nil)
+		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
 		return
 	}
-	userId, err := utils2.GetUserId(c)
+	userId, err := request.GetUserId(c)
 	if err != nil {
-		logging.Logger.Warn("user not log in,but want to follow community",
+		logger.Warn("user not log in,but want to follow community",
 			zap.Error(err),
 			zap.Int64("communityId", communityId))
-		str2.Response(c, err, str2.Empty, nil)
+		str.Response(c, err, str.Empty, nil)
 		return
 	}
-	_, err = client.FollowCommunity(c, &communityPb.FollowCommunityRequest{
+	_, err = client.FollowCommunity(c.Request.Context(), &communityPb.FollowCommunityRequest{
 		ActorId:     userId,
 		CommunityId: communityId,
 	})
 	if err != nil {
-		logging.Logger.Error("follow community service error",
+		logger.Error("follow community service error",
 			zap.Error(err),
 			zap.Int64("userId", userId),
 			zap.Int64("communityId", communityId))
-		str2.Response(c, err, str2.Empty, nil)
+		str.Response(c, err, str.Empty, nil)
 		return
 	}
-	str2.Response(c, nil, str2.Empty, nil)
+	str.Response(c, nil, str.Empty, nil)
 	return
 }
 
-func UnFollowCommunity(c *gin.Context) {
-	communityIdStr := c.Query("beFollowId")
+func UnFollowCommunityHandler(c *gin.Context) {
+	_,span:=tracing.Tracer.Start(c.Request.Context(),"UnFollowCommunityHandler")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger:=logging.LogServiceWithTrace(span,"GateWay.UnFollowCommunity")
+
+	communityIdStr := c.Query("id")
 	communityId, err := strconv.ParseInt(communityIdStr, 64, 10)
 	if err != nil || communityId == 0 {
-		logging.Logger.Error("unfollow community error,invalid param",
+		logger.Error("unfollow community error,invalid param",
 			zap.Error(err),
 			zap.String("communityIdStr", communityIdStr))
-		str2.Response(c, str2.ErrInvalidParam, str2.Empty, nil)
+		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
 		return
 	}
-	userId, err := utils2.GetUserId(c)
+	userId, err := request.GetUserId(c)
 	if err != nil {
-		logging.Logger.Warn("user not log in,but want to unfollow community",
+		logger.Warn("user not log in,but want to unfollow community",
 			zap.Error(err),
 			zap.Int64("communityId", communityId))
-		str2.Response(c, err, str2.Empty, nil)
+		str.Response(c, err, str.Empty, nil)
 		return
 	}
-	_, err = client.UnFollowCommunity(c, &communityPb.UnFollowCommunityRequest{
+	_, err = client.UnFollowCommunity(c.Request.Context(), &communityPb.UnFollowCommunityRequest{
 		ActorId:     userId,
 		CommunityId: communityId,
 	})
@@ -123,46 +148,53 @@ func UnFollowCommunity(c *gin.Context) {
 			zap.Error(err),
 			zap.Int64("userId", userId),
 			zap.Int64("communityId", communityId))
-		str2.Response(c, err, str2.Empty, nil)
+		str.Response(c, err, str.Empty, nil)
 		return
 	}
-	str2.Response(c, nil, str2.Empty, nil)
+	str.Response(c, nil, str.Empty, nil)
 	return
 }
 
-//func GetCommunityListHandler(c *gin.Context) {
-//	resp, err := client.GetCommunityList()
-//	if err != nil {
-//		str.Response(c, err, str.Empty, nil)
-//		return
-//	}
-//	str.Response(c, nil, "communitys", resp.Communitys)
-//}
 
-//func ShowCommunityHandler(c *gin.Context) {
-//	communityIdString := c.Param("id")
-//	communityId, _ := strconv.Atoi(communityIdString)
-//	resp, err := client.ShowCommunity()
-//	if err != nil {
-//		str.Response(c, err, str.Empty, nil)
-//		return
-//	}
-//	str.Response(c, nil, str.Empty, resp)
-//}
+func GetCommunityInfoHandler(c *gin.Context){
+	_,span:=tracing.Tracer.Start(c.Request.Context(),"GetCommunityInfoHandler")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger:=logging.LogServiceWithTrace(span,"GateWay.GetCommunityInfo")
+
+    communityIdStr:=c.Param("id")
+	communityId, err := strconv.ParseInt(communityIdStr, 64, 10)
+	if err != nil || communityId == 0 {
+		logger.Error("invalid param",
+			zap.Error(err),
+			zap.String("communityIdStr", communityIdStr))
+		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
+		return
+	}
+    resp,err:=client.GetCommunityInfo(c.Request.Context(),&communityPb.GetCommunityInfoRequest{
+		   CommunityId: communityId,
+	})
+	if err!=nil{
+		logger.Error("get community info service error",
+		   zap.Error(err)) 
+        str.Response(c,err,str.Empty,nil)
+	}
+	str.Response(c,nil,"communityInfo",resp.Community)
+}
 
 // validateDescription 效验简介字数
 func validateDescriptionAndName(community *models.Community) error {
 	if len(community.Description) < 2 {
-		return str2.ErrDescriptionShort
+		return str.ErrDescriptionShort
 	}
 	if len(community.Description) > 50 {
-		return str2.ErrDescriptionLong
+		return str.ErrDescriptionLong
 	}
 	if len(community.CommunityName) < 1 {
-		return str2.ErrCommunityNameEmpty
+		return str.ErrCommunityNameEmpty
 	}
 	if len(community.CommunityName) > 10 {
-		return str2.ErrCommunityNameLong
+		return str.ErrCommunityNameLong
 	}
 	return nil
 }

@@ -17,9 +17,20 @@ func Setup() *gin.Engine {
 	{
 		v1.POST("/password", httpHandler.LoginHandler)
 		v1.GET("/captcha/send", httpHandler.SendLoginHandler)
-		v1.POST("/captcha", httpHandler.LoginWithCaptcha)
+		v1.POST("/captcha", httpHandler.LoginWithCaptchaHandler)
 	}
-	v.GET("/test", httpHandler.SendSystemHandler)
+
+	//
+
+	v2 := v.Group("/community")
+	{
+		v2.POST("/create", middleware.JWTAuthHandler, httpHandler.CreateCommunityHandler)
+		v2.POST("/:id/follow", middleware.JWTAuthHandler, httpHandler.FollowCommunityHandler)
+		v2.POST("/:id/unFollow", middleware.JWTAuthHandler, httpHandler.UnFollowCommunityHandler)
+		v2.POST("publish", middleware.JWTAuthHandler, httpHandler.CreatePostHandler)
+
+	}
+	v.POST("/like", middleware.JWTAuthHandler, httpHandler.LikeActionHandler)
 	//使用登录鉴权中间件
 	v.Use(middleware.JWTAuthHandler)
 	{

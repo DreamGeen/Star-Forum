@@ -8,11 +8,11 @@ import "star/proto/user/user.proto";
 import "star/proto/community/community.proto";
 
 
-service PostService{
+service FeedService{
     rpc QueryPostExist(QueryPostExistRequest)returns(QueryPostExistResponse);
-    rpc GetCommunityPostByPopularity(GetCommunityPostByPopularityRequest)returns(GetCommunityPostByPopularityResponse);
+    rpc GetCommunityPostByNewReply(GetCommunityPostByNewReplyRequest)returns(GetCommunityPostByNewReplyResponse);
     rpc GetCommunityPostByTime(GetCommunityPostByTimeRequest)returns(GetCommunityPostByTimeResponse);
-    rpc GetPostByTime(GetPostByTimeRequest)returns(GetPostByTimeResponse);
+    rpc GetPostByRelation(GetPostByRelationRequest)returns(GetPostByRelationResponse);
     rpc QueryPosts(QueryPostsRequest)returns(QueryPostsResponse);
 }
 
@@ -36,25 +36,28 @@ message Post{
   int64     CommentCount=7;
    bool     IsLike=8;
    bool     IsCollect=9;
+   string   LastReplyTime=10;
 }
 
 
-message GetCommunityPostByPopularityRequest{
+message GetCommunityPostByNewReplyRequest{
   int64  Page=1;
   int64 CommunityId=2;
   int64  ActorId=3;
+  string  LastReplyTime=4;
 }
 
-message GetCommunityPostByPopularityResponse{
+message GetCommunityPostByNewReplyResponse{
   repeated Post Posts=1;
+  string  NewReplyTime=2;
 }
 
-message GetPostByTimeRequest{
+message GetPostByRelationRequest{
     int64  page=1;
     int64  ActorId=2;
 }
 
-message GetPostByTimeResponse{
+message GetPostByRelationResponse{
     repeated  Post Posts=1;
 }
 

@@ -31,7 +31,7 @@ func CheckCommunity(communityName string) error {
 	community := new(models.Community)
 	if err := Client.Get(community, queryCommunityByNameSQL, communityName); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return str.ErrCommunityNameExists
+			return str.ErrCommunityNotExists
 		}
 		return err
 	}

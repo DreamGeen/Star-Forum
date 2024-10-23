@@ -36,6 +36,7 @@ var userService userPb.UserService
 var conn *amqp091.Connection
 var channel *amqp091.Channel
 var manager = NewManager()
+var messageSrvIns *MessageSrv
 
 func failOnError(err error, msg string) {
 	if err != nil {
@@ -518,7 +519,7 @@ func convertChatListToPB(ctx context.Context, recipientId int64, list []*models.
 			pchat := &messagePb.PrivateChat{
 				UserId:      sender.UserId,
 				UserName:    sender.UserName,
-				Img:         sender.Img,
+				Img:         *sender.Img,
 				LastMsg:     chat.LastMsgContent,
 				LastMsgTime: chat.LastSendTime.Format(str.ParseTimeFormat),
 			}
@@ -605,7 +606,7 @@ func convertMessagesToPB(messages []*models.PrivateMessage, sender *userPb.User)
 		pmessage := &messagePb.PrivateMessage{
 			SenderId:    message.SenderId,
 			SenderName:  sender.UserName,
-			SenderImg:   sender.Img,
+			SenderImg:   *sender.Img,
 			RecipientId: message.RecipientId,
 			Content:     message.Content,
 			Status:      message.Status,

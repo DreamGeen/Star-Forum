@@ -3,7 +3,7 @@ package httpHandler
 import (
 	"github.com/gin-gonic/gin"
 	"star/app/constant/settings"
-	str2 "star/app/constant/str"
+	 "star/app/constant/str"
 	"star/app/utils/sendSms"
 )
 
@@ -21,12 +21,12 @@ func SendLoginHandler(c *gin.Context) {
 func sendHandler(c *gin.Context, templateCode string) {
 	phone := c.Query("phone")
 	if phone == "" {
-		str2.Response(c, str2.ErrPhoneEmpty, str2.Empty, nil)
+		str.Response(c, str.ErrPhoneEmpty, str.Empty, nil)
 		return
 	}
 	if err := sendSms.HandleSendSms(c, phone, templateCode); err != nil {
-		str2.Response(c, err, str2.Empty, nil)
+		str.Response(c, err, str.Empty, nil)
 		return
 	}
-	str2.Response(c, nil, str2.Empty, nil)
+	str.Response(c, nil, str.Empty, nil)
 }

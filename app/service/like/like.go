@@ -1,4 +1,4 @@
-package like
+package main
 
 import (
 	"context"
@@ -33,11 +33,12 @@ const (
 type LikeSrv struct {
 }
 
-var postService feedPb.PostService
+var feedService feedPb.FeedService
 var messageService messagePb.MessageService
 var commentService commentPb.CommentService
 var conn *amqp091.Connection
 var channel *amqp091.Channel
+var likeSrvIns *LikeSrv
 
 func failOnError(err error, msg string) {
 	if err != nil {
@@ -58,9 +59,9 @@ func CloseMQ() {
 	}
 }
 
-func New() {
+func (l *LikeSrv) New() {
 	postMicroService := micro.NewService(micro.Name(str.FeedServiceClient))
-	postService = feedPb.NewPostService(str.FeedService, postMicroService.Client())
+	feedService = feedPb.NewFeedService(str.FeedService, postMicroService.Client())
 
 	messageMicroService := micro.NewService(micro.Name(str.MessageServiceClient))
 	messageService = messagePb.NewMessageService(str.MessageService, messageMicroService.Client())
@@ -185,7 +186,7 @@ func (l *LikeSrv) LikeAction(ctx context.Context, req *likePb.LikeActionRequest,
 }
 
 func likePost(ctx context.Context, req *likePb.LikeActionRequest, span trace.Span, logger *zap.Logger) error {
-	postExistResp, err := postService.QueryPostExist(ctx, &feedPb.QueryPostExistRequest{
+	postExistResp, err := feedService.QueryPostExist(ctx, &feedPb.QueryPostExistRequest{
 		PostId: req.SourceId,
 	})
 	if err != nil {
@@ -204,7 +205,7 @@ func likePost(ctx context.Context, req *likePb.LikeActionRequest, span trace.Spa
 	//贴子信息
 	postInfo, err := redis.GetPostInfo(ctx, req.SourceId)
 	if err != nil {
-		logger.Error("get feed info error",
+		logger.Error("get post info error",
 			zap.Error(err),
 			zap.Int64("post_id", req.SourceId),
 			zap.Int64("user_id", req.UserId))
@@ -437,7 +438,7 @@ func (l *LikeSrv) LikeList(ctx context.Context, req *likePb.LikeListRequest, res
 		postId, _ := strconv.ParseInt(postIdStr, 10, 64)
 		postIds[i] = postId
 	}
-	queryPostsResp, err := postService.QueryPosts(ctx, &feedPb.QueryPostsRequest{
+	queryPostsResp, err := feedService.QueryPosts(ctx, &feedPb.QueryPostsRequest{
 		ActorId: req.UserId,
 		PostIds: postIds,
 	})

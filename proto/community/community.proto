@@ -6,8 +6,6 @@ option  go_package = "star/proto/community/communityPb;communityPb";
 
 service community{
   rpc CreateCommunity(CreateCommunityRequest)returns(EmptyCommunityResponse);
-  rpc GetCommunityList(EmptyCommunityRequest)returns(GetCommunityListResponse);
-  rpc ShowCommunity(ShowCommunityRequest)returns(ShowCommunityResponse);
   rpc GetCommunityInfo(GetCommunityInfoRequest)returns(GetCommunityInfoResponse);
   rpc FollowCommunity(FollowCommunityRequest)returns(FollowCommunityResponse);
   rpc UnFollowCommunity(UnFollowCommunityRequest)returns(UnFollowCommunityResponse);
@@ -29,18 +27,6 @@ message EmptyCommunityRequest{
 }
 message EmptyCommunityResponse{
 }
-
-message GetCommunityListResponse{
-  repeated  Community Communitys=1;
-}
-
-message ShowCommunityRequest{
-   int64  CommunityId=1;
-}
-
-message ShowCommunityResponse{
-}
-
 
 message GetCommunityInfoRequest{
   int64 CommunityId=1;

@@ -37,7 +37,7 @@ func NewRelationServiceEndpoints() []*api.Endpoint {
 // Client API for RelationService service
 
 type RelationService interface {
-	GetFollowList(ctx context.Context, in *GetFollowRequest, opts ...client.CallOption) (*GetFollowResponse, error)
+	GetFollowList(ctx context.Context, in *GetFollowListRequest, opts ...client.CallOption) (*GetFollowListResponse, error)
 	GetFansList(ctx context.Context, in *GetFansListRequest, opts ...client.CallOption) (*GetFansListResponse, error)
 	CountFollow(ctx context.Context, in *CountFollowRequest, opts ...client.CallOption) (*CountFollowResponse, error)
 	CountFans(ctx context.Context, in *CountFansRequest, opts ...client.CallOption) (*CountFansResponse, error)
@@ -58,9 +58,9 @@ func NewRelationService(name string, c client.Client) RelationService {
 	}
 }
 
-func (c *relationService) GetFollowList(ctx context.Context, in *GetFollowRequest, opts ...client.CallOption) (*GetFollowResponse, error) {
+func (c *relationService) GetFollowList(ctx context.Context, in *GetFollowListRequest, opts ...client.CallOption) (*GetFollowListResponse, error) {
 	req := c.c.NewRequest(c.name, "RelationService.GetFollowList", in)
-	out := new(GetFollowResponse)
+	out := new(GetFollowListResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -131,7 +131,7 @@ func (c *relationService) IsFollow(ctx context.Context, in *IsFollowRequest, opt
 // Server API for RelationService service
 
 type RelationServiceHandler interface {
-	GetFollowList(context.Context, *GetFollowRequest, *GetFollowResponse) error
+	GetFollowList(context.Context, *GetFollowListRequest, *GetFollowListResponse) error
 	GetFansList(context.Context, *GetFansListRequest, *GetFansListResponse) error
 	CountFollow(context.Context, *CountFollowRequest, *CountFollowResponse) error
 	CountFans(context.Context, *CountFansRequest, *CountFansResponse) error
@@ -142,7 +142,7 @@ type RelationServiceHandler interface {
 
 func RegisterRelationServiceHandler(s server.Server, hdlr RelationServiceHandler, opts ...server.HandlerOption) error {
 	type relationService interface {
-		GetFollowList(ctx context.Context, in *GetFollowRequest, out *GetFollowResponse) error
+		GetFollowList(ctx context.Context, in *GetFollowListRequest, out *GetFollowListResponse) error
 		GetFansList(ctx context.Context, in *GetFansListRequest, out *GetFansListResponse) error
 		CountFollow(ctx context.Context, in *CountFollowRequest, out *CountFollowResponse) error
 		CountFans(ctx context.Context, in *CountFansRequest, out *CountFansResponse) error
@@ -161,7 +161,7 @@ type relationServiceHandler struct {
 	RelationServiceHandler
 }
 
-func (h *relationServiceHandler) GetFollowList(ctx context.Context, in *GetFollowRequest, out *GetFollowResponse) error {
+func (h *relationServiceHandler) GetFollowList(ctx context.Context, in *GetFollowListRequest, out *GetFollowListResponse) error {
 	return h.RelationServiceHandler.GetFollowList(ctx, in, out)
 }
 

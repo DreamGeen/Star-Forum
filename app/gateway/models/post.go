@@ -9,6 +9,15 @@ type CreatePost struct {
 
 type GetCommunityPost struct {
 	CommunityId int64 `json:"community_id" binding:"required"`
-	Limit       int64 `json:"limit" binding:"required"`
 	Page        int64 `json:"page"  binding:"required"`
+	ActorId     int64  `json:"actor_id" `
+	LastPostId  int64  `json:"last_post_id"`
 }
+
+type GetCommunityPostByNewReply struct {
+	CommunityId int64 `json:"community_id" binding:"required"`
+	Page        int64 `json:"page"  binding:"required"`
+	ActorId     int64  `json:"actor_id" `
+	LastRelyTime string `json:"last_reply_time"`
+}
+

@@ -1,38 +1,37 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/go-micro/plugins/v4/registry/etcd"
 	"go-micro.dev/v4/registry"
 	"go-micro.dev/v4/web"
+	"go.uber.org/zap"
 	"star/app/constant/settings"
+	"star/app/extra/tracing"
 	"star/app/gateway/client"
 	"star/app/gateway/router"
+	"star/app/utils/logging"
 )
 
 func main() {
-	//// 初始化zap
-	//if err := logger.InitGatewayLogger(); err != nil {
-	//	log.Fatalf("初始化日志失败: %v", err)
-	//}
-	//
-	//// 确保所有日志都被刷新
-	//defer func() {
-	//	if err := logger.GatewayLogger.Sync(); err != nil {
-	//		// 如果日志刷新失败，打印到标准错误输出
-	//		_, _ = fmt.Fprintf(os.Stderr, "日志刷新失败: %v\n", err)
-	//	}
-	//}()
-
-	//// 初始化配置
-	//if err := settings.Init(); err != nil {
-	//	fmt.Println(err)
-	//	return
-	//}
 	//初始化微服务客户端
 	client.Init()
 	etcdReg := etcd.NewRegistry(
 		registry.Addrs(fmt.Sprintf("%s:%d", settings.Conf.EtcdHost, settings.Conf.EtcdPort)))
+	tp, err := tracing.SetTraceProvider("HttpService")
+	if err != nil {
+		logging.Logger.Error("set tracer error",
+			zap.Error(err))
+		return
+	}
+	defer func() {
+		if err := tp.Shutdown(context.Background()); err != nil {
+			logging.Logger.Error("set tracer error",
+				zap.Error(err))
+			return
+		}
+	}()
 	//得到一个web服务实例
 	webService := web.NewService(
 		web.Name("HttpService"), //服务名称

@@ -22,8 +22,8 @@ import (
 
 type CollectSrv struct {
 }
-
-var postService feedPb.PostService
+var collectSrvIns  *CollectSrv
+var feedService feedPb.FeedService
 var conn *amqp091.Connection
 var channel *amqp091.Channel
 
@@ -46,9 +46,9 @@ func CloseMQ() {
 	}
 }
 
-func New() {
-	postMicroService := micro.NewService(micro.Name(str.FeedServiceClient))
-	postService = feedPb.NewPostService(str.FeedService, postMicroService.Client())
+func (c *CollectSrv)New() {
+	feedMicroService := micro.NewService(micro.Name(str.FeedServiceClient))
+	feedService = feedPb.NewFeedService(str.FeedService, feedMicroService.Client())
 
 	var err error
 	conn, err = amqp091.Dial(rabbitmq.ReturnRabbitmqUrl())
@@ -161,7 +161,7 @@ func (c *CollectSrv) CollectList(ctx context.Context, req *collectPb.CollectList
 		postId, _ := strconv.ParseInt(postIdStr, 10, 64)
 		postIds[i] = postId
 	}
-	queryPostsResp, err := postService.QueryPosts(ctx, &feedPb.QueryPostsRequest{
+	queryPostsResp, err := feedService.QueryPosts(ctx, &feedPb.QueryPostsRequest{
 		ActorId: req.ActorId,
 		PostIds: postIds,
 	})

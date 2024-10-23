@@ -24,7 +24,7 @@ func (g *GroupMessage) UnmarshalBinary(data []byte) error {
 	return json.Unmarshal(data, g)
 }
 
-// Value 批量插入mysql
+
 func (g *GroupMessage) Value() (driver.Value, error) {
 	return []interface{}{g.Content, g.SendTime, g.ChatId, g.SdUserId, g.CommunityId}, nil
 }

@@ -12,6 +12,7 @@ type Post struct {
 	Star        int       `db:"star"`
 	Collection  int       `db:"collection"`
 	Content     string    `db:"content"`
+	LastRelyTime string    `db:"lastRelyTime"`
 	IsScan      bool      `db:"isScan"`
 	CreateTime  time.Time `db:"createTime"`
 	DeleteTime  time.Time `db:"deleteTime"`

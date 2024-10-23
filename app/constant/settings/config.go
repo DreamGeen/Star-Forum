@@ -12,6 +12,8 @@ var Conf = new(AppConfig)
 
 // AppConfig  网站配置
 type AppConfig struct {
+	PodIpAddr       string `mapstructure:"pod_ip_addr"` //服务ip地址
+	SnowflakeId     int64  `mapstructure:"snowflake_id"`
 	*GinConfig      `mapstructure:"gin"`
 	*MysqlConfig    `mapstructure:"mysql"`
 	*RedisConfig    `mapstructure:"redis"`
@@ -98,12 +100,11 @@ type TracerConfig struct {
 	TracingEndPoint string  `mapstructure:"tracing_end_point"` //追踪数据要发送到的服务器地址
 	OtelState       string  `mapstructure:"otel_state"`
 	OtelSampler     float64 `mapstructure:"otel_sampler"`
-	PodIpAddr       string  `mapstructure:"pod_ip_addr"` //服务ip地址
 }
 
 func init() {
 	//设置读取配置文件路径
-	viper.SetConfigFile("C:\\Users\\浅梦\\Desktop\\star\\constant\\settings\\config.yaml")
+	viper.SetConfigFile("C:\\Users\\浅梦\\Desktop\\star\\app\\constant\\settings\\config.yaml")
 	//读取配置文件
 	if err := viper.ReadInConfig(); err != nil {
 		//utils.Logger.Error("读取配置文件失败", zap.Error(err))

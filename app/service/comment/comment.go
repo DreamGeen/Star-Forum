@@ -27,12 +27,12 @@ const redisCommentQPS = 3
 
 var (
 	commentSrvIns *CommentService
-	postService   feedPb.PostService
+	postService   feedPb.FeedService
 )
 
 func (s *CommentService) New() {
 	postMicroService := micro.NewService(micro.Name(str.FeedServiceClient))
-	postService = feedPb.NewPostService(str.FeedService, postMicroService.Client())
+	postService = feedPb.NewFeedService(str.FeedService, postMicroService.Client())
 }
 
 func commentLimitKey(userId int64) string {
@@ -55,7 +55,7 @@ func (s *CommentService) PostComment(ctx context.Context, req *commentPb.PostCom
 			zap.Error(err),
 			zap.Int64("actorId", req.UserId))
 		logging.SetSpanError(span, err)
-		return str.ErrPostError
+		return str.ErrFeedError
 	}
 	if limitRes.Allowed == 0 {
 		logger.Error("user feed comment too frequently",

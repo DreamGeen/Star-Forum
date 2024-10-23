@@ -37,8 +37,6 @@ func NewCommunityEndpoints() []*api.Endpoint {
 
 type CommunityService interface {
 	CreateCommunity(ctx context.Context, in *CreateCommunityRequest, opts ...client.CallOption) (*EmptyCommunityResponse, error)
-	GetCommunityList(ctx context.Context, in *EmptyCommunityRequest, opts ...client.CallOption) (*GetCommunityListResponse, error)
-	ShowCommunity(ctx context.Context, in *ShowCommunityRequest, opts ...client.CallOption) (*ShowCommunityResponse, error)
 	GetCommunityInfo(ctx context.Context, in *GetCommunityInfoRequest, opts ...client.CallOption) (*GetCommunityInfoResponse, error)
 	FollowCommunity(ctx context.Context, in *FollowCommunityRequest, opts ...client.CallOption) (*FollowCommunityResponse, error)
 	UnFollowCommunity(ctx context.Context, in *UnFollowCommunityRequest, opts ...client.CallOption) (*UnFollowCommunityResponse, error)
@@ -62,26 +60,6 @@ func NewCommunityService(name string, c client.Client) CommunityService {
 func (c *communityService) CreateCommunity(ctx context.Context, in *CreateCommunityRequest, opts ...client.CallOption) (*EmptyCommunityResponse, error) {
 	req := c.c.NewRequest(c.name, "Community.CreateCommunity", in)
 	out := new(EmptyCommunityResponse)
-	err := c.c.Call(ctx, req, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *communityService) GetCommunityList(ctx context.Context, in *EmptyCommunityRequest, opts ...client.CallOption) (*GetCommunityListResponse, error) {
-	req := c.c.NewRequest(c.name, "Community.GetCommunityList", in)
-	out := new(GetCommunityListResponse)
-	err := c.c.Call(ctx, req, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *communityService) ShowCommunity(ctx context.Context, in *ShowCommunityRequest, opts ...client.CallOption) (*ShowCommunityResponse, error) {
-	req := c.c.NewRequest(c.name, "Community.ShowCommunity", in)
-	out := new(ShowCommunityResponse)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -153,8 +131,6 @@ func (c *communityService) GetFollowCommunityList(ctx context.Context, in *GetFo
 
 type CommunityHandler interface {
 	CreateCommunity(context.Context, *CreateCommunityRequest, *EmptyCommunityResponse) error
-	GetCommunityList(context.Context, *EmptyCommunityRequest, *GetCommunityListResponse) error
-	ShowCommunity(context.Context, *ShowCommunityRequest, *ShowCommunityResponse) error
 	GetCommunityInfo(context.Context, *GetCommunityInfoRequest, *GetCommunityInfoResponse) error
 	FollowCommunity(context.Context, *FollowCommunityRequest, *FollowCommunityResponse) error
 	UnFollowCommunity(context.Context, *UnFollowCommunityRequest, *UnFollowCommunityResponse) error
@@ -166,8 +142,6 @@ type CommunityHandler interface {
 func RegisterCommunityHandler(s server.Server, hdlr CommunityHandler, opts ...server.HandlerOption) error {
 	type community interface {
 		CreateCommunity(ctx context.Context, in *CreateCommunityRequest, out *EmptyCommunityResponse) error
-		GetCommunityList(ctx context.Context, in *EmptyCommunityRequest, out *GetCommunityListResponse) error
-		ShowCommunity(ctx context.Context, in *ShowCommunityRequest, out *ShowCommunityResponse) error
 		GetCommunityInfo(ctx context.Context, in *GetCommunityInfoRequest, out *GetCommunityInfoResponse) error
 		FollowCommunity(ctx context.Context, in *FollowCommunityRequest, out *FollowCommunityResponse) error
 		UnFollowCommunity(ctx context.Context, in *UnFollowCommunityRequest, out *UnFollowCommunityResponse) error
@@ -188,14 +162,6 @@ type communityHandler struct {
 
 func (h *communityHandler) CreateCommunity(ctx context.Context, in *CreateCommunityRequest, out *EmptyCommunityResponse) error {
 	return h.CommunityHandler.CreateCommunity(ctx, in, out)
-}
-
-func (h *communityHandler) GetCommunityList(ctx context.Context, in *EmptyCommunityRequest, out *GetCommunityListResponse) error {
-	return h.CommunityHandler.GetCommunityList(ctx, in, out)
-}
-
-func (h *communityHandler) ShowCommunity(ctx context.Context, in *ShowCommunityRequest, out *ShowCommunityResponse) error {
-	return h.CommunityHandler.ShowCommunity(ctx, in, out)
 }
 
 func (h *communityHandler) GetCommunityInfo(ctx context.Context, in *GetCommunityInfoRequest, out *GetCommunityInfoResponse) error {
