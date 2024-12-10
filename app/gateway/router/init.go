@@ -13,11 +13,11 @@ func Setup() *gin.Engine {
 
 	v.GET("/signup/send", httpHandler.SendSetupHandler)
 	v.POST("/signup", httpHandler.SignupHandler)
-	v1 := v.Group("/login")
+	v1 := v.Group("/account")
 	{
-		v1.POST("/password", httpHandler.LoginHandler)
-		v1.GET("/captcha/send", httpHandler.SendLoginHandler)
-		v1.POST("/captcha", httpHandler.LoginWithCaptchaHandler)
+		v1.POST("/checkCode", httpHandler.GetCaptchaHandler)
+		v1.POST("/login", httpHandler.LoginHandler)
+		v1.POST("/send", httpHandler.SendSetupHandler)
 	}
 
 	//
@@ -32,16 +32,16 @@ func Setup() *gin.Engine {
 	}
 	v.POST("/like", middleware.JWTAuthHandler, httpHandler.LikeActionHandler)
 	//使用登录鉴权中间件
-	v.Use(middleware.JWTAuthHandler)
-	{
-		// 评论相关路由
-		v.POST("/comment", httpHandler.PostComment)
-		v.DELETE("/comment/:id", httpHandler.DeleteComment)
-		v.GET("/comments", httpHandler.GetComments)
-
-		v.GET("/whisper", httpHandler.ListMessageCountHandler)
-		v.GET("/whisper/:userId", httpHandler.SendPrivateMessageHandler)
-	}
+	//v.Use(middleware.JWTAuthHandler)
+	//{
+	//	// 评论相关路由
+	//	v.POST("/comment", httpHandler.PostComment)
+	//	v.DELETE("/comment/:id", httpHandler.DeleteComment)
+	//	v.GET("/comments", httpHandler.GetComments)
+	//
+	//	v.GET("/whisper", httpHandler.ListMessageCountHandler)
+	//	v.GET("/whisper/:userId", httpHandler.SendPrivateMessageHandler)
+	//}
 
 	return v
 }

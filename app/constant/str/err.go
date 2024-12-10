@@ -141,27 +141,27 @@ func getCode(err error) int32 {
 	return code
 }
 
-func Response(c *gin.Context, err error, dataFieldName string, data interface{}) {
+func Response(c *gin.Context, err error, dataFields map[string]interface{}) {
 	statusCode := SuccessCode
 	statusMsg := Success
 	if err != nil {
 		statusMsg = err.Error()
+		statusCode = getCode(err)
 	}
-	statusCode = getCode(err)
+
 	// 构建响应 JSON
 	response := gin.H{
 		"statusCode": statusCode,
 		"statusMsg":  statusMsg,
 	}
-	if data != nil {
-		// 根据传入的 dataFieldName 动态设置字段名
-		if dataFieldName != Empty {
-			response[dataFieldName] = data
-		} else {
-			response["data"] = data // 默认使用 "data" 字段名
-		}
 
+	// 动态设置多个字段
+	if dataFields != nil {
+		for key, value := range dataFields {
+			response[key] = value
+		}
 	}
+
 	c.JSON(http.StatusOK, response)
 	return
 }

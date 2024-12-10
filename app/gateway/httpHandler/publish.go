@@ -14,15 +14,15 @@ import (
 )
 
 func CreatePostHandler(c *gin.Context) {
-	_,span:=tracing.Tracer.Start(c.Request.Context(),"CreatePostHandler")
+	_, span := tracing.Tracer.Start(c.Request.Context(), "CreatePostHandler")
 	defer span.End()
 	logging.SetSpanWithHostname(span)
-	logger:=logging.LogServiceWithTrace(span,"GateWay.CreatePost")
+	logger := logging.LogServiceWithTrace(span, "GateWay.CreatePost")
 
 	userId, err := request.GetUserId(c)
 	if err != nil {
 		logger.Warn("user not log in,but want to create feed")
-		str.Response(c, err, str.Empty, nil)
+		str.Response(c, err, nil)
 		return
 	}
 	p := new(models.CreatePost)
@@ -31,7 +31,7 @@ func CreatePostHandler(c *gin.Context) {
 		logger.Error("create feed error,invalid param",
 			zap.Error(err),
 			zap.Int64("userId", userId))
-		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
+		str.Response(c, str.ErrInvalidParam, nil)
 		return
 	}
 	_, err = client.CreatePost(c.Request.Context(), &publishPb.CreatePostRequest{
@@ -47,9 +47,9 @@ func CreatePostHandler(c *gin.Context) {
 			zap.Int64("communityId", p.CommunityId),
 			zap.String("content", p.Content),
 			zap.Bool("isScan", p.IsScan))
-		str.Response(c, err, str.Empty, nil)
+		str.Response(c, err, nil)
 		return
 	}
-	str.Response(c, nil, str.Empty, nil)
+	str.Response(c, nil, nil)
 	return
 }

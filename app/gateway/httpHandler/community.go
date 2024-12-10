@@ -15,29 +15,29 @@ import (
 )
 
 func CreateCommunityHandler(c *gin.Context) {
-	_,span:=tracing.Tracer.Start(c.Request.Context(),"CreateCommunityHandler")
+	_, span := tracing.Tracer.Start(c.Request.Context(), "CreateCommunityHandler")
 	defer span.End()
 	logging.SetSpanWithHostname(span)
-	logger:=logging.LogServiceWithTrace(span,"GateWay.CreateCommunity")
-	
+	logger := logging.LogServiceWithTrace(span, "GateWay.CreateCommunity")
+
 	community := new(models.Community)
 	if err := c.ShouldBindJSON(community); err != nil {
 		logger.Error("invalid param",
-	        zap.Error(err))
-		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
+			zap.Error(err))
+		str.Response(c, str.ErrInvalidParam, nil)
 		return
 	}
 	if err := validateDescriptionAndName(community); err != nil {
 		logger.Error("invalid description",
-	        zap.Error(err))
-		str.Response(c, err, str.Empty, nil)
+			zap.Error(err))
+		str.Response(c, err, nil)
 		return
 	}
-	userId, err :=request.GetUserId(c)
+	userId, err := request.GetUserId(c)
 	if err != nil {
 		logger.Error("user not log in",
-	        zap.Error(err))
-		str.Response(c, err, str.Empty, nil)
+			zap.Error(err))
+		str.Response(c, err, nil)
 		return
 	}
 	req := &communityPb.CreateCommunityRequest{
@@ -46,23 +46,23 @@ func CreateCommunityHandler(c *gin.Context) {
 		LeaderId:      userId,
 	}
 	if _, err := client.CreateCommunity(c.Request.Context(), req); err != nil {
-		str.Response(c, err, str.Empty, nil)
+		str.Response(c, err, nil)
 		return
 	}
-	str.Response(c, nil, str.Empty, nil)
+	str.Response(c, nil, nil)
 }
 
 func GetFollowCommunityListHandler(c *gin.Context) {
-	_,span:=tracing.Tracer.Start(c.Request.Context(),"GetFollowCommunityListHandler")
+	_, span := tracing.Tracer.Start(c.Request.Context(), "GetFollowCommunityListHandler")
 	defer span.End()
 	logging.SetSpanWithHostname(span)
-	logger:=logging.LogServiceWithTrace(span,"GateWay.GetFollowCommunityList")
+	logger := logging.LogServiceWithTrace(span, "GateWay.GetFollowCommunityList")
 
 	userId, err := request.GetUserId(c)
 	if err != nil {
 		logger.Warn("user not log in,but want to get follow community",
 			zap.Error(err))
-		str.Response(c, err, str.Empty, nil)
+		str.Response(c, err, nil)
 		return
 	}
 	resp, err := client.GetFollowCommunityList(c.Request.Context(), &communityPb.GetFollowCommunityListRequest{
@@ -72,16 +72,19 @@ func GetFollowCommunityListHandler(c *gin.Context) {
 		logger.Error("get follow community list service error",
 			zap.Error(err),
 			zap.Int64("userId", userId))
-		str.Response(c, err, str.Empty, nil)
+		str.Response(c, err, nil)
 		return
 	}
-	str.Response(c, nil, "communityList", resp.CommunityList)
+
+	str.Response(c, nil, map[string]interface{}{
+		"communityList": resp.CommunityList,
+	})
 }
 func FollowCommunityHandler(c *gin.Context) {
-	_,span:=tracing.Tracer.Start(c.Request.Context(),"FollowCommunityHandler")
+	_, span := tracing.Tracer.Start(c.Request.Context(), "FollowCommunityHandler")
 	defer span.End()
 	logging.SetSpanWithHostname(span)
-	logger:=logging.LogServiceWithTrace(span,"GateWay.FollowCommunityList")
+	logger := logging.LogServiceWithTrace(span, "GateWay.FollowCommunityList")
 
 	communityIdStr := c.Param("id")
 	communityId, err := strconv.ParseInt(communityIdStr, 64, 10)
@@ -89,7 +92,7 @@ func FollowCommunityHandler(c *gin.Context) {
 		logger.Error("follow user error,invalid param",
 			zap.Error(err),
 			zap.String("communityIdStr", communityIdStr))
-		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
+		str.Response(c, str.ErrInvalidParam, nil)
 		return
 	}
 	userId, err := request.GetUserId(c)
@@ -97,7 +100,7 @@ func FollowCommunityHandler(c *gin.Context) {
 		logger.Warn("user not log in,but want to follow community",
 			zap.Error(err),
 			zap.Int64("communityId", communityId))
-		str.Response(c, err, str.Empty, nil)
+		str.Response(c, err, nil)
 		return
 	}
 	_, err = client.FollowCommunity(c.Request.Context(), &communityPb.FollowCommunityRequest{
@@ -109,18 +112,18 @@ func FollowCommunityHandler(c *gin.Context) {
 			zap.Error(err),
 			zap.Int64("userId", userId),
 			zap.Int64("communityId", communityId))
-		str.Response(c, err, str.Empty, nil)
+		str.Response(c, err, nil)
 		return
 	}
-	str.Response(c, nil, str.Empty, nil)
+	str.Response(c, nil, nil)
 	return
 }
 
 func UnFollowCommunityHandler(c *gin.Context) {
-	_,span:=tracing.Tracer.Start(c.Request.Context(),"UnFollowCommunityHandler")
+	_, span := tracing.Tracer.Start(c.Request.Context(), "UnFollowCommunityHandler")
 	defer span.End()
 	logging.SetSpanWithHostname(span)
-	logger:=logging.LogServiceWithTrace(span,"GateWay.UnFollowCommunity")
+	logger := logging.LogServiceWithTrace(span, "GateWay.UnFollowCommunity")
 
 	communityIdStr := c.Query("id")
 	communityId, err := strconv.ParseInt(communityIdStr, 64, 10)
@@ -128,7 +131,7 @@ func UnFollowCommunityHandler(c *gin.Context) {
 		logger.Error("unfollow community error,invalid param",
 			zap.Error(err),
 			zap.String("communityIdStr", communityIdStr))
-		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
+		str.Response(c, str.ErrInvalidParam, nil)
 		return
 	}
 	userId, err := request.GetUserId(c)
@@ -136,7 +139,7 @@ func UnFollowCommunityHandler(c *gin.Context) {
 		logger.Warn("user not log in,but want to unfollow community",
 			zap.Error(err),
 			zap.Int64("communityId", communityId))
-		str.Response(c, err, str.Empty, nil)
+		str.Response(c, err, nil)
 		return
 	}
 	_, err = client.UnFollowCommunity(c.Request.Context(), &communityPb.UnFollowCommunityRequest{
@@ -148,38 +151,40 @@ func UnFollowCommunityHandler(c *gin.Context) {
 			zap.Error(err),
 			zap.Int64("userId", userId),
 			zap.Int64("communityId", communityId))
-		str.Response(c, err, str.Empty, nil)
+		str.Response(c, err, nil)
 		return
 	}
-	str.Response(c, nil, str.Empty, nil)
+	str.Response(c, nil, nil)
 	return
 }
 
-
-func GetCommunityInfoHandler(c *gin.Context){
-	_,span:=tracing.Tracer.Start(c.Request.Context(),"GetCommunityInfoHandler")
+func GetCommunityInfoHandler(c *gin.Context) {
+	_, span := tracing.Tracer.Start(c.Request.Context(), "GetCommunityInfoHandler")
 	defer span.End()
 	logging.SetSpanWithHostname(span)
-	logger:=logging.LogServiceWithTrace(span,"GateWay.GetCommunityInfo")
+	logger := logging.LogServiceWithTrace(span, "GateWay.GetCommunityInfo")
 
-    communityIdStr:=c.Param("id")
+	communityIdStr := c.Param("id")
 	communityId, err := strconv.ParseInt(communityIdStr, 64, 10)
 	if err != nil || communityId == 0 {
 		logger.Error("invalid param",
 			zap.Error(err),
 			zap.String("communityIdStr", communityIdStr))
-		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
+		str.Response(c, str.ErrInvalidParam, nil)
 		return
 	}
-    resp,err:=client.GetCommunityInfo(c.Request.Context(),&communityPb.GetCommunityInfoRequest{
-		   CommunityId: communityId,
+	resp, err := client.GetCommunityInfo(c.Request.Context(), &communityPb.GetCommunityInfoRequest{
+		CommunityId: communityId,
 	})
-	if err!=nil{
+	if err != nil {
 		logger.Error("get community info service error",
-		   zap.Error(err)) 
-        str.Response(c,err,str.Empty,nil)
+			zap.Error(err))
+		str.Response(c, err, nil)
 	}
-	str.Response(c,nil,"communityInfo",resp.Community)
+
+	str.Response(c, nil, map[string]interface{}{
+		"communityInfo": resp.Community,
+	})
 }
 
 // validateDescription 效验简介字数

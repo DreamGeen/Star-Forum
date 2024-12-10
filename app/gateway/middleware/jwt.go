@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"log"
-	str2 "star/app/constant/str"
+	"star/app/constant/str"
 	"star/app/utils/jwt"
 	"strings"
 
@@ -14,8 +14,9 @@ func JWTAuthHandler(c *gin.Context) {
 	auth := c.Request.Header.Get("Authorization")
 	if auth == "" {
 		log.Println("授权字段为空")
-		str2.Response(c, str2.ErrNotLogin, str2.Empty, nil)
+		str.Response(c, str.ErrNotLogin, str.Empty, nil)
 		c.Abort()
+		return
 	}
 	//按空格分割取token
 	token := strings.Split(auth, " ")[1]
@@ -23,8 +24,9 @@ func JWTAuthHandler(c *gin.Context) {
 	claims, err := jwt.ParseToken(token)
 	if err != nil {
 		log.Println("无效的token", err)
-		str2.Response(c, str2.ErrNotLogin, str2.Empty, nil)
+		str.Response(c, str.ErrNotLogin, str.Empty, nil)
 		c.Abort()
+		return
 	}
 	//将获取的用户id和用户名保存下来
 	c.Set("userId", claims.UserID)

@@ -44,6 +44,7 @@ func sendMsg(ctx context.Context, phone, templateCode string) error {
 	}
 	//生成验证码
 	code := generateCode()
+	fmt.Println(code)
 	templateParam := fmt.Sprintf(`{"code":"%s"}`, code)
 
 	//tea.string()取地址

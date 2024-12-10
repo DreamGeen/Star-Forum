@@ -14,24 +14,24 @@ import (
 )
 
 func LikeActionHandler(c *gin.Context) {
-	_,span:=tracing.Tracer.Start(c.Request.Context(),"LikeActionHandler")
+	_, span := tracing.Tracer.Start(c.Request.Context(), "LikeActionHandler")
 	defer span.End()
 	logging.SetSpanWithHostname(span)
-	logger:=logging.LogServiceWithTrace(span,"GateWay.LikeAction")
+	logger := logging.LogServiceWithTrace(span, "GateWay.LikeAction")
 
 	l := new(models.LikeAction)
 	err := c.ShouldBindJSON(l)
 	if err != nil {
 		logger.Error("like action error,invalid param",
 			zap.Error(err))
-		str.Response(c, str.ErrInvalidParam, str.Empty, nil)
+		str.Response(c, str.ErrInvalidParam, nil)
 		return
 	}
 	l.UserId, err = request.GetUserId(c)
 	if err != nil {
 		logger.Warn("user not log in,but want to like action",
 			zap.Error(err))
-		str.Response(c, err, str.Empty, nil)
+		str.Response(c, err, nil)
 		return
 	}
 	l.Url = c.Request.URL.RawPath
@@ -49,24 +49,24 @@ func LikeActionHandler(c *gin.Context) {
 			zap.Int64("sourceId", l.SourceId),
 			zap.Uint32("sourceType", l.SourceType),
 			zap.String("url", l.Url))
-		str.Response(c, err, str.Empty, nil)
+		str.Response(c, err, nil)
 		return
 	}
-	str.Response(c, nil, str.Empty, nil)
+	str.Response(c, nil, nil)
 	return
 }
 
 func LikeListHandler(c *gin.Context) {
-	_,span:=tracing.Tracer.Start(c.Request.Context(),"LikeListHandler")
+	_, span := tracing.Tracer.Start(c.Request.Context(), "LikeListHandler")
 	defer span.End()
 	logging.SetSpanWithHostname(span)
-	logger:=logging.LogServiceWithTrace(span,"GateWay.LikeList")
+	logger := logging.LogServiceWithTrace(span, "GateWay.LikeList")
 
 	userId, err := request.GetUserId(c)
 	if err != nil {
 		logger.Warn("user not log in,but want to list like feed",
 			zap.Error(err))
-		str.Response(c, err, str.Empty, nil)
+		str.Response(c, err, nil)
 		return
 	}
 	resp, err := client.LikeList(c.Request.Context(), &likePb.LikeListRequest{
@@ -76,9 +76,12 @@ func LikeListHandler(c *gin.Context) {
 		logger.Error("like list service error",
 			zap.Error(err),
 			zap.Int64("userId", userId))
-		str.Response(c, err, str.Empty, nil)
+		str.Response(c, err, nil)
 		return
 	}
-	str.Response(c, nil, "posts", resp.Posts)
+
+	str.Response(c, nil, map[string]interface{}{
+		"posts": resp.Posts,
+	})
 	return
 }
