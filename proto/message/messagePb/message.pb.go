@@ -669,7 +669,7 @@ type PrivateChat struct {
 
 	UserId      int64  `protobuf:"varint,1,opt,name=UserId,proto3" json:"UserId,omitempty"`
 	UserName    string `protobuf:"bytes,2,opt,name=UserName,proto3" json:"UserName,omitempty"`
-	Img         string `protobuf:"bytes,3,opt,name=Img,proto3" json:"Img,omitempty"`
+	Img         string `protobuf:"bytes,3,opt,name=Avatar,proto3" json:"Avatar,omitempty"`
 	LastMsg     string `protobuf:"bytes,4,opt,name=LastMsg,proto3" json:"LastMsg,omitempty"`
 	LastMsgTime string `protobuf:"bytes,5,opt,name=LastMsgTime,proto3" json:"LastMsgTime,omitempty"`
 }

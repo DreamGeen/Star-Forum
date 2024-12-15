@@ -24,6 +24,7 @@ type AppConfig struct {
 	*QiniuConfig    `mapstructure:"qiniuyv"`
 	*LogConfig      `mapstructure:"log"`
 	*TracerConfig   `mapstructure:"tracer"`
+	*Admin          `mapstructure:"admin"`
 }
 
 type GinConfig struct {
@@ -100,6 +101,13 @@ type TracerConfig struct {
 	TracingEndPoint string  `mapstructure:"tracing_end_point"` //追踪数据要发送到的服务器地址
 	OtelState       string  `mapstructure:"otel_state"`
 	OtelSampler     float64 `mapstructure:"otel_sampler"`
+}
+
+// Admin 管理员
+type Admin struct {
+	Id       int64  `mapstructure:"id"`
+	Username string `mapstructure:"username"`
+	Password string `mapstructure:"password"`
 }
 
 func init() {

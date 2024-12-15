@@ -27,4 +27,7 @@ const (
 
 	PublishServiceClient = "PublishService.client"
 	PublishService       = "PublishService"
+
+	AdminServiceClient = "AdminService.client"
+	AdminService       = "AdminService"
 )

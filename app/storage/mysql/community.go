@@ -15,7 +15,7 @@ import (
 const (
 	queryCommunityByNameSQL      = "select communityId from community where communityName=?"
 	insertCommunitySQL           = "insert into community(communityId,communityName,description,member,leaderId,img) values (?,?,?,?,?,?)"
-	queryCommunityListSQL        = "select communityId,communityName,Img from community "
+	queryCommunityListSQL        = "select communityId,communityName,Avatar from community "
 	getCommunityInfoSQL          = "select communityId, description, communityName, member, leaderId, manageId,img from community  where communityId=?"
 	getAllCommunityIdSQL         = "select communityId from community"
 	countCommunityFollowSQL      = "select count(1) from community_follows where userId=?"

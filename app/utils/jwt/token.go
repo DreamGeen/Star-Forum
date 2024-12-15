@@ -42,7 +42,6 @@ func GetToken(user *models.User) (accessTokenString string, refreshTokenString s
 	if err != nil {
 		return "", "", err
 	}
-
 	return
 }
 
@@ -58,6 +57,21 @@ func RefreshAccessToken(accessToken, refreshToken string) (string, error) {
 		return "", tokenInValid
 	}
 	return generateToken(claims.UserID, expireAccessToken)
+}
+
+// AutoLogin 刷新accessToken并且返回userId
+func AutoLogin(accessToken, refreshToken string) (int64, string, error) {
+	//判断refresh token是否合法
+	if _, err := ParseToken(refreshToken); err != nil {
+		return 0, "", err
+	}
+	//判断access jwtAuth 是否是因为过期而失效并解析出负载信息
+	claims, err := ParseToken(accessToken)
+	if err != nil && !errors.Is(err, tokenExpired) {
+		return 0, "", tokenInValid
+	}
+	newAccessToken, err := generateToken(claims.UserID, expireAccessToken)
+	return claims.UserID, newAccessToken, err
 }
 
 // ParseToken 解析token

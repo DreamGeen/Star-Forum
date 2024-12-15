@@ -14,7 +14,7 @@ func (s *CaptchaStore) Set(id string, value string) error {
 }
 
 func (s *CaptchaStore) Get(id string, clear bool) string {
-	captcha := redis.Client.Get(context.Background(), id).String()
+	captcha, _ := redis.Client.Get(context.Background(), id).Result()
 	if clear {
 		redis.Client.Del(context.Background(), id)
 	}

@@ -1,0 +1,61 @@
+syntax="proto3";
+
+package adminPb;
+
+option go_package="star/proto/admin/adminPb;adminPb";
+
+
+service AdminService{
+     rpc LoadCategoryList(LoadCategoryListRequest)returns(LoadCategoryListResponse);
+     rpc DelCategory(DelCategoryRequest)returns(DelCategoryResponse);
+     rpc SaveCategory(SaveCategoryRequest)returns(SaveCategoryResponse);
+     rpc ChangeSort(ChangeSortRequest)returns(ChangeSortResponse);
+}
+
+message   LoadCategoryListRequest{
+
+}
+
+message   LoadCategoryListResponse{
+    repeated Category categoryList=1;
+}
+
+message DelCategoryRequest{
+  int64 categoryId=1;
+}
+message DelCategoryResponse{
+
+}
+message SaveCategoryRequest{
+  string categoryCode = 1;
+  string categoryName = 2;
+  string icon = 3;
+  string background = 4;
+  int64 categoryId = 5;
+  int64 pCategoryId = 6;
+}
+
+message SaveCategoryResponse{
+
+}
+message ChangeSortRequest{
+    int64  pCategoryId =1;
+    string categoryIdsStr=2;
+}
+message ChangeSortResponse{
+
+}
+
+message Category {
+  string categoryCode = 1;
+  string categoryName = 2;
+  string icon = 3;
+  string background = 4;
+  int64 categoryId = 5;
+  int64 pCategoryId = 6;
+  uint32  sort=7;
+  repeated Category children = 8; // 子分类列表
+}
+
+
+

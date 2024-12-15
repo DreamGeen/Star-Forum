@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-redis/redis_rate/v10"
+	"github.com/google/uuid"
 	redis2 "github.com/redis/go-redis/v9"
 	"go-micro.dev/v4"
 	"go.uber.org/zap"
+	"path/filepath"
 	"star/app/constant/str"
 	"star/app/extra/tracing"
 	"star/app/models"
@@ -25,10 +27,6 @@ import (
 type PublishSrv struct {
 }
 
-const (
-	redisPublishQPS = 3
-)
-
 var feedService feedPb.FeedService
 var publishSrvIns *PublishSrv
 
@@ -38,7 +36,60 @@ func (p *PublishSrv) New() {
 }
 
 func publishLimitKey(userId int64) string {
-	return fmt.Sprintf("redis_post_limiter:%d", userId)
+	return str.Redis_Key_Limiter_Publish + fmt.Sprintf(":%d", userId)
+}
+func uploadVideosKey(uploadId string, userId int64) string {
+	return str.Redis_Key_Upload_Videos + uploadId + fmt.Sprintf(":%d", userId)
+}
+
+func (p *PublishSrv) PreUploadVideos(ctx context.Context, req *publishPb.PreUploadVideosRequest, resp *publishPb.PreUploadVideosResponse) error {
+	ctx, span := tracing.Tracer.Start(ctx, "PublishService")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger := logging.LogServiceWithTrace(span, "PublishService.PreUploadVideos")
+
+	//redis limit
+	limiter := redis_rate.NewLimiter(redis.Client)
+	limiterKey := publishLimitKey(req.ActorId)
+	limitRes, err := limiter.Allow(ctx, limiterKey, redis_rate.PerSecond(str.Redis_QPS_Publish))
+	if err != nil {
+		logger.Error("publish limiter error",
+			zap.Error(err),
+			zap.Int64("actorId", req.ActorId))
+		logging.SetSpanError(span, err)
+		return str.ErrPublishError
+	}
+	if limitRes.Allowed == 0 {
+		logger.Error("user upload videos too frequently",
+			zap.Int64("userId", req.ActorId))
+		logging.SetSpanError(span, err)
+		return str.ErrRequestTooFrequently
+	}
+	upload := &models.UploadFile{
+		UploadId:   uuid.New().String(),
+		FileName:   req.FileName,
+		Chunks:     req.Chunks,
+		ChunkIndex: uint32(0),
+		FilePath:   filepath.Join(str.DirTemp, time.Now().Format(str.YYMMDD)),
+	}
+
+	err = redis.Client.HSet(ctx, uploadVideosKey(upload.UploadId, req.ActorId), upload).Err()
+	if err != nil {
+		logger.Error("redis save use upload msg error",
+			zap.Error(err),
+			zap.Int64("userId", req.ActorId))
+		logging.SetSpanError(span, err)
+		return str.ErrPublishError
+	}
+	err = redis.Client.Expire(ctx, uploadVideosKey(upload.UploadId, req.ActorId), 24*time.Hour).Err()
+	if err != nil {
+		logger.Error("redis set expire error",
+			zap.Error(err),
+			zap.Int64("userId", req.ActorId))
+		return str.ErrPublishError
+	}
+	resp.UploadId = upload.UploadId
+	return nil
 }
 
 // CreatePost 创建帖子
@@ -51,7 +102,7 @@ func (p *PublishSrv) CreatePost(ctx context.Context, req *publishPb.CreatePostRe
 	//redis limit
 	limiter := redis_rate.NewLimiter(redis.Client)
 	limiterKey := publishLimitKey(req.UserId)
-	limitRes, err := limiter.Allow(ctx, limiterKey, redis_rate.PerSecond(redisPublishQPS))
+	limitRes, err := limiter.Allow(ctx, limiterKey, redis_rate.PerSecond(str.Redis_QPS_Publish))
 	if err != nil {
 		logger.Error("feed limiter error",
 			zap.Error(err),

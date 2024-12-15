@@ -5,6 +5,7 @@ import (
 	"star/app/constant/str"
 	"star/app/extra/tracing"
 	"star/app/gateway/models"
+	"star/app/utils/jwt"
 	"star/app/utils/logging"
 	"star/app/utils/request"
 	"star/proto/user/userPb"
@@ -17,6 +18,7 @@ import (
 	"star/app/gateway/client"
 )
 
+// 图片验证码生成
 var store = &models.CaptchaStore{}
 var driver = &base64Captcha.DriverMath{
 	Height: 42,
@@ -41,7 +43,7 @@ func LoginHandler(c *gin.Context) {
 	if !store.Verify(u.CheckCodeKey, u.CheckCode, true) {
 		logger.Warn("img captcha error",
 			zap.String("user", u.User))
-		str.Response(c, str.ErrInvalidCaptcha, nil)
+		str.Response(c, str.ErrInvalidImgCaptcha, nil)
 		return
 	}
 	//登录处理
@@ -61,7 +63,9 @@ func LoginHandler(c *gin.Context) {
 
 	//成功响应
 	str.Response(c, nil, map[string]interface{}{
-		"token": resp.Token,
+		"accessToken":  resp.Token.AccessToken,
+		"refreshToken": resp.Token.RefreshToken,
+		"userInfo":     resp.UserInfo,
 	})
 }
 
@@ -77,9 +81,10 @@ func LoginWithCaptchaHandler(c *gin.Context) {
 	if err := c.ShouldBindJSON(u); err != nil {
 		logger.Error("login error invalid param",
 			zap.Error(err))
-		str.Response(c, str.ErrInvalidParam, nil)
+		str.Response(c, str.ErrInvalidImgCaptcha, nil)
 		return
 	}
+
 	//登录处理
 	req := &userPb.LSRequest{
 		Phone:   u.Phone,
@@ -100,6 +105,66 @@ func LoginWithCaptchaHandler(c *gin.Context) {
 	})
 }
 
+func AutoLoginHandler(c *gin.Context) {
+	_, span := tracing.Tracer.Start(c.Request.Context(), "AutoLoginHandler")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger := logging.LogServiceWithTrace(span, "GateWay.AutoLoginHandler")
+
+	oldToken := new(models.Token)
+	if err := c.ShouldBindJSON(oldToken); err != nil {
+		logger.Error("auto login error invalid param",
+			zap.Error(err))
+		str.Response(c, str.ErrInvalidParam, nil)
+		return
+	}
+	userId, accessToken, err := jwt.AutoLogin(oldToken.AccessToken, oldToken.RefreshToken)
+	if err != nil {
+		logger.Error("auto login refresh token error",
+			zap.Error(err))
+		str.Response(c, err, nil)
+		return
+	}
+	userInfoResp, err := client.GetUserInfo(c.Request.Context(), &userPb.GetUserInfoRequest{
+		UserId: userId,
+	})
+	if err != nil {
+		logger.Error("auto login error because get use info error",
+			zap.Error(err))
+		str.Response(c, str.ErrAutoLoginError, nil)
+		return
+	}
+	str.Response(c, nil, map[string]interface{}{
+		"accessToken": accessToken,
+		"userInfo":    userInfoResp.User,
+	})
+}
+
+func RefreshTokenHandler(c *gin.Context) {
+	_, span := tracing.Tracer.Start(c.Request.Context(), "RefreshTokenHandler")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger := logging.LogServiceWithTrace(span, "GateWay.RefreshToken")
+
+	oldToken := new(models.Token)
+	if err := c.ShouldBindJSON(oldToken); err != nil {
+		logger.Error("refresh error invalid param",
+			zap.Error(err))
+		str.Response(c, str.ErrInvalidParam, nil)
+		return
+	}
+	accessToken, err := jwt.RefreshAccessToken(oldToken.AccessToken, oldToken.RefreshToken)
+	if err != nil {
+		logger.Error("refresh token error",
+			zap.Error(err))
+		str.Response(c, err, nil)
+		return
+	}
+	str.Response(c, nil, map[string]interface{}{
+		"accessToken": accessToken,
+	})
+}
+
 func SignupHandler(c *gin.Context) {
 	_, span := tracing.Tracer.Start(c.Request.Context(), "SignupHandler")
 	defer span.End()
@@ -114,6 +179,13 @@ func SignupHandler(c *gin.Context) {
 		str.Response(c, str.ErrInvalidParam, nil)
 		return
 	}
+	if !store.Verify(u.CheckCodeKey, u.CheckCode, true) {
+		logger.Warn("img captcha error",
+			zap.String("phone", u.Phone))
+		str.Response(c, str.ErrInvalidImgCaptcha, nil)
+		return
+	}
+	remoteAddr := c.RemoteIP()
 	//校验用户名
 	if err := validateUsername(u.Username); err != nil {
 		str.Response(c, err, nil)
@@ -125,6 +197,7 @@ func SignupHandler(c *gin.Context) {
 		Password: u.Password,
 		Phone:    u.Phone,
 		Captcha:  u.Captcha,
+		Ip:       remoteAddr,
 	}
 	if _, err := client.Signup(c.Request.Context(), req); err != nil {
 		logger.Error("sign up error",
@@ -200,9 +273,4 @@ func GetCaptchaHandler(c *gin.Context) {
 		"captcha":   encodedImage,
 		"captchaId": id,
 	})
-}
-
-func VerifyCaptchaHandler(c *gin.Context) {
-	//captcha := c.Param("captcha")
-
 }

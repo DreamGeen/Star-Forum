@@ -45,6 +45,10 @@ func sendMsg(ctx context.Context, phone, templateCode string) error {
 	//生成验证码
 	code := generateCode()
 	fmt.Println(code)
+	//将验证码储存在redis中
+	key := "captcha:" + phone
+	cached.WriteWithOvertime(ctx, key, code, 5*time.Minute)
+
 	templateParam := fmt.Sprintf(`{"code":"%s"}`, code)
 
 	//tea.string()取地址
@@ -63,7 +67,7 @@ func sendMsg(ctx context.Context, phone, templateCode string) error {
 		return err
 	}
 	//将验证码储存在redis中
-	key := "captcha:" + phone
+	key = "captcha:" + phone
 	cached.WriteWithOvertime(ctx, key, code, 5*time.Minute)
 	return nil
 }

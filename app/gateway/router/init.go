@@ -10,27 +10,34 @@ func Setup() *gin.Engine {
 	v := gin.New()
 	// v.Use(logger.GinLogger(), logger.GinRecovery(true))
 	// 用户相关路由
-
-	v.GET("/signup/send", httpHandler.SendSetupHandler)
-	v.POST("/signup", httpHandler.SignupHandler)
 	v1 := v.Group("/account")
 	{
+		v1.POST("/register", httpHandler.SignupHandler)
 		v1.POST("/checkCode", httpHandler.GetCaptchaHandler)
 		v1.POST("/login", httpHandler.LoginHandler)
+		v1.POST("/autoLogin", httpHandler.AutoLoginHandler)
 		v1.POST("/send", httpHandler.SendSetupHandler)
 	}
+	v.POST("/refreshToken", httpHandler.RefreshTokenHandler)
+	v2 := v.Group("/admin")
+	{
+		v2.POST("/account/checkCode", httpHandler.GetCaptchaHandler)
+		v2.POST("/account/login", httpHandler.LoginAdminHandler)
+
+		v3 := v2.Use(middleware.AdminAuthHandler)
+		{
+			v3.POST("/category/loadCategory", httpHandler.LoadCategoryListHandler)
+			v3.POST("/category/delCategory", httpHandler.DelCategoryHandler)
+			v3.POST("/category/saveCategory", httpHandler.SaveCategoryHandler)
+			v3.POST("/category/changeSort", httpHandler.ChangeSortHandler)
+			v3.POST("/file/uploadImage", httpHandler.FileUploadHandler)
+		}
+	}
+	v.POST("/category/loadAllCategory", httpHandler.LoadCategoryListHandler)
+	v.POST("file/preUploadVideo", middleware.JWTAuthHandler, httpHandler.PreUploadVideosHandler)
 
 	//
 
-	v2 := v.Group("/community")
-	{
-		v2.POST("/create", middleware.JWTAuthHandler, httpHandler.CreateCommunityHandler)
-		v2.POST("/:id/follow", middleware.JWTAuthHandler, httpHandler.FollowCommunityHandler)
-		v2.POST("/:id/unFollow", middleware.JWTAuthHandler, httpHandler.UnFollowCommunityHandler)
-		v2.POST("publish", middleware.JWTAuthHandler, httpHandler.CreatePostHandler)
-
-	}
-	v.POST("/like", middleware.JWTAuthHandler, httpHandler.LikeActionHandler)
 	//使用登录鉴权中间件
 	//v.Use(middleware.JWTAuthHandler)
 	//{

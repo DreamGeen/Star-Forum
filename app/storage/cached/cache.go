@@ -7,7 +7,6 @@ import (
 	redis2 "github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"math/rand/v2"
-	"reflect"
 	"star/app/constant/str"
 	"star/app/extra/tracing"
 	"star/app/models"
@@ -25,6 +24,11 @@ const redisRandom = 60
 
 var cacheMap = make(map[string]*cache.Cache)
 var mu sync.RWMutex
+
+type cachedItem interface {
+	GetID() int64
+	IsDirty() bool
+}
 
 // 创建或获取cache
 func getOrCreateCache(name string) *cache.Cache {
@@ -49,11 +53,17 @@ func ScanGetUser(ctx context.Context, key string, obj *models.User) (bool, error
 	logging.SetSpanWithHostname(span)
 	logger := logging.LogServiceWithTrace(span, "CachedScanGetUser")
 
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Error("Recovered from panic: %v", zap.Any("r", r))
+		}
+	}()
 	//先在缓存里找
 	c := getOrCreateCache(key)
 	x, found := c.Get(key)
 	if found {
-		*obj = *x.(*models.User)
+		t := x.(models.User)
+		*obj = t
 		return true, nil
 	}
 
@@ -68,10 +78,9 @@ func ScanGetUser(ctx context.Context, key string, obj *models.User) (bool, error
 	}
 	//wrappedObj := obj.(cacheItem)
 	if obj.IsDirty() {
-		c.Set(key, reflect.ValueOf(obj).Elem(), cache.DefaultExpiration)
+		c.Set(key, *obj, cache.DefaultExpiration)
 		return true, nil
 	}
-
 	//再往mysql里找
 	err := mysql.QueryUserInfo(obj, obj.GetID())
 	if err != nil {
@@ -80,7 +89,6 @@ func ScanGetUser(ctx context.Context, key string, obj *models.User) (bool, error
 		logging.SetSpanError(span, err)
 		return false, err
 	}
-
 	//将查询的值储存到redis和缓存里
 	if err := redis.Client.HSet(ctx, key, obj).Err(); err != nil {
 		logger.Error("set obj error",
@@ -88,18 +96,15 @@ func ScanGetUser(ctx context.Context, key string, obj *models.User) (bool, error
 		logging.SetSpanError(span, err)
 		return true, str.ErrServiceBusy
 	}
-	c.Set(key, obj, cache.DefaultExpiration)
-
+	c.Set(key, *obj, cache.DefaultExpiration)
 	return true, nil
 }
 
 // ScanDeleteUser 将user从缓存里删除，下次读取回到mysql里读取
 func ScanDeleteUser(ctx context.Context, key string) {
-
 	c := getOrCreateCache(key)
 	c.Delete(key)
 	redis.Client.HDel(ctx, key)
-
 }
 
 // Get 查询字符串，从缓存中读取数据，读取成功返回true,失败返回false,不存在也返回false

@@ -15,10 +15,11 @@ service userService{
 
 //LSRequest 登录或注册请求,其中User可以表示用户名或邮箱
 message LSRequest{
-  string User=1;
-  string Password=2;
-  string Phone=3;
-  string Captcha=4;
+  string user=1;
+  string password=2;
+  string phone=3;
+  string captcha=4;
+  string  ip=5;
 }
 
 message LoginResponse{
@@ -27,14 +28,15 @@ message LoginResponse{
     string accessToken = 1;
     string refreshToken = 2;
   }
+  User  UserInfo=3;
 }
 message EmptyLSResponse{
 
 }
 
 message GetUserInfoRequest{
-   int64   ActorId=1;
-   int64   UserId=2;
+   int64   actorId=1;
+   int64   userId=2;
 }
 
 message  GetUserInfoResponse{
@@ -42,25 +44,35 @@ message  GetUserInfoResponse{
 }
 
 message User{
-    int64  UserId=1;
-    int64   exp=2;
-   optional int64   TotalLiked=3;
-   optional int64  LikeCount =4  ;
-   optional int64  CollectCount=5;
-   optional int64   PostCount=6;
-   optional  int64   FollowCount=7;
-   optional  int64   FansCount=8;
-    uint32   grade=9;
-    string  UserName=10;
-   optional string   Img=11;
-   optional string   Gender=12;
-   optional string   Birth=13;
-   optional string   Sign=14;
-    bool   IsFollow=15;
+    int64  userId=1;
+   optional int64   totalLiked=2;
+   optional int64  likeCount =3  ;
+   optional int64  collectCount=4;
+   optional int64   postCount=5;
+   optional  int64   followCount=6;
+   optional  int64   fansCount=7;
+    string  username=8;
+   optional string   email=9;
+   optional string   avatar=10;
+   optional string   birthday=11;
+   optional string   introduction=12;
+   optional string   phone=13;
+   optional  string  school=14;
+   optional  string   lastLoginTime=15;
+   optional  string   lastLoginIp=16;
+   optional  string   noticeInfo=17;
+   optional  string   joinTime=18;
+   optional uint32    totalCoinCount=19;
+   optional  uint32   currentCoinCount=20;
+   optional  uint32    theme=21;
+   optional  uint32   sex=22;
+   optional   uint32  status=23;
+    bool   isFollow=24;
+
 }
 message GetUserExistInformationRequest{
-  int64  UserId=1;
+  int64  userId=1;
 }
 message GetUserExistInformationResponse{
-  bool  Existed=1;
+  bool  existed=1;
 }

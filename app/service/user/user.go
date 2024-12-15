@@ -23,7 +23,7 @@ import (
 	"star/proto/relation/relationPb"
 	"star/proto/user/userPb"
 	"strings"
-	"sync"
+	"time"
 )
 
 type UserSrv struct {
@@ -52,8 +52,8 @@ func (u *UserSrv) GetUserInfo(ctx context.Context, req *userPb.GetUserInfoReques
 	logging.SetSpanWithHostname(span)
 	logger := logging.LogServiceWithTrace(span, "UserService.GetUserInfo")
 
-	key := fmt.Sprintf("GetUserInfo:%d", req.UserId)
-	user := new(models.User)
+	key := fmt.Sprintf("Star_Bilibili:GetUserInfo:%d", req.UserId)
+	user := &models.User{UserId: req.UserId}
 	found, err := cached.ScanGetUser(ctx, key, user)
 	if err != nil {
 		logger.Error("GetUserInfo failed",
@@ -68,108 +68,122 @@ func (u *UserSrv) GetUserInfo(ctx context.Context, req *userPb.GetUserInfoReques
 		return str.ErrUserNotExists
 	}
 	resp.User = &userPb.User{
-		UserId:   user.UserId,
-		Exp:      user.Exp,
-		Grade:    user.Grade,
-		Gender:   &user.Gender,
-		UserName: user.Username,
-		Img:      &user.Img,
-		Sign:     &user.Signature,
-		Birth:    &user.Birth,
-		IsFollow: false,
+		UserId:           user.UserId,
+		Username:         user.Username,
+		Avatar:           &user.Avatar,
+		Birthday:         &user.Birthday,
+		Email:            &user.Email,
+		Phone:            &user.Phone,
+		Introduction:     &user.Introduction,
+		LastLoginIp:      &user.LastLoginIp,
+		School:           &user.School,
+		Status:           &user.Status,
+		CurrentCoinCount: &user.CurrentCoinCount,
+		TotalCoinCount:   &user.TotalCoinCount,
+		NoticeInfo:       &user.NoticeInfo,
+		Theme:            &user.Theme,
+		Sex:              &user.Sex,
 	}
-	var wg sync.WaitGroup
-	var isErr bool
-	wg.Add(6)
-	go func() {
-		defer wg.Done()
-		isFollowResp, err := relationService.IsFollow(ctx, &relationPb.IsFollowRequest{
-			UserId:   req.UserId,
-			FollowId: req.ActorId,
-		})
-		if err != nil {
-			logger.Error("get is follow failed",
-				zap.Error(err),
-				zap.Int64("userId", req.UserId),
-				zap.Any("followId", req.ActorId))
-			isErr = true
-			return
-		}
-		resp.User.IsFollow = isFollowResp.Result
-	}()
-
-	go func() {
-		defer wg.Done()
-		countFollowResp, err := relationService.CountFollow(ctx, &relationPb.CountFollowRequest{
-			UserId: req.UserId,
-		})
-		if err != nil {
-			logger.Error("get user follow count error",
-				zap.Error(err),
-				zap.Int64("user", req.UserId))
-			isErr = true
-			return
-		}
-		resp.User.FollowCount = &countFollowResp.Count
-	}()
-	go func() {
-		defer wg.Done()
-		countFansResp, err := relationService.CountFans(ctx, &relationPb.CountFansRequest{
-			UserId: req.UserId,
-		})
-		if err != nil {
-			logger.Error("get user fans count error",
-				zap.Error(err),
-				zap.Int64("user", req.UserId))
-			isErr = true
-			return
-		}
-		resp.User.FansCount = &countFansResp.Count
-	}()
-	go func() {
-		defer wg.Done()
-		getUserLikeCountResp, err := likeService.GetUserLikeCount(ctx, &likePb.GetUserLikeCountRequest{
-			UserId: req.UserId,
-		})
-		if err != nil {
-			logger.Error("get user like count error",
-				zap.Error(err),
-				zap.Int64("user", req.UserId))
-			isErr = true
-			return
-		}
-		resp.User.LikeCount = &getUserLikeCountResp.Count
-	}()
-	go func() {
-		getUserTotalLikeResp, err := likeService.GetUserTotalLike(ctx, &likePb.GetUserTotalLikeRequest{
-			UserId: req.UserId,
-		})
-		if err != nil {
-			logger.Error("get user total liked count error",
-				zap.Error(err),
-				zap.Int64("user", req.UserId))
-			isErr = true
-			return
-		}
-		resp.User.TotalLiked = &getUserTotalLikeResp.Count
-	}()
-	go func() {
-		getUserCollectCount, err := collectService.GetUserCollectCount(ctx, &collectPb.GetUserCollectCountRequest{
-			UserId: req.UserId,
-		})
-		if err != nil {
-			logger.Error("get user  collect count error",
-				zap.Error(err),
-				zap.Int64("user", req.UserId))
-			isErr = true
-			return
-		}
-		resp.User.CollectCount = &getUserCollectCount.Count
-	}()
-	wg.Wait()
-	if isErr {
-		return str.ErrUserError
+	if user.LastLoginTime != nil {
+		lastLoginTime := user.LastLoginTime.Format(str.ParseTimeFormat)
+		resp.User.LastLoginTime = &lastLoginTime
 	}
+	if user.JoinTime != nil {
+		joinTime := user.JoinTime.Format(str.ParseTimeFormat)
+		resp.User.JoinTime = &joinTime
+	}
+	//var wg sync.WaitGroup
+	//var isErr bool
+	//wg.Add(6)
+	//go func() {
+	//	defer wg.Done()
+	//	isFollowResp, err := relationService.IsFollow(ctx, &relationPb.IsFollowRequest{
+	//		UserId:   req.UserId,
+	//		FollowId: req.ActorId,
+	//	})
+	//	if err != nil {
+	//		logger.Error("get is follow failed",
+	//			zap.Error(err),
+	//			zap.Int64("userId", req.UserId),
+	//			zap.Any("followId", req.ActorId))
+	//		isErr = true
+	//		return
+	//	}
+	//	resp.User.IsFollow = isFollowResp.Result
+	//}()
+	//
+	//go func() {
+	//	defer wg.Done()
+	//	countFollowResp, err := relationService.CountFollow(ctx, &relationPb.CountFollowRequest{
+	//		UserId: req.UserId,
+	//	})
+	//	if err != nil {
+	//		logger.Error("get user follow count error",
+	//			zap.Error(err),
+	//			zap.Int64("user", req.UserId))
+	//		isErr = true
+	//		return
+	//	}
+	//	resp.User.FollowCount = &countFollowResp.Count
+	//}()
+	//go func() {
+	//	defer wg.Done()
+	//	countFansResp, err := relationService.CountFans(ctx, &relationPb.CountFansRequest{
+	//		UserId: req.UserId,
+	//	})
+	//	if err != nil {
+	//		logger.Error("get user fans count error",
+	//			zap.Error(err),
+	//			zap.Int64("user", req.UserId))
+	//		isErr = true
+	//		return
+	//	}
+	//	resp.User.FansCount = &countFansResp.Count
+	//}()
+	//go func() {
+	//	defer wg.Done()
+	//	getUserLikeCountResp, err := likeService.GetUserLikeCount(ctx, &likePb.GetUserLikeCountRequest{
+	//		UserId: req.UserId,
+	//	})
+	//	if err != nil {
+	//		logger.Error("get user like count error",
+	//			zap.Error(err),
+	//			zap.Int64("user", req.UserId))
+	//		isErr = true
+	//		return
+	//	}
+	//	resp.User.LikeCount = &getUserLikeCountResp.Count
+	//}()
+	//go func() {
+	//	getUserTotalLikeResp, err := likeService.GetUserTotalLike(ctx, &likePb.GetUserTotalLikeRequest{
+	//		UserId: req.UserId,
+	//	})
+	//	if err != nil {
+	//		logger.Error("get user total liked count error",
+	//			zap.Error(err),
+	//			zap.Int64("user", req.UserId))
+	//		isErr = true
+	//		return
+	//	}
+	//	resp.User.TotalLiked = &getUserTotalLikeResp.Count
+	//}()
+	//go func() {
+	//	getUserCollectCount, err := collectService.GetUserCollectCount(ctx, &collectPb.GetUserCollectCountRequest{
+	//		UserId: req.UserId,
+	//	})
+	//	if err != nil {
+	//		logger.Error("get user  collect count error",
+	//			zap.Error(err),
+	//			zap.Int64("user", req.UserId))
+	//		isErr = true
+	//		return
+	//	}
+	//	resp.User.CollectCount = &getUserCollectCount.Count
+	//}()
+	//wg.Wait()
+	//if isErr {
+	//	return str.ErrUserError
+	//}
 	//返回user信息
 	return nil
 }
@@ -214,6 +228,12 @@ func (u *UserSrv) LoginPassword(ctx context.Context, req *userPb.LSRequest, resp
 	if err != nil {
 		return
 	}
+	if err := mysql.UpdateLoginTimeAndIp(time.Now().UTC(), req.Ip, user.UserId); err != nil {
+		logger.Error("update loginTime and loginIp error",
+			zap.Error(err))
+		logging.SetSpanError(span, err)
+		return str.ErrLoginError
+	}
 	accessToken, refreshToken, err := jwt.GetToken(user)
 	if err != nil {
 		logger.Error("get  token  error",
@@ -228,6 +248,18 @@ func (u *UserSrv) LoginPassword(ctx context.Context, req *userPb.LSRequest, resp
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}
+	userInfoResp := new(userPb.GetUserInfoResponse)
+	err = u.GetUserInfo(ctx, &userPb.GetUserInfoRequest{
+		UserId: user.UserId,
+	}, userInfoResp)
+	if err != nil {
+		logger.Error("get user info error",
+			zap.Error(err),
+			zap.Int64("userId", user.UserId))
+		logging.SetSpanError(span, err)
+		return str.ErrLoginError
+	}
+	resp.UserInfo = userInfoResp.User
 	return
 }
 
@@ -442,6 +474,7 @@ func (u *UserSrv) Signup(ctx context.Context, req *userPb.LSRequest, resp *userP
 	if ok := validateCaptcha(ctx, span, logger, req.Phone, req.Captcha); !ok {
 		return str.ErrInvalidCaptcha
 	}
+
 	//检查用户名和手机号是否已经注册过
 	user := createUser(0, req.User, req.Password, req.Phone, "")
 	if err = mysql.QueryUserByUsername(user); err == nil || !errors.Is(err, str.ErrUserNotExists) {
@@ -471,9 +504,14 @@ func (u *UserSrv) Signup(ctx context.Context, req *userPb.LSRequest, resp *userP
 	//生成用户id
 	user.UserId = snowflake.GetID()
 	//用户默认签名
-	user.Signature = str.DefaultSignature
+	user.Introduction = str.DefaultSignature
 	//用户默认头像
-	user.Img = str.DefaultImg
+	user.Avatar = str.DefaultImg
+	user.Sex = 2
+	joinTime := time.Now().UTC()
+	user.JoinTime = &joinTime
+	user.CurrentCoinCount = 0
+	user.TotalCoinCount = 0
 	//将用户插入mysql当中
 	if err := mysql.InsertUser(user); err != nil {
 		logger.Error("sign up error",

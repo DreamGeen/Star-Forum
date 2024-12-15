@@ -13,6 +13,43 @@ import (
 	"go.uber.org/zap"
 )
 
+func PreUploadVideosHandler(c *gin.Context) {
+	_, span := tracing.Tracer.Start(c.Request.Context(), "PreUploadVideos")
+	defer span.End()
+	logging.SetSpanWithHostname(span)
+	logger := logging.LogServiceWithTrace(span, "GateWay.PreUploadVideos")
+
+	preUpload := new(models.PreUpload)
+	if err := c.ShouldBind(preUpload); err != nil {
+		logger.Error("preUploadVideos error because invalid param",
+			zap.Error(err))
+		str.Response(c, str.ErrInvalidParam, nil)
+		return
+	}
+	userId, err := request.GetUserId(c)
+	if err != nil {
+		logger.Error("get user id error",
+			zap.Error(err))
+		str.Response(c, err, nil)
+		return
+	}
+	resp, err := client.PreUploadVideos(c.Request.Context(), &publishPb.PreUploadVideosRequest{
+		ActorId:  userId,
+		Chunks:   preUpload.Chunks,
+		FileName: preUpload.FileName,
+	})
+	if err != nil {
+		logger.Error("pre upload videos error",
+			zap.Error(err),
+			zap.Int64("userId", userId))
+		str.Response(c, err, nil)
+		return
+	}
+	str.Response(c, nil, map[string]interface{}{
+		"uploadId": resp.UploadId,
+	})
+}
+
 func CreatePostHandler(c *gin.Context) {
 	_, span := tracing.Tracer.Start(c.Request.Context(), "CreatePostHandler")
 	defer span.End()

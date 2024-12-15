@@ -11,8 +11,10 @@ const (
 	UsernameExistsCode
 	UsernameMustLess
 	UsernameStartWith
+	InvalidAccessTokenCode
 	InvalidPasswordCode
 	InvalidParamCode
+	InvalidImgCaptchaCode
 	InvalidCaptchaCode
 	NotLoginCode
 	PhoneEmptyCode
@@ -31,6 +33,9 @@ const (
 	PostNotExistsCode
 	UploadCode
 	RequestTooFrequentlyCode
+	AutoLoginErrorCode
+	CategoryNotExistsCode
+	CategoryIdExistsCode
 )
 
 const (
@@ -47,6 +52,7 @@ const (
 	CollectErrorCode
 	PublishErrorCode
 	FeedErrorCode
+	CategoryErrorCode
 )
 
 var (
@@ -54,8 +60,10 @@ var (
 	ErrUsernameExists       = errors.New("用户名已存在")
 	ErrUsernameMustLess     = errors.New("用户名长度必须小于20")
 	ErrUsernameStartWith    = errors.New("用户名不能以数字开头")
+	ErrInvalidAccessToken   = errors.New("非法的accessToken")
 	ErrInvalidPassword      = errors.New("用户名或密码错误")
 	ErrInvalidParam         = errors.New("请求参数错误")
+	ErrInvalidImgCaptcha    = errors.New("图形验证码错误")
 	ErrInvalidCaptcha       = errors.New("验证码错误")
 	ErrNotLogin             = errors.New("请登录")
 	ErrPhoneEmpty           = errors.New("手机号为空")
@@ -74,6 +82,9 @@ var (
 	ErrPostNotExists        = errors.New("该帖子不存在")
 	ErrUpload               = errors.New("上传失败")
 	ErrRequestTooFrequently = errors.New("请求频繁")
+	ErrAutoLoginError       = errors.New("自动登录失败")
+	ErrCategoryNotExists    = errors.New("分类不存在")
+	ErrCategoryIdExists     = errors.New("分类编号已存在")
 )
 
 var (
@@ -90,6 +101,7 @@ var (
 	ErrLikeError      = errors.New("点赞服务内部出现问题，请稍后再试！")
 	ErrCollectError   = errors.New("收藏服务内部出现问题，请稍后再试！")
 	ErrPublishError   = errors.New("发帖服务内部出现问题，请稍后再试！")
+	ErrCategoryError  = errors.New("分类服务内部出现问题，请稍后再试! ")
 )
 
 var codeMap = map[error]int32{
@@ -97,6 +109,8 @@ var codeMap = map[error]int32{
 	ErrUsernameExists:       UsernameExistsCode,
 	ErrUsernameMustLess:     UsernameMustLess,
 	ErrUsernameStartWith:    UsernameStartWith,
+	ErrInvalidAccessToken:   InvalidAccessTokenCode,
+	ErrInvalidImgCaptcha:    InvalidImgCaptchaCode,
 	ErrInvalidPassword:      InvalidPasswordCode,
 	ErrInvalidParam:         InvalidParamCode,
 	ErrInvalidCaptcha:       InvalidCaptchaCode,
@@ -117,6 +131,9 @@ var codeMap = map[error]int32{
 	ErrPostNotExists:        PostNotExistsCode,
 	ErrUpload:               UploadCode,
 	ErrRequestTooFrequently: RequestTooFrequentlyCode,
+	ErrAutoLoginError:       AutoLoginErrorCode,
+	ErrCategoryNotExists:    CategoryNotExistsCode,
+	ErrCategoryIdExists:     CategoryIdExistsCode,
 
 	ErrServiceBusy:    ServiceBusyCode,
 	ErrUserError:      UserErrorCode,
@@ -131,6 +148,7 @@ var codeMap = map[error]int32{
 	ErrLikeError:      LikeErrorCode,
 	ErrCollectError:   CollectErrorCode,
 	ErrPublishError:   PublishErrorCode,
+	ErrCategoryError:  CategoryErrorCode,
 }
 
 func getCode(err error) int32 {

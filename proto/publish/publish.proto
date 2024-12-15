@@ -7,9 +7,19 @@ option go_package="star/proto/publish/publishPb;publishPb";
 import "star/proto/feed/feed.proto";
 
 service PublishService{
+  rpc PreUploadVideos(PreUploadVideosRequest)returns(PreUploadVideosResponse);
   rpc CreatePost(CreatePostRequest)returns(CreatePostResponse);
   rpc CountPost(CountPostRequest)returns(CountPostResponse);
   rpc  ListPost(ListPostRequest)returns(ListPostResponse);
+}
+message PreUploadVideosRequest{
+  string  fileName=1;
+  uint32   chunks=2;
+  int64    actorId=3;
+}
+
+message PreUploadVideosResponse{
+  string  uploadId=1;
 }
 
 message CreatePostRequest{

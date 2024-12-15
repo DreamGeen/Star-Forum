@@ -37,6 +37,7 @@ func NewPublishServiceEndpoints() []*api.Endpoint {
 // Client API for PublishService service
 
 type PublishService interface {
+	PreUploadVideos(ctx context.Context, in *PreUploadVideosRequest, opts ...client.CallOption) (*PreUploadVideosResponse, error)
 	CreatePost(ctx context.Context, in *CreatePostRequest, opts ...client.CallOption) (*CreatePostResponse, error)
 	CountPost(ctx context.Context, in *CountPostRequest, opts ...client.CallOption) (*CountPostResponse, error)
 	ListPost(ctx context.Context, in *ListPostRequest, opts ...client.CallOption) (*ListPostResponse, error)
@@ -52,6 +53,16 @@ func NewPublishService(name string, c client.Client) PublishService {
 		c:    c,
 		name: name,
 	}
+}
+
+func (c *publishService) PreUploadVideos(ctx context.Context, in *PreUploadVideosRequest, opts ...client.CallOption) (*PreUploadVideosResponse, error) {
+	req := c.c.NewRequest(c.name, "PublishService.PreUploadVideos", in)
+	out := new(PreUploadVideosResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *publishService) CreatePost(ctx context.Context, in *CreatePostRequest, opts ...client.CallOption) (*CreatePostResponse, error) {
@@ -87,6 +98,7 @@ func (c *publishService) ListPost(ctx context.Context, in *ListPostRequest, opts
 // Server API for PublishService service
 
 type PublishServiceHandler interface {
+	PreUploadVideos(context.Context, *PreUploadVideosRequest, *PreUploadVideosResponse) error
 	CreatePost(context.Context, *CreatePostRequest, *CreatePostResponse) error
 	CountPost(context.Context, *CountPostRequest, *CountPostResponse) error
 	ListPost(context.Context, *ListPostRequest, *ListPostResponse) error
@@ -94,6 +106,7 @@ type PublishServiceHandler interface {
 
 func RegisterPublishServiceHandler(s server.Server, hdlr PublishServiceHandler, opts ...server.HandlerOption) error {
 	type publishService interface {
+		PreUploadVideos(ctx context.Context, in *PreUploadVideosRequest, out *PreUploadVideosResponse) error
 		CreatePost(ctx context.Context, in *CreatePostRequest, out *CreatePostResponse) error
 		CountPost(ctx context.Context, in *CountPostRequest, out *CountPostResponse) error
 		ListPost(ctx context.Context, in *ListPostRequest, out *ListPostResponse) error
@@ -107,6 +120,10 @@ func RegisterPublishServiceHandler(s server.Server, hdlr PublishServiceHandler, 
 
 type publishServiceHandler struct {
 	PublishServiceHandler
+}
+
+func (h *publishServiceHandler) PreUploadVideos(ctx context.Context, in *PreUploadVideosRequest, out *PreUploadVideosResponse) error {
+	return h.PublishServiceHandler.PreUploadVideos(ctx, in, out)
 }
 
 func (h *publishServiceHandler) CreatePost(ctx context.Context, in *CreatePostRequest, out *CreatePostResponse) error {

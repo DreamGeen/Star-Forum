@@ -2,6 +2,8 @@ package client
 
 import (
 	"star/app/constant/str"
+	"star/proto/admin/adminPb"
+
 	"star/proto/collect/collectPb"
 	"star/proto/comment/commentPb"
 	"star/proto/community/communityPb"
@@ -25,6 +27,7 @@ var (
 	likeService      likePb.LikeService
 	collectService   collectPb.CollectService
 	publishService   publishPb.PublishService
+	adminService     adminPb.AdminService
 )
 
 func Init() {
@@ -60,9 +63,11 @@ func Init() {
 	collectMicroService := micro.NewService(micro.Name(str.CollectServiceClient))
 	collectService = collectPb.NewCollectService(str.CollectService, collectMicroService.Client())
 
-
 	//创建一个发布微服务客户端
-	publishMicroService:=micro.NewService(micro.Name(str.PublishServiceClient))
-	publishService=publishPb.NewPublishService(str.PublishService,publishMicroService.Client())
+	publishMicroService := micro.NewService(micro.Name(str.PublishServiceClient))
+	publishService = publishPb.NewPublishService(str.PublishService, publishMicroService.Client())
 
+	//创建一个管理员微服务客户端
+	adminMicroService := micro.NewService(micro.Name(str.AdminServiceClient))
+	adminService = adminPb.NewAdminService(str.AdminService, adminMicroService.Client())
 }

@@ -5,15 +5,16 @@ import (
 	"errors"
 	"star/app/constant/str"
 	"star/app/models"
+	"time"
 )
 
 const (
-	queryUserByPhoneSQL    = "SELECT userId,username,phone,password,deletedAt FROM userLogin WHERE phone=?"
-	queryUserByUsernameSQL = "SELECT userId, username,password,deletedAt FROM userLogin WHERE username=?"
-	queryUserByEmailSQL    = "SELECT userId,username, email, password,deletedAt FROM userLogin WHERE email=?"
-	insertUserLoginSQL     = "INSERT INTO userLogin(userId, username, password, phone) VALUES (?, ?, ?, ?)"
-	insertUserSQL          = "INSERT INTO user(userId, username,img,sign) VALUES (?, ?, ?,?)"
-	queryUserInfoSQL       = "select  userId,userName,gender,sign,birth,grade,exp,img,updatedAt,createdAt,deletedAt from user  where userId=?"
+	queryUserByPhoneSQL     = "SELECT user_id,username,phone,password FROM user_info WHERE phone=?"
+	queryUserByUsernameSQL  = "SELECT user_id, username,password FROM user_info WHERE username=?"
+	queryUserByEmailSQL     = "SELECT user_id,username, email, password FROM user_info WHERE email=?"
+	insertUserSQL           = "INSERT INTO user_info(user_id, username,password,phone,avatar,person_introduction,sex,join_time,total_coin_count,current_coin_count) VALUES (?,?, ?,?, ?,?,?,?,?,?)"
+	queryUserInfoSQL        = "select  user_id,username,phone,email,person_introduction,avatar,birthday,school,notice_info,last_login_ip,total_coin_count,current_coin_count,theme,sex,status,last_login_time,join_time from user_info  where user_id=?"
+	updateLoginTimeAndIpSQL = "update user_info set last_login_time=?,last_login_ip=? where user_id=? "
 )
 
 // QueryUserByPhone 通过手机号查询用户密码
@@ -39,36 +40,14 @@ func queryUser(u *models.User, sqlStr string, args ...interface{}) error {
 		}
 		return err
 	}
-	if u.DeleteTime != nil {
-		return str.ErrUserNotExists
-	}
 	return nil
 }
 
 // InsertUser 将用户信息插入mysql
 func InsertUser(u *models.User) error {
 	//将用户信息插入mysql
-	tx, err := Client.Beginx()
+	_, err := Client.Exec(insertUserSQL, u.UserId, u.Username, u.Password, u.Phone, u.Avatar, u.Introduction, u.Sex, u.JoinTime, u.TotalCoinCount, u.CurrentCoinCount)
 	if err != nil {
-		return str.ErrMessageError
-	}
-	defer func() {
-		if p := recover(); p != nil {
-			tx.Rollback()
-			err = str.ErrMessageError
-		} else if err != nil {
-			tx.Rollback()
-		}
-	}()
-	_, err = Client.Exec(insertUserLoginSQL, u.UserId, u.Username, u.Password, u.Phone)
-	if err != nil {
-		return err
-	}
-	_, err = Client.Exec(insertUserSQL, u.UserId, u.Username, u.Img, u.Signature)
-	if err != nil {
-		return err
-	}
-	if err := tx.Commit(); err != nil {
 		return err
 	}
 	return nil
@@ -79,6 +58,13 @@ func QueryUserInfo(user *models.User, userId int64) error {
 		if errors.Is(err, sql.ErrNoRows) {
 			return str.ErrUserNotExists
 		}
+		return err
+	}
+	return nil
+}
+
+func UpdateLoginTimeAndIp(loginTime time.Time, loginIp string, userId int64) error {
+	if _, err := Client.Exec(updateLoginTimeAndIpSQL, loginTime, loginIp, userId); err != nil {
 		return err
 	}
 	return nil

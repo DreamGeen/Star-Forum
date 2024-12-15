@@ -1,0 +1,5 @@
+package redis
+
+func UpdateCategoryCache() {
+
+}

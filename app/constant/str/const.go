@@ -22,3 +22,19 @@ const (
 	DefaultLoadMessageNumber = 50
 	DefaultLoadPostNumber    = 200
 )
+
+const (
+	Backslashes = "/"
+	Dot         = "."
+)
+
+const (
+	YYMMDD = "2006-01-02"
+)
+const (
+	UploadMarkImg = "_star-bilibli_img"
+	DirImg        = "img/"
+	DirVideo      = "video/"
+	DirTemp       = "temp/"
+	DirTimeParse  = "2006-01"
+)
